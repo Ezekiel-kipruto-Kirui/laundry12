@@ -49,8 +49,8 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'LaundryApp',
-    "tailwind",
-    "crispy_forms",
+    'tailwind',
+    'crispy_forms',
     'import_export',
     'django_daraja',
     'theme'

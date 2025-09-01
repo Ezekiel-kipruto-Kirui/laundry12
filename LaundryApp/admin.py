@@ -1514,7 +1514,7 @@ class OrderAdmin(ShopPermissionMixin, AppPermissionMixin, ModelAdmin, ImportExpo
             'common_customers': data['common_customers'],
         }
 
-        return render(request, 'admin/laundry_dashboard.html', context)
+        return render(request, 'Admin/laundry_dashboard.html', context)
 
 # --- OrderItem Admin (standalone view) ---
 @admin.register(OrderItem)
