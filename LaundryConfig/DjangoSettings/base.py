@@ -200,7 +200,7 @@ UNFOLD = {
     "SITE_TITLE": "ELITE Laundry",
     "SITE_HEADER": "Elite Laundry Management System",
     "SITE_SUBHEADER": "Performance Analytics & Administration",
-    "SITE_URL": "/dashboard/",
+    "SITE_URL": "/admin/",
     "SITE_ICON": {
         "light": lambda request: static("icons/laundry-light.svg"),
         "dark": lambda request: static("icons/laundry-dark.svg"),
@@ -256,23 +256,7 @@ UNFOLD = {
     "SIDEBAR": {
     "show_search": True,
     "navigation": [
-        {
-            "title": "Administration",
-            "items": [
-                {
-                    "title": "Groups",
-                    "icon": "groups",
-                    "link": reverse_lazy("admin:auth_group_changelist"),
-                    "permission": lambda request: request.user.is_superuser
-                },
-                {
-                    "title": "Users",
-                    "icon": "people",
-                    "link": reverse_lazy("admin:auth_user_changelist"),
-                    "permission": lambda request: request.user.is_superuser
-                },
-            ],
-        },
+        
         {
             "title": "Dashboard",
             "items": [
@@ -309,6 +293,23 @@ UNFOLD = {
                     "title": "Customers",
                     "icon": "people",
                     "link": reverse_lazy("admin:LaundryApp_customer_changelist"),
+                },
+            ],
+        },
+        {
+            "title": "Administration",
+            "items": [
+                {
+                    "title": "Groups",
+                    "icon": "groups",
+                    "link": reverse_lazy("admin:auth_group_changelist"),
+                    "permission": lambda request: request.user.is_superuser
+                },
+                {
+                    "title": "Users",
+                    "icon": "people",
+                    "link": reverse_lazy("admin:auth_user_changelist"),
+                    "permission": lambda request: request.user.is_superuser
                 },
             ],
         },

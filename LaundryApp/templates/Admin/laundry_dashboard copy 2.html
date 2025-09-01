@@ -6,12 +6,12 @@
 <script
     src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0/dist/chartjs-plugin-datalabels.min.js"></script>
 <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
-<link href="https://fonts.googleapis/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 <style>
     /* Modern Dashboard Styles */
     .dashboard-container {
-        --primary: #EC407A;
-        /* Vibrant pink */
+        --primary: #1E3A8A;
+        /* Navy blue */
         --secondary: #F59E0B;
         /* Orange-yellow */
         --accent: #FBBF24;
@@ -28,7 +28,6 @@
         --warning: #F59E0B;
         --danger: #EF4444;
         --info: #3B82F6;
-        --navy-blue: #1E3A8A;
     }
 
     body {
@@ -110,16 +109,15 @@
         color: var(--text-dark);
     }
 
-    /* Card Styles - Made smaller and more compact */
+    /* Card Styles - Reduced size for shop cards */
     .stat-card {
         background: var(--card-light);
         border-radius: 12px;
-        padding: 0.75rem;
+        padding: 1rem;
         box-shadow: 0 2px 4px -1px rgba(0, 0, 0, 0.05), 0 1px 2px -1px rgba(0, 0, 0, 0.03);
         transition: all 0.3s ease;
         position: relative;
         overflow: hidden;
-        height: 100%;
     }
 
     .dark .stat-card {
@@ -148,19 +146,19 @@
     }
 
     .icon-wrapper {
-        width: 32px;
-        height: 32px;
+        width: 36px;
+        height: 36px;
         border-radius: 8px;
         display: flex;
         align-items: center;
         justify-content: center;
-        margin-bottom: 0.5rem;
-        background: rgba(236, 64, 122, 0.1);
+        margin-bottom: 0.75rem;
+        background: rgba(30, 58, 138, 0.1);
         color: var(--primary);
     }
 
     .shop-a-theme .icon-wrapper {
-        background: rgba(236, 64, 122, 0.1);
+        background: rgba(30, 58, 138, 0.1);
         color: var(--primary);
     }
 
@@ -170,7 +168,7 @@
     }
 
     .stat-card h3 {
-        font-size: 0.7rem;
+        font-size: 0.75rem;
         font-weight: 500;
         color: #64748B;
         margin-bottom: 0.25rem;
@@ -181,7 +179,7 @@
     }
 
     .stat-card .value {
-        font-size: 1.1rem;
+        font-size: 1.25rem;
         font-weight: 700;
         color: var(--text-light);
         margin-bottom: 0.25rem;
@@ -192,7 +190,7 @@
     }
 
     .stat-card .subtext {
-        font-size: 0.6rem;
+        font-size: 0.65rem;
         color: #94A3B8;
     }
 
@@ -243,7 +241,7 @@
         border-radius: 9999px;
         font-size: 0.75rem;
         font-weight: 500;
-        background: rgba(236, 64, 122, 0.1);
+        background: rgba(30, 58, 138, 0.1);
         color: var(--primary);
     }
 
@@ -251,10 +249,10 @@
     .customer-card {
         display: flex;
         align-items: center;
-        padding: 0.75rem;
+        padding: 1rem;
         border-radius: 12px;
         background: var(--card-light);
-        margin-bottom: 0.5rem;
+        margin-bottom: 0.75rem;
         transition: all 0.3s ease;
         box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.05);
     }
@@ -274,8 +272,8 @@
     }
 
     .customer-avatar {
-        width: 36px;
-        height: 36px;
+        width: 40px;
+        height: 40px;
         border-radius: 10px;
         display: flex;
         align-items: center;
@@ -283,7 +281,7 @@
         font-weight: 600;
         background: linear-gradient(135deg, var(--primary), var(--secondary));
         color: white;
-        margin-right: 0.75rem;
+        margin-right: 1rem;
     }
 
     .customer-info {
@@ -291,7 +289,7 @@
     }
 
     .customer-name {
-        font-size: 0.8rem;
+        font-size: 0.875rem;
         font-weight: 600;
         color: var(--text-light);
         margin-bottom: 0.25rem;
@@ -302,12 +300,12 @@
     }
 
     .customer-stats {
-        font-size: 0.7rem;
+        font-size: 0.75rem;
         color: #64748B;
     }
 
     .customer-amount {
-        font-size: 0.8rem;
+        font-size: 0.875rem;
         font-weight: 700;
         color: var(--primary);
     }
@@ -317,7 +315,7 @@
         font-size: 1.25rem;
         font-weight: 600;
         color: var(--text-light);
-        margin: 1.5rem 0 1rem 0;
+        margin: 2rem 0 1.5rem 0;
         display: flex;
         align-items: center;
         gap: 0.5rem;
@@ -330,7 +328,7 @@
     /* Grid Layout */
     .grid {
         display: grid;
-        gap: 1rem;
+        gap: 1.5rem;
     }
 
     .grid-cols-1 {
@@ -431,7 +429,7 @@
     /* Custom scrollbar for customer list */
     .custom-scroll {
         scrollbar-width: thin;
-        scrollbar-color: rgba(236, 64, 122, 0.3) transparent;
+        scrollbar-color: rgba(30, 58, 138, 0.3) transparent;
     }
 
     .custom-scroll::-webkit-scrollbar {
@@ -444,7 +442,7 @@
     }
 
     .custom-scroll::-webkit-scrollbar-thumb {
-        background-color: rgba(236, 64, 122, 0.3);
+        background-color: rgba(30, 58, 138, 0.3);
         border-radius: 3px;
     }
 
@@ -493,7 +491,7 @@
         <i class="fas fa-store" style="color: var(--primary);"></i>
         Shop A Performance
     </h2>
-    <div class="grid grid-cols-4 mb-6 shop-a-theme">
+    <div class="grid grid-cols-4 mb-8 shop-a-theme">
         <!-- Revenue Card -->
         <div class="stat-card">
             <div class="icon-wrapper">
@@ -540,7 +538,7 @@
         <i class="fas fa-store" style="color: var(--secondary);"></i>
         Shop B Performance
     </h2>
-    <div class="grid grid-cols-4 mb-6 shop-b-theme">
+    <div class="grid grid-cols-4 mb-8 shop-b-theme">
         <!-- Revenue Card -->
         <div class="stat-card">
             <div class="icon-wrapper">
@@ -700,366 +698,384 @@
 </div>
 
 <script>
-    // Color palette using navy blue and orange-yellow for charts
-    const COLOR_PALETTE = {
-na            ue: '#1E3A8A', // Navy blue
-        orangeYellow: '#F59E0B', /            ange-yellow
-        ligh                 '#FBBF24', // Lighter orange
-                    : '#EC407A', // Vibrant pink
-        light                F48FB1', // Lighter pink
-        success: '#10B981',
-        warning: '#F59E0B',
-        danger: '#EF4444',
-        info: '#3B82F6',
-        light: '#F8FAFC',
-        dark: '#0F172A'
-    };
-
-    function getChartOptions() {
-        const isDark = document.documentElement.classList.contains('dark');
-        const textColor = isD                F1F5F9' : '#1E293B';
-        const tooltipBg = isDark ? '#1E293B' : '#FFFFFF';
-        const tooltipBorder = isDark ? '#334155' : '#E2E8F0';
-        const tooltipText = isDark ? '#F1F5F9' : '#1E293B';
-
-        return {
-            maintainAspectRatio: false,
-            plugins: {
-                tooltip: {
-                    backgroundColor: tooltipBg,
-                    borderColor: tooltipBorder,
-                    borderWidth: 1,
-                    borderRadius: 12,
-                    padding: 12,
-                    titleColor: tooltipText,
-                    bodyColor: tooltipText,
-                    bodyFont: {
-                        size: 14,
-                        weight: '600'
-                    },
-                    titleFont: {
-                        size: 12,
-                        weight: '500'
-                    },
-                    boxShadow: '0 8px 24px rgba(0, 0, 0, 0.15)',
-                    callbacks: {
-                        title: function (context) {
-                            return context[0].label || '';
-                        },
-                        label: function (context) {
-                            if (context.parsed.y !== undefined) {
-                                return context.parsed.y.toLocaleString('en-US');
-                            } else if (context.parsed !== undefined) {
-                                return context.parsed.toLocaleString('en-US');
-                            }
-                            return '';
-                        }
-                    }
-                }
-            },
-            scales: {
-                x: {
-                    display: false, // Hide x-axis
-                    grid: {
-                        display: false
-                    },
-                    ticks: {
-                        color: textColor,
-                        font: {
-                            size: 11
-                        }
-                    },
-                    border: {
-                        display: false
-                    }
-                },
-                y: {
-                    display: false, // Hide y-axis
-                    grid: {
-                        display: false
-                    },
-                    ticks: {
-                        color: textColor,
-                        font: {
-                            size: 11
-                        }
-                    },
-                    border: {
-                        display: false
-                    }
-                }
-            }
+    // Color palette using navy blue and orange-yellow
+        const COLOR_PALETTE = {
+       ma            '#1E3A8A', // Navy blue
+            secondary: '#F5            / Orange-yellow
+                        '#FBBF24', // Lighter orange
+                    ess: '#10B981',
+            warning: '#                          danger: '#EF4444',
+                        3B82F6',
+                           FAFC',
+            d                A'
         };
-    }
 
-    document.addEventListener("DOMContentLoaded", function () {
-        const options = getChartOptions();
+                  on getChartOptions                      const isDark                 ocumentElement.cl            contai            ');
+            const textCol                ? '#F1F5F9' : '#1E293B';
+            const gridColor = isDark ? 'rgb                255, 0.1)' : 'rgba(0, 0, 0, 0.05)';
+            co                g = isDark ? '#1E293B' : '#FFFFFF';
+            const tooltipBorder = isDark ?                 '#E2E8F0';
+            const tooltipText = isDark                 : '#1E293B';
 
-        // Enhanced Revenue Distribution Chart with navy blue and orange-yellow
-        const revenueCtx = document.getElementById('revenueChart');
-        if (revenueCtx) {
-            let revenueLabels = [];
-            let revenueValues = [];
-            try {
-                revenueLabels = JSON.parse('{{ pie_chart_labels|safe }}');
-                revenueValues = JSON.parse('{{ pie_chart_values|safe }}');
-            } catch (e) {
-                console.error('Error parsing revenue chart data:', e);
-                revenueLabels = [];
-                revenueValues = [];
-            }
-
-            // Using navy blue and orange-yellow for the doughnut chart
-            const pieColors = [
-                COLOR_PALETTE.navyBlue, // Navy blue
-                COLOR_PALETTE.orangeYellow, // Orange-yellow
-                COLOR_PALETTE.lightOrange, // Lighter orange
-                COLOR_PALETTE.pink, // Pink
-                COLOR_PALETTE.lightPink, // Light pink
-                COLOR_PALETTE.success,
-                COLOR_PALETTE.info
-            ];
-
-            new Chart(revenueCtx, {
-                type: 'doughnut',
-                data: {
-                    labels: revenueLabels,
-                    datasets: [{
-                        data: revenueValues,
-                        backgroundColor: pieColors,
-                        borderWidth: 0,
-                        cutout: '65%',
-                        spacing: 2,
-                        hoverOffset: 8,
-                        borderRadius: 6
-                    }]
+            return {
+                maintainAspectRatio: false,
+                plugins: {
+                    tooltip: {
+                        backgroundColor: tooltipBg,
+                        borderColor: tooltipBorder,
+                        borderWidth: 1,
+                        borderRadius: 12,
+                        padding: 12,
+                        titleColor: tooltipText,
+                        bodyColor: tooltipText,
+                        bodyFont: {
+                            size: 14,
+                            weight: '600'
+                        },
+                        titleFont: {
+                            size: 12,
+                            weight: '500'
+                        },
+                        boxShadow: '0 8px 24px rgba(0, 0, 0, 0.15)',
+                        callbacks: {
+                            title: function (context) {
+                                return context[0].label || '';
+                            },
+                            label: function (context) {
+                                if (context.parsed.y !== undefined) {
+                                    return context.parsed.y.toLocaleString('en-US');
+                                } else if (context.parsed !== undefined) {
+                                    return context.parsed.toLocaleString('en-US');
+                                }
+                                return '';
+                            }
+                        }
+                    }
                 },
-                options: {
-                    ...options,
-                    plugins: {
-                        ...options.plugins,
-                        legend: {
-                            display: true,
-                            position: 'bottom',
-                            labels: {
-                                padding: 15,
-                                usePointStyle: true,
-                                pointStyle: 'circle',
-                                boxWidth: 12,
-                                boxHeight: 12,
-                                font: {
-                                    size: 11,
-                                    weight: '500'
+                scales: {
+                    x: {
+                        grid: {
+                            display: false
+                        },
+                        ticks: {
+                            color: textColor,
+                            font: {
+                                size: 11
+                            }
+                        },
+                        border: {
+                            display: false
+                        }
+                    },
+                    y: {
+                        grid: {
+                            display: false
+                        },
+                        ticks: {
+                            color: textColor,
+                            font: {
+                                size: 11
+                            }
+                        },
+                        border: {
+                            display: false
+                        }
+                    }
+                }
+            };
+        }
+
+                                    r("                        unc                                       tion            hartOptions();
+
+            // Enhanced Revenue Distribution Chart with                     d orange-yellow
+            const rev                    cument.getElementById('revenueChart')?.getContext('2d');
+            if                      {
+                let revenueLabels = [];
+                let revenueValues                                try {
+                            revenueLabels = JSON.p                        rt_labels|safe }}');
+                            revenu                            ('{{ pie_chart_values|safe }}');
+                } catch (e                                 console.error('Error parsing revenue chart data:', e);                             revenueLab                                       revenueValues = [];
+                }
+
+                // Using navy blue and orange-yellow for the doughnut chart
+                const pieColors = [
+                    COLOR_PALETTE.primary, // Navy blue
+                    COLOR_PALETTE.secondary, // Orange-yellow
+                    COLOR_PALETTE.accent, // Lighter orange
+                    COLOR_PALETTE.info,
+                    COLOR_PALETTE.success,
+                    COLOR_PALETTE.warning
+                ];
+
+                new Chart(revenueCtx, {
+                    type: 'doughnut',
+                    data: {
+                        labels: revenueLabels,
+                        datasets: [{
+                            data: revenueValues,
+                            backgroundColor: pieColors,
+                            borderWidth: 0,
+                            cutout: '65%', // Reduced cutout to make room for legend
+                            spacing: 2,
+                            hoverOffset: 8,
+                            borderRadius: 6
+                        }]
+                    },
+                    options: {
+                        ...options,
+                        plugins: {
+                            ...options.plugins,
+                            legend: {
+                                display: true, // Show legend at bottom
+                                position: 'bottom',
+                                labels: {
+                                    padding: 15,
+                                    usePointStyle: true,
+                                    pointStyle: 'circle',
+                                    boxWidth: 12,
+                                    boxHeight: 12,
+                                    font: {
+                                        size: 11,
+                                        weight: '500'
+                                    }
                                 }
                             }
-                        }
+                        },
+                        // Remove x and y axis scales from the doughnut chart
+                        scales: {}
                     }
-                }
-            });
-        }
-
-        // Enhanced Trend Chart with pink and orange-yellow
-        const trendCtx = document.getElementById('trendChart');
-        if (trendCtx) {
-            let lineData = [];
-            try {
-                lineData = JSON.parse('{{ line_chart_data|safe }}');
-            } catch (e) {
-                console.error('Error parsing line chart data:', e);
-                lineData = [];
+                });
             }
 
-            // Line colors using pink and orange-yellow
-            const lineColors = [
-                COLOR_PALETTE.pink, // Pink
-                COLOR_PALETTE.orangeYellow, // Orange-yellow
-                COLOR_PALETTE.navyBlue, // Navy blue
-                COLOR_PALETTE.success,
-                COLOR_PALETTE.info
-            ];
-
-            const datasets = lineData.map((series, index) => ({
-                label: series.label,
-                data: series.data,
-                borderColor: lineColors[index % lineColors.length],
-                backgroundColor: `${lineColors[index % lineColors.length]}10`,
-                borderWidth: 3,
-                tension: 0.4,
-                pointRadius: 0,
-                pointHoverRadius: 6,
-                pointBackgroundColor: lineColors[index % lineColors.length],
-                fill: true,
-                cubicInterpolationMode: 'monotone'
-            }));
-
-            new Chart(trendCtx, {
-                type: 'line',
-                data: {
-                    labels: lineData[0]?.months || [],
-                    datasets: datasets
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: {
-                        ...options.plugins,
-                        legend: {
-                            position: 'bottom',
-                            labels: {
-                                padding: 15,
-                                usePointStyle: true,
-                                boxWidth: 10,
-                                boxHeight: 10
-                            }
-                        }
-                    },
-                    scales: {
-                        x: {
-                            display: true,
-                            grid: {
-                                display: false
-                            },
-                            ticks: {
-                                color: options.scales.x.ticks.color,
-                                maxRotation: 0,
-                                padding: 10
-                            }
-                        },
-                        y: {
-                            display: false,
-                            grid: {
-                                display: false
-                            }
-                        }
-                    },
-                    interaction: {
-                        mode: 'index',
-                        intersect: false
-                    }
+            // Enhanced Trend Chart
+            const trendCtx = document.getElementById('trendChart')?.getContext('2d');
+            if (trendCtx) {
+                let lineData = [];
+                try {
+                    lineData = JSON.parse('{{ line_chart_data|safe }}');
+                } catch (e) {
+                    console.error('Error parsing line chart data:', e);
+                    lineData = [];
                 }
-            });
-        }
 
-        // Enhanced Bar Charts for Services and Products
-        const createBarChart = (id, labels, data, color) => {
-            const ctx = document.getElementById(id);
-            if (!ctx) return;
-
-            const barColors = labels.map((_, index) => {
-                const colors = [
-                    COLOR_PALETTE.navyBlue,
-                    COLOR_PALETTE.orangeYellow,
-                    COLOR_PALETTE.pink,
-                    COLOR_PALETTE.lightPink,
+                // Line colors using our color palette
+                const lineColors = [
+                    COLOR_PALETTE.primary,
+                    COLOR_PALETTE.secondary,
                     COLOR_PALETTE.success,
                     COLOR_PALETTE.info,
                     COLOR_PALETTE.warning
                 ];
-                return colors[index % colors.length];
-            });
 
-            new Chart(ctx, {
-                type: 'bar',
-                data: {
-                    labels: labels,
-                    datasets: [{
-                        data: data,
-                        backgroundColor: barColors,
-                        borderRadius: 8,
-                        borderWidth: 0,
-                        barThickness: 16,
-                        categoryPercentage: 0.8,
-                        barPercentage: 0.9
-                    }]
-                },
-                options: {
-                    ...options,
-                    indexAxis: 'y',
-                    plugins: {
-                        ...options.plugins,
-                        legend: {
-                            display: false
-                        },
-                        tooltip: {
-                            ...options.plugins.tooltip,
-                            callbacks: {
-                                title: function (context) {
-                                    return context[0].label || '';
-                                },
-                                label: function (context) {
-                                    return `${context.parsed.x}`;
-                                }
-                            }
-                        }
+                const datasets = lineData.map((series, index) => ({
+                    label: series.label,
+                    data: series.data,
+                    borderColor: lineColors[index % lineColors.length],
+                    backgroundColor: `${lineColors[index % lineColors.length]}10`,
+                    borderWidth: 3,
+                    tension: 0.4,
+                    pointRadius: 0,
+                    pointHoverRadius: 6,
+                    pointBackgroundColor: lineColors[index % lineColors.length],
+                    fill: true,
+                    cubicInterpolationMode: 'monotone'
+                }));
+
+                new Chart(trendCtx, {
+                    type: 'line',
+                    data: {
+                        labels: lineData[0]?.months || [],
+                        datasets: datasets
                     },
-                    scales: {
-                        y: {
-                            display: true,
-                            grid: {
-                                display: false
-                            },
-                            ticks: {
-                                color: getChartOptions().scales.x.ticks.color,
-                                font: {
-                                    size: 11,
-                                    weight: '500'
-                                },
-                                padding: 8
-                            },
-                            border: {
-                                display: false
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            ...options.plugins,
+                            legend: {
+                                position: 'bottom',
+                                labels: {
+                                    padding: 15,
+                                    usePointStyle: true,
+                                    boxWidth: 10,
+                                    boxHeight: 10
+                                }
                             }
                         },
-                        x: {
-                            display: true,
-                            grid: {
-                                display: false
-                            },
-                            ticks: {
-                                color: getChartOptions().scales.x.ticks.color,
-                                font: {
-                                    size: 10
+                        scales: {
+                            x: {
+                                display: true,
+                                grid: {
+                                    display: false
                                 },
-                                callback: function (value) {
-                                    return value;
+                                ticks: {
+                                    color: options.scales.x.ticks.color,
+                                    maxRotation: 0,
+                                    padding: 10
                                 }
                             },
-                            border: {
+                            y: {
+                                display: false,
+                                grid: {
+                                    display: false
+                                }
+                            }
+                        },
+                        interaction: {
+                            mode: 'index',
+                            intersect: false
+                        }
+                    }
+                });
+            }
+
+            // Enhanced Bar Charts for Services and Products
+            const createBarChart = (id, labels, data, color) => {
+                const ctx = document.getElementById(id)?.getContext('2d');
+                if (!ctx) return;
+
+                const barColors = labels.map((_, index) => {
+                    const colors = [
+                        COLOR_PALETTE.primary,
+                        COLOR_PALETTE.secondary,
+                        COLOR_PALETTE.accent,
+                        COLOR_PALETTE.info,
+                        COLOR_PALETTE.success
+                    ];
+                    return colors[index % colors.length];
+                });
+
+                new Chart(ctx, {
+                    type: 'bar',
+                    data: {
+                        labels: labels,
+                        datasets: [{
+                            data: data,
+                            backgroundColor: barColors,
+                            borderRadius: 8,
+                            borderWidth: 0,
+                            barThickness: 16,
+                            categoryPercentage: 0.8,
+                            barPercentage: 0.9
+                        }]
+                    },
+                    options: {
+                        ...options,
+                        indexAxis: 'y',
+                        plugins: {
+                            ...options.plugins,
+                            legend: {
                                 display: false
+                            },
+                            tooltip: {
+                                ...options.plugins.tooltip,
+                                callbacks: {
+                                    title: function (context) {
+                                        return context[0].label || '';
+                                    },
+                                    label: function (context) {
+                                        return `${context.parsed.x}`;
+                                    }
+                                }
+                            }
+                        },
+                        scales: {
+                            y: {
+                                display: true, // SHOW Y-AXIS LABELS (left side)
+                                grid: {
+                                    display: false
+                                },
+                                ticks: {
+                                    color: getChartOptions().scales.x.ticks.color,
+                                    font: {
+                                        size: 11,
+                                        weight: '500'
+                                    },
+                                    padding: 8,
+                                    // Align text to the start (left)
+                                    crossAlign: 'near'
+                                },
+                                border: {
+                                    display: false
+                                }
+                            },
+                            x: {
+                                display: true, // SHOW X-AXIS (count numbers)
+                                grid: {
+                                    display: false
+                                },
+                                ticks: {
+                                    color: getChartOptions().scales.x.ticks.color,
+                                    font: {
+                                        size: 10
+                                    },
+                                    callback: function (value) {
+                                        return value;
+                                    }
+                                },
+                                border: {
+                                    display: false
+                                }
                             }
                         }
                     }
-                }
-            });
-        };
+                });
+            };
 
-        // Initialize bar charts if they exist
-        const servicesCtx = document.getElementById('servicesChart');
-        const productsCtx = document.getElementById('productsChart');
-
-        if (servicesCtx) {
+            // Top Services Chart
             let servicesLabels = [];
             let servicesData = [];
             try {
                 servicesLabels = JSON.parse('{{ services_labels|safe }}');
-                servicesData = JSON.parse('{{ services_data|safe }}');
+                servicesData = JSON.parse('{{ services_counts|safe }}');
             } catch (e) {
                 console.error('Error parsing services chart data:', e);
+                servicesLabels = [];
+                servicesData = [];
             }
-            createBarChart('servicesChart', servicesLabels, servicesData);
-        }
+            if (servicesLabels?.length) {
+                createBarChart('servicesChart', servicesLabels, servicesData);
+            }
 
-        if (productsCtx) {
-            let itemLabels = [];
-            let itemData = [];
+            // Products Chart
+            let productsLabels = [];
+            let productsData = [];
             try {
-                itemLabels = JSON.parse('{{ item_labels|safe }}');
-                itemData = JSON.parse('{{ item_data|safe }}');
+                productsLabels = JSON.parse('{{ item_labels|safe }}');
+                productsData = JSON.parse('{{ item_counts|safe }}');
             } catch (e) {
                 console.error('Error parsing products chart data:', e);
+                productsLabels = [];
+                productsData = [];
             }
-            createBarChart('productsChart', itemLabels, itemData);
-        }
-    });
+            if (productsLabels?.length) {
+                createBarChart('productsChart', productsLabels, productsData);
+            }
+
+            // Add smooth animations and transitions
+            const statCards = document.querySelectorAll('.stat-card');
+            statCards.forEach(card => {
+                card.addEventListener('mouseenter', () => {
+                    card.style.transform = 'translateY(-3px)';
+                });
+                card.addEventListener('mouseleave', () => {
+                    card.style.transform = 'translateY(0)';
+                });
+            });
+        });
+
+        // Handle dark/light mode transitions
+        const observer = new MutationObserver(function (mut            {
+            mutations.forEach(functi            tion) {
+                if (mutation.attributeName === 'class                              // Reinitialize charts when                                        if (typeof Chart !== 'u                                          Chart.getChart('revenueCh                                              Chart.getChart(                            
+                        Chart.getChart('s                            ;
+                        Chart.getChart                            e();
+                    }
+                                                });
+
+        observer.observe(document.documentElement, {
+            attributes: true,
+            attribute            ['class']
+        });
 </script>
 {% endblock %}
