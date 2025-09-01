@@ -53,6 +53,7 @@ INSTALLED_APPS = [
     "crispy_forms",
     'import_export',
     'django_daraja'
+    ' theme'
 ]
 
 MIDDLEWARE = [
