@@ -52,8 +52,8 @@ INSTALLED_APPS = [
     "tailwind",
     "crispy_forms",
     'import_export',
-    'django_daraja'
-    ' theme'
+    'django_daraja',
+    'theme'
 ]
 
 MIDDLEWARE = [
