@@ -13,8 +13,7 @@ from django.templatetags.static import static
 from django.urls import reverse_lazy
 from django.utils.translation import gettext_lazy as _
 import os
-from LaundryConfig.env import BASE_DIR,env
-
+from LaundryConfig.env import BASE_DIR, env
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/5.2/howto/deployment/checklist/
@@ -25,17 +24,20 @@ TWILIO_ACCOUNT_SID = env("TWILIO_ACCOUNT_SID")
 TWILIO_AUTH_TOKEN = env("TWILIO_AUTH_TOKEN")
 TWILIO_PHONE_NUMBER = env("TWILIO_PHONE_NUMBER")
 
-
-
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = env.bool('DJANGO_DEBUG',default=True)
+DEBUG = env.bool('DJANGO_DEBUG', default=False)  # Set to False for production
 
-ALLOWED_HOSTS = ['*']
+# This allows your Render URL to be a valid host
+ALLOWED_HOSTS = ['laundry12-4.onrender.com', '*']
 
 
 # Application definition
 
 INSTALLED_APPS = [
+    # IMPORTANT: Add whitenoise to INSTALLED_APPS for it to be recognized
+    # by collectstatic and for its static file storage engine to work.
+    'whitenoise.runserver_nostatic', # For development
+    
     'unfold',
     'unfold.contrib.import_export',
     'unfold.contrib.filters',
@@ -51,11 +53,12 @@ INSTALLED_APPS = [
     "crispy_forms",
     'import_export',
     'django_daraja'
-    
 ]
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
+    # Place Whitenoise middleware at the top for efficiency
+    'whitenoise.middleware.WhiteNoiseMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
@@ -71,28 +74,17 @@ CRISPY_ALLOWED_TEMPLATE_PACKS = "tailwind"
 CRISPY_TEMPLATE_PACK = "tailwind"
 
 
-DEFAULT_AUTO_FIELD=env('DEFAULT_AUTO_FIELD')
+DEFAULT_AUTO_FIELD = env('DEFAULT_AUTO_FIELD')
 
-MPESA_ENVIRONMENT=env('MPESA_ENVIRONMENT')
-
-MPESA_CONSUMER_KEY=env('MPESA_CONSUMER_KEY')
-
-MPESA_CONSUMER_SECRET=env('MPESA_CONSUMER_SECRET')
-
-MPESA_SHORTCODE=env('MPESA_SHORTCODE')
-
-MPESA_EXPRESS_SHORTCODE=env('MPESA_EXPRESS_SHORTCODE')
-
-MPESA_SHORTCODE_TYPE=env('MPESA_SHORTCODE_TYPE')
-
-MPESA_PASSKEY=env('MPESA_PASSKEY')
-
-MPESA_INITIATOR_USERNAME=env('MPESA_INITIATOR_USERNAME')
-
-MPESA_INITIATOR_SECURITY_CREDENTIAL=env('MPESA_INITIATOR_SECURITY_CREDENTIAL')
-
-
-
+MPESA_ENVIRONMENT = env('MPESA_ENVIRONMENT')
+MPESA_CONSUMER_KEY = env('MPESA_CONSUMER_KEY')
+MPESA_CONSUMER_SECRET = env('MPESA_CONSUMER_SECRET')
+MPESA_SHORTCODE = env('MPESA_SHORTCODE')
+MPESA_EXPRESS_SHORTCODE = env('MPESA_EXPRESS_SHORTCODE')
+MPESA_SHORTCODE_TYPE = env('MPESA_SHORTCODE_TYPE')
+MPESA_PASSKEY = env('MPESA_PASSKEY')
+MPESA_INITIATOR_USERNAME = env('MPESA_INITIATOR_USERNAME')
+MPESA_INITIATOR_SECURITY_CREDENTIAL = env('MPESA_INITIATOR_SECURITY_CREDENTIAL')
 
 
 ROOT_URLCONF = 'LaundryConfig.urls'
@@ -160,10 +152,21 @@ USE_TZ = True
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/5.2/howto/static-files/
 
+# Configure static files for production
 STATIC_URL = 'static/'
+
+# Tell Django where to collect all static files for production
+STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles') 
+
+# Tell Django where to look for your static files during development
 STATICFILES_DIRS = [
     os.path.join(BASE_DIR, 'static'),
 ]
+
+# Tell Whitenoise to compress your static files
+STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
+
+
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field
 
@@ -191,6 +194,7 @@ LOGGING = {
         },
     },
 }
+
 UNFOLD = {
     "SITE_TITLE": "ELITE Laundry",
     "SITE_HEADER": "Elite Laundry Management System",
@@ -212,7 +216,7 @@ UNFOLD = {
 
     "SHOW_RECENT_ACTIONS": lambda request: request.user.is_superuser,
     "TEMPLATES": {
-        "index": "admin/index.html",  # Point to our custom template
+        "index": "admin/index.html",   # Point to our custom template
     },
     
     "COLORS": {
