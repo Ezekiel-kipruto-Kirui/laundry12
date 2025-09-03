@@ -458,10 +458,7 @@
 <div id="content-main" class="dashboard-container">
     <!-- Dashboard Header -->
     <div class="dashboard-header">
-        <h1 class="dashboard-title">
-            <i class="fas fa-chart-network" style="color: var(--secondary);"></i>
-            Business Analytics Dashboard
-        </h1>
+       
 
         <!-- Month Selector Section -->
         <div class="month-selector">
@@ -489,96 +486,96 @@
     </div>
 
     <!-- Shop A Stats -->
-    <h2 class="section-header">
-        <i class="fas fa-store" style="color: var(--primary);"></i>
+    <h5 class="m-2 font-light">
+       
         Shop A Performance
-    </h2>
+    </h5>
     <div class="grid grid-cols-4 mb-6 shop-a-theme">
         <!-- Revenue Card -->
-        <div class="stat-card">
+        <div class="stat-card flex flex-row items-center space-x-4 justify-between">
             <div class="icon-wrapper">
                 <i class="fas fa-wallet text-lg"></i>
             </div>
-            <h3>Revenue</h3>
+            
             <div class="value">ksh{{ shop_a_revenue|floatformat:2|default:"0.00" }}</div>
-            <div class="subtext">{{ current_year }} YTD</div>
+           
         </div>
 
         <!-- Orders Card -->
-        <div class="stat-card">
+        <div class="stat-card flex flex-row items-center space-x-4 justify-between">
             <div class="icon-wrapper">
                 <i class="fas fa-shopping-bag text-lg"></i>
             </div>
-            <h3>Total Orders</h3>
+            <h4>Total Orders</h4>
             <div class="value">{{ shop_a_total_orders }}</div>
-            <div class="subtext">{{ current_year }} YTD</div>
+            
         </div>
 
         <!-- Pending Card -->
-        <div class="stat-card">
+        <div class="stat-card flex flex-row items-center space-x-4 justify-between">
             <div class="icon-wrapper">
                 <i class="fas fa-clock text-lg"></i>
             </div>
-            <h3>Pending</h3>
+            <h4>Pending</h4>
             <div class="value">{{ shop_a_pending_orders }}</div>
-            <div class="subtext">Awaiting fulfillment</div>
+           
         </div>
 
         <!-- Completed Card -->
-        <div class="stat-card">
+        <div class="stat-card flex flex-row items-center space-x-4 justify-between">
             <div class="icon-wrapper">
                 <i class="fas fa-check-circle text-lg"></i>
             </div>
-            <h3>Completed</h3>
+            <h4>Completed</h4>
             <div class="value">{{ shop_a_completed_orders }}</div>
-            <div class="subtext">Successfully delivered</div>
+           
         </div>
     </div>
 
     <!-- Shop B Stats -->
-    <h2 class="section-header">
-        <i class="fas fa-store" style="color: var(--secondary);"></i>
+    <h5 class="m-2 font-normal">
+       
         Shop B Performance
-    </h2>
+    </h5>
     <div class="grid grid-cols-4 mb-6 shop-b-theme">
         <!-- Revenue Card -->
-        <div class="stat-card">
+        <div class="stat-card flex flex-row items-center space-x-4 justify-between">
             <div class="icon-wrapper">
                 <i class="fas fa-wallet text-lg"></i>
             </div>
-            <h3>Revenue</h3>
+           
             <div class="value">ksh{{ shop_b_revenue|floatformat:2|default:"0.00" }}</div>
-            <div class="subtext">{{ current_year }} YTD</div>
+            
         </div>
 
         <!-- Orders Card -->
-        <div class="stat-card">
+        <div class="stat-card flex flex-row items-center space-x-4 justify-between">
             <div class="icon-wrapper">
                 <i class="fas fa-shopping-bag text-lg"></i>
             </div>
-            <h3>Total Orders</h3>
+            <h4>Total Orders</h4>
             <div class="value">{{ shop_b_total_orders }}</div>
-            <div class="subtext">{{ current_year }} YTD</div>
+
         </div>
 
         <!-- Pending Card -->
-        <div class="stat-card">
+        <div class="stat-card flex flex-row  items-center space-x-4 justify-between">
             <div class="icon-wrapper">
                 <i class="fas fa-clock text-lg"></i>
             </div>
-            <h3>Pending</h3>
+            <h4>Pending</h4>
             <div class="value">{{ shop_b_pending_orders }}</div>
-            <div class="subtext">Awaiting fulfillment</div>
+
         </div>
 
         <!-- Completed Card -->
-        <div class="stat-card">
+        <div class="stat-card flex flex-row items-center space-x-4 justify-between">
             <div class="icon-wrapper">
                 <i class="fas fa-check-circle text-lg"></i>
             </div>
-            <h3>Completed</h3>
+            <h4>Completed</h4>
             <div class="value">{{ shop_b_completed_orders }}</div>
-            <div class="subtext">Successfully delivered</div>
+            
         </div>
     </div>
 
@@ -587,10 +584,10 @@
         <!-- Revenue Distribution -->
         <div class="chart-container">
             <div class="chart-header">
-                <h2 class="chart-title">
+                <h4 class="chart-title">
                     <i class="fas fa-chart-pie" style="color: var(--secondary);"></i>
                     Revenue Distribution
-                </h2>
+                </h4>
                 <span class="chart-badge">{{total_revenue_percentage}}%</span>
             </div>
             <div style="height: 250px;">
@@ -698,255 +695,273 @@
         </div>
     </div>
 </div>
-
 <script>
-    // Color palette using navy blue and orange-yellow for charts
-    const COLOR_PALETTE = {
-na            ue: '#1E3A8A', // Navy blue
-        orangeYellow: '#F59E0B', /            ange-yellow
-        ligh                 '#FBBF24', // Lighter orange
-                    : '#EC407A', // Vibrant pink
-        light                F48FB1', // Lighter pink
-        success: '#10B981',
-        warning: '#F59E0B',
-        danger: '#EF4444',
-        info: '#3B82F6',
-        light: '#F8FAFC',
-        dark: '#0F172A'
-    };
+    // Wait for Chart.js to be fully loaded
+    function initializeCharts() {
+        // Check if Chart is available
+        if (typeof Chart === 'undefined') {
+            console.error('Chart.js is not loaded');
+            setTimeout(initializeCharts, 100);
+            return;
+        }
 
-    function getChartOptions() {
-        const isDark = document.documentElement.classList.contains('dark');
-        const textColor = isD                F1F5F9' : '#1E293B';
-        const tooltipBg = isDark ? '#1E293B' : '#FFFFFF';
-        const tooltipBorder = isDark ? '#334155' : '#E2E8F0';
-        const tooltipText = isDark ? '#F1F5F9' : '#1E293B';
-
-        return {
-            maintainAspectRatio: false,
-            plugins: {
-                tooltip: {
-                    backgroundColor: tooltipBg,
-                    borderColor: tooltipBorder,
-                    borderWidth: 1,
-                    borderRadius: 12,
-                    padding: 12,
-                    titleColor: tooltipText,
-                    bodyColor: tooltipText,
-                    bodyFont: {
-                        size: 14,
-                        weight: '600'
-                    },
-                    titleFont: {
-                        size: 12,
-                        weight: '500'
-                    },
-                    boxShadow: '0 8px 24px rgba(0, 0, 0, 0.15)',
-                    callbacks: {
-                        title: function (context) {
-                            return context[0].label || '';
-                        },
-                        label: function (context) {
-                            if (context.parsed.y !== undefined) {
-                                return context.parsed.y.toLocaleString('en-US');
-                            } else if (context.parsed !== undefined) {
-                                return context.parsed.toLocaleString('en-US');
-                            }
-                            return '';
-                        }
-                    }
-                }
-            },
-            scales: {
-                x: {
-                    display: false, // Hide x-axis
-                    grid: {
-                        display: false
-                    },
-                    ticks: {
-                        color: textColor,
-                        font: {
-                            size: 11
-                        }
-                    },
-                    border: {
-                        display: false
-                    }
-                },
-                y: {
-                    display: false, // Hide y-axis
-                    grid: {
-                        display: false
-                    },
-                    ticks: {
-                        color: textColor,
-                        font: {
-                            size: 11
-                        }
-                    },
-                    border: {
-                        display: false
-                    }
-                }
-            }
+        // Color palette using navy blue and orange-yellow for charts
+        const COLOR_PALETTE = {
+            navyBlue: '#1E3A8A',      // Navy blue
+            orangeYellow: '#F59E0B',  // Orange-yellow
+            lightOrange: '#FBBF24',   // Lighter orange
+            pink: '#EC407A',          // Vibrant pink
+            lightPink: '#F48FB1',     // Lighter pink
+            success: '#10B981',
+            warning: '#F59E0B',
+            danger: '#EF4444',
+            info: '#3B82F6',
+            light: '#F8FAFC',
+            dark: '#0F172A'
         };
-    }
 
-    document.addEventListener("DOMContentLoaded", function () {
-        const options = getChartOptions();
+        function getChartOptions() {
+            const isDark = document.documentElement.classList.contains('dark');
+            const textColor = isDark ? '#F1F5F9' : '#1E293B';
+            const tooltipBg = isDark ? '#1E293B' : '#FFFFFF';
+            const tooltipBorder = isDark ? '#334155' : '#E2E8F0';
+            const tooltipText = isDark ? '#F1F5F9' : '#1E293B';
 
-        // Enhanced Revenue Distribution Chart with navy blue and orange-yellow
-        const revenueCtx = document.getElementById('revenueChart');
-        if (revenueCtx) {
-            let revenueLabels = [];
-            let revenueValues = [];
-            try {
-                revenueLabels = JSON.parse('{{ pie_chart_labels|safe }}');
-                revenueValues = JSON.parse('{{ pie_chart_values|safe }}');
-            } catch (e) {
-                console.error('Error parsing revenue chart data:', e);
-                revenueLabels = [];
-                revenueValues = [];
-            }
-
-            // Using navy blue and orange-yellow for the doughnut chart
-            const pieColors = [
-                COLOR_PALETTE.navyBlue, // Navy blue
-                COLOR_PALETTE.orangeYellow, // Orange-yellow
-                COLOR_PALETTE.lightOrange, // Lighter orange
-                COLOR_PALETTE.pink, // Pink
-                COLOR_PALETTE.lightPink, // Light pink
-                COLOR_PALETTE.success,
-                COLOR_PALETTE.info
-            ];
-
-            new Chart(revenueCtx, {
-                type: 'doughnut',
-                data: {
-                    labels: revenueLabels,
-                    datasets: [{
-                        data: revenueValues,
-                        backgroundColor: pieColors,
-                        borderWidth: 0,
-                        cutout: '65%',
-                        spacing: 2,
-                        hoverOffset: 8,
-                        borderRadius: 6
-                    }]
+            return {
+                maintainAspectRatio: false,
+                responsive: true,
+                plugins: {
+                    legend: {
+                        labels: {
+                            color: textColor,
+                            font: {
+                                size: 11,
+                                weight: '500'
+                            }
+                        }
+                    },
+                    tooltip: {
+                        backgroundColor: tooltipBg,
+                        borderColor: tooltipBorder,
+                        borderWidth: 1,
+                        borderRadius: 12,
+                        padding: 12,
+                        titleColor: tooltipText,
+                        bodyColor: tooltipText,
+                        bodyFont: {
+                            size: 14,
+                            weight: '600'
+                        },
+                        titleFont: {
+                            size: 12,
+                            weight: '500'
+                        },
+                        callbacks: {
+                            title: function (context) {
+                                return context[0].label || '';
+                            },
+                            label: function (context) {
+                                if (context.parsed.y !== undefined) {
+                                    return context.parsed.y.toLocaleString('en-US');
+                                } else if (context.parsed !== undefined) {
+                                    return context.parsed.toLocaleString('en-US');
+                                }
+                                return '';
+                            }
+                        }
+                    }
                 },
-                options: {
-                    ...options,
-                    plugins: {
-                        ...options.plugins,
-                        legend: {
-                            display: true,
-                            position: 'bottom',
-                            labels: {
-                                padding: 15,
-                                usePointStyle: true,
-                                pointStyle: 'circle',
-                                boxWidth: 12,
-                                boxHeight: 12,
-                                font: {
-                                    size: 11,
-                                    weight: '500'
+                scales: {
+                    x: {
+                        display: false,
+                        grid: { display: false },
+                        ticks: { color: textColor, font: { size: 11 } },
+                        border: { display: false }
+                    },
+                    y: {
+                        display: false,
+                        grid: { display: false },
+                        ticks: { color: textColor, font: { size: 11 } },
+                        border: { display: false }
+                    }
+                }
+            };
+        }
+
+        // Safe JSON parse with better error handling
+        function safeJsonParse(jsonString, fallback = []) {
+            try {
+                if (!jsonString || jsonString === 'None' || jsonString === 'null' ||
+                    jsonString === '""' || jsonString === "''") {
+                    return fallback;
+                }
+
+                // Handle the case where Django might output Python lists as strings
+                let parsedString = jsonString;
+                if (typeof jsonString === 'string') {
+                    // Replace Python-style None with JavaScript null
+                    parsedString = jsonString.replace(/None/g, 'null');
+                    // Replace single quotes with double quotes for proper JSON
+                    parsedString = parsedString.replace(/'/g, '"');
+                }
+
+                const parsed = JSON.parse(parsedString);
+                return Array.isArray(parsed) ? parsed : fallback;
+            } catch (error) {
+                console.error('Error parsing JSON:', jsonString, error);
+                return fallback;
+            }
+        }
+
+        // ---------------- Pie/Doughnut Chart ----------------
+        const revenueCanvas = document.getElementById('revenueChart');
+        if (revenueCanvas) {
+            // Get the data from Django template variables
+            const revenueLabels = safeJsonParse('{{ pie_chart_labels|safe }}');
+            const revenueValues = safeJsonParse('{{ pie_chart_values|safe }}');
+
+            console.log('Revenue Labels:', revenueLabels);
+            console.log('Revenue Values:', revenueValues);
+
+            if (revenueLabels.length > 0 && revenueValues.length > 0 &&
+                revenueLabels.length === revenueValues.length) {
+
+                const revenueCtx = revenueCanvas.getContext('2d');
+
+                new Chart(revenueCtx, {
+                    type: 'doughnut',
+                    data: {
+                        labels: revenueLabels,
+                        datasets: [{
+                            data: revenueValues,
+                            backgroundColor: [
+                                COLOR_PALETTE.navyBlue,
+                                COLOR_PALETTE.orangeYellow,
+                                COLOR_PALETTE.lightOrange,
+                                COLOR_PALETTE.pink,
+                                COLOR_PALETTE.lightPink,
+                                COLOR_PALETTE.success,
+                                COLOR_PALETTE.info
+                            ],
+                            borderWidth: 0,
+                            cutout: '85%',
+                            spacing: 1,
+                            hoverOffset: 6,
+                            borderRadius: 4
+                        }]
+                    },
+                    options: {
+                        ...getChartOptions(),
+                        plugins: {
+                            ...getChartOptions().plugins,
+                            legend: {
+                                position: 'bottom',
+                                labels: {
+                                    padding: 10,
+                                    usePointStyle: true,
+                                    pointStyle: 'circle',
+                                    boxWidth: 8,
+                                    boxHeight: 8,
+                                    font: {
+                                        size: 11,
+                                        weight: '500'
+                                    }
                                 }
                             }
                         }
                     }
-                }
-            });
+                });
+            } else {
+                console.warn('No valid data for revenue chart');
+                revenueCanvas.style.display = 'none';
+                // Create a message element
+                const message = document.createElement('div');
+                message.className = 'empty-state';
+                message.innerHTML = '<i class="fas fa-chart-pie"></i><p>No revenue data available</p>';
+                revenueCanvas.parentNode.appendChild(message);
+            }
         }
 
-        // Enhanced Trend Chart with pink and orange-yellow
-        const trendCtx = document.getElementById('trendChart');
-        if (trendCtx) {
-            let lineData = [];
-            try {
-                lineData = JSON.parse('{{ line_chart_data|safe }}');
-            } catch (e) {
-                console.error('Error parsing line chart data:', e);
-                lineData = [];
-            }
+        // ---------------- Line/Trend Chart ----------------
+        const trendCanvas = document.getElementById('trendChart');
+        if (trendCanvas) {
+            const lineData = safeJsonParse('{{ line_chart_data|safe }}');
+            console.log('Line Data:', lineData);
 
-            // Line colors using pink and orange-yellow
-            const lineColors = [
-                COLOR_PALETTE.pink, // Pink
-                COLOR_PALETTE.orangeYellow, // Orange-yellow
-                COLOR_PALETTE.navyBlue, // Navy blue
-                COLOR_PALETTE.success,
-                COLOR_PALETTE.info
-            ];
+            if (lineData && lineData.length > 0 && lineData[0] && lineData[0].months) {
+                const trendCtx = trendCanvas.getContext('2d');
+                const lineColors = [
+                    COLOR_PALETTE.pink,
+                    COLOR_PALETTE.orangeYellow,
+                    COLOR_PALETTE.navyBlue,
+                    COLOR_PALETTE.success,
+                    COLOR_PALETTE.info
+                ];
 
-            const datasets = lineData.map((series, index) => ({
-                label: series.label,
-                data: series.data,
-                borderColor: lineColors[index % lineColors.length],
-                backgroundColor: `${lineColors[index % lineColors.length]}10`,
-                borderWidth: 3,
-                tension: 0.4,
-                pointRadius: 0,
-                pointHoverRadius: 6,
-                pointBackgroundColor: lineColors[index % lineColors.length],
-                fill: true,
-                cubicInterpolationMode: 'monotone'
-            }));
+                const datasets = lineData.map((series, index) => ({
+                    label: series.label || `Series ${index + 1}`,
+                    data: series.data || [],
+                    borderColor: lineColors[index % lineColors.length],
+                    backgroundColor: `${lineColors[index % lineColors.length]}20`,
+                    borderWidth: 1,
+                    tension: 0.4,
+                    pointRadius: 0,
+                    pointHoverRadius: 6,
+                    pointBackgroundColor: lineColors[index % lineColors.length],
+                    fill: true,
+                    cubicInterpolationMode: 'monotone'
+                }));
 
-            new Chart(trendCtx, {
-                type: 'line',
-                data: {
-                    labels: lineData[0]?.months || [],
-                    datasets: datasets
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: {
-                        ...options.plugins,
-                        legend: {
-                            position: 'bottom',
-                            labels: {
-                                padding: 15,
-                                usePointStyle: true,
-                                boxWidth: 10,
-                                boxHeight: 10
-                            }
-                        }
+                new Chart(trendCtx, {
+                    type: 'line',
+                    data: {
+                        labels: lineData[0].months,
+                        datasets: datasets
                     },
-                    scales: {
-                        x: {
-                            display: true,
-                            grid: {
-                                display: false
+                    options: {
+                        ...getChartOptions(),
+                        scales: {
+                            x: {
+                                display: true,
+                                grid: { display: false },
+                                ticks: {
+                                    color: getChartOptions().scales.x.ticks.color,
+                                    maxRotation: 0,
+                                    padding: 10
+                                }
                             },
-                            ticks: {
-                                color: options.scales.x.ticks.color,
-                                maxRotation: 0,
-                                padding: 10
+                            y: {
+                                display: false,
+                                grid: { display: false }
                             }
                         },
-                        y: {
-                            display: false,
-                            grid: {
-                                display: false
-                            }
+                        interaction: {
+                            mode: 'index',
+                            intersect: false
                         }
-                    },
-                    interaction: {
-                        mode: 'index',
-                        intersect: false
                     }
-                }
-            });
+                });
+            } else {
+                console.warn('No valid data for trend chart');
+                trendCanvas.style.display = 'none';
+                const message = document.createElement('div');
+                message.className = 'empty-state';
+                message.innerHTML = '<i class="fas fa-chart-line"></i><p>No trend data available</p>';
+                trendCanvas.parentNode.appendChild(message);
+            }
         }
 
-        // Enhanced Bar Charts for Services and Products
-        const createBarChart = (id, labels, data, color) => {
-            const ctx = document.getElementById(id);
-            if (!ctx) return;
+        // ---------------- Bar Charts (Services & Products) ----------------
+        const createBarChart = (id, labels, data, title) => {
+            const canvas = document.getElementById(id);
+            if (!canvas) return;
 
-            const barColors = labels.map((_, index) => {
-                const colors = [
+            console.log(`${title} Labels:`, labels);
+            console.log(`${title} Data:`, data);
+
+            if (labels.length > 0 && data.length > 0 && labels.length === data.length) {
+                const ctx = canvas.getContext('2d');
+                const barColors = [
                     COLOR_PALETTE.navyBlue,
                     COLOR_PALETTE.orangeYellow,
                     COLOR_PALETTE.pink,
@@ -955,110 +970,156 @@ na            ue: '#1E3A8A', // Navy blue
                     COLOR_PALETTE.info,
                     COLOR_PALETTE.warning
                 ];
-                return colors[index % colors.length];
-            });
 
-            new Chart(ctx, {
-                type: 'bar',
-                data: {
-                    labels: labels,
-                    datasets: [{
-                        data: data,
-                        backgroundColor: barColors,
-                        borderRadius: 8,
-                        borderWidth: 0,
-                        barThickness: 16,
-                        categoryPercentage: 0.8,
-                        barPercentage: 0.9
-                    }]
-                },
-                options: {
-                    ...options,
-                    indexAxis: 'y',
-                    plugins: {
-                        ...options.plugins,
-                        legend: {
-                            display: false
-                        },
-                        tooltip: {
-                            ...options.plugins.tooltip,
-                            callbacks: {
-                                title: function (context) {
-                                    return context[0].label || '';
-                                },
-                                label: function (context) {
-                                    return `${context.parsed.x}`;
-                                }
-                            }
-                        }
+                new Chart(ctx, {
+                    type: 'bar',
+                    data: {
+                        labels: labels,
+                        datasets: [{
+                            data: data,
+                            backgroundColor: labels.map((_, index) => barColors[index % barColors.length]),
+                            borderRadius: 8,
+                            borderWidth: 0,
+                            barThickness: 10,
+                            categoryPercentage: 0.8,
+                            barPercentage: 0.9
+                        }]
                     },
-                    scales: {
-                        y: {
-                            display: true,
-                            grid: {
-                                display: false
-                            },
-                            ticks: {
-                                color: getChartOptions().scales.x.ticks.color,
-                                font: {
-                                    size: 11,
-                                    weight: '500'
-                                },
-                                padding: 8
-                            },
-                            border: {
+                    options: {
+                        ...getChartOptions(),
+                        indexAxis: 'y',
+                        plugins: {
+                            ...getChartOptions().plugins,
+                            legend: {
                                 display: false
                             }
                         },
-                        x: {
-                            display: true,
-                            grid: {
-                                display: false
-                            },
-                            ticks: {
-                                color: getChartOptions().scales.x.ticks.color,
-                                font: {
-                                    size: 10
-                                },
-                                callback: function (value) {
-                                    return value;
+                        scales: {
+                            y: {
+                                display: true,
+                                grid: { display: false },
+                                ticks: {
+                                    color: getChartOptions().scales.x.ticks.color,
+                                    font: {
+                                        size: 11,
+                                        weight: '500'
+                                    },
+                                    padding: 8
                                 }
                             },
-                            border: {
-                                display: false
+                            x: {
+                                display: true,
+                                grid: { display: false },
+                                ticks: {
+                                    color: getChartOptions().scales.x.ticks.color,
+                                    font: { size: 10 }
+                                }
                             }
                         }
                     }
-                }
-            });
+                });
+            } else {
+                console.warn(`No valid data for ${title} chart`);
+                canvas.style.display = 'none';
+                const message = document.createElement('div');
+                message.className = 'empty-state';
+                message.innerHTML = `<i class="fas ${id === 'servicesChart' ? 'fa-concierge-bell' : 'fa-box'}"></i><p>No ${title.toLowerCase()} data available</p>`;
+                canvas.parentNode.appendChild(message);
+            }
         };
 
-        // Initialize bar charts if they exist
-        const servicesCtx = document.getElementById('servicesChart');
-        const productsCtx = document.getElementById('productsChart');
+        // Initialize bar charts - FIXED VARIABLE NAMES
+        createBarChart('servicesChart',
+            safeJsonParse('{{ services_labels|safe }}'),
+            safeJsonParse('{{ services_counts|safe }}'),  // Changed from services_data to services_counts
+            'Services');
 
-        if (servicesCtx) {
-            let servicesLabels = [];
-            let servicesData = [];
-            try {
-                servicesLabels = JSON.parse('{{ services_labels|safe }}');
-                servicesData = JSON.parse('{{ services_data|safe }}');
-            } catch (e) {
-                console.error('Error parsing services chart data:', e);
+        createBarChart('productsChart',
+            safeJsonParse('{{ item_labels|safe }}'),
+            safeJsonParse('{{ item_counts|safe }}'),      // Changed from item_data to item_counts
+            'Products');
+
+        // ---------------- Payment Methods Chart ----------------
+        const paymentCanvas = document.getElementById('paymentChart');
+        if (paymentCanvas) {
+            const paymentLabels = safeJsonParse('{{ payment_method_labels|safe }}');
+            const paymentData = safeJsonParse('{{ payment_method_counts|safe }}');
+
+            console.log('Payment Labels:', paymentLabels);
+            console.log('Payment Data:', paymentData);
+
+            if (paymentLabels.length > 0 && paymentData.length > 0 &&
+                paymentLabels.length === paymentData.length) {
+
+                const paymentCtx = paymentCanvas.getContext('2d');
+                const paymentColors = [
+                    COLOR_PALETTE.success,
+                    COLOR_PALETTE.info,
+                    COLOR_PALETTE.warning,
+                    COLOR_PALETTE.navyBlue,
+                    COLOR_PALETTE.orangeYellow
+                ];
+
+                new Chart(paymentCtx, {
+                    type: 'doughnut',
+                    data: {
+                        labels: paymentLabels,
+                        datasets: [{
+                            data: paymentData,
+                            backgroundColor: paymentLabels.map((_, index) =>
+                                paymentColors[index % paymentColors.length]),
+                            borderWidth: 0,
+                            cutout: '75%',
+                            spacing: 2,
+                            hoverOffset: 8,
+                            borderRadius: 6
+                        }]
+                    },
+                    options: {
+                        ...getChartOptions(),
+                        plugins: {
+                            ...getChartOptions().plugins,
+                            legend: {
+                                position: 'bottom',
+                                labels: {
+                                    padding: 12,
+                                    usePointStyle: true,
+                                    pointStyle: 'circle',
+                                    boxWidth: 6,
+                                    boxHeight: 6,
+                                    font: {
+                                        size: 10,
+                                        weight: '500'
+                                    }
+                                }
+                            }
+                        }
+                    }
+                });
+            } else {
+                console.warn('No valid data for payment methods chart');
+                paymentCanvas.style.display = 'none';
+                const message = document.createElement('div');
+                message.className = 'empty-state';
+                message.innerHTML = '<i class="fas fa-credit-card"></i><p>No payment data available</p>';
+                paymentCanvas.parentNode.appendChild(message);
             }
-            createBarChart('servicesChart', servicesLabels, servicesData);
         }
+    }
 
-        if (productsCtx) {
-            let itemLabels = [];
-            let itemData = [];
-            try {
-                itemLabels = JSON.parse('{{ item_labels|safe }}');
-                itemData = JSON.parse('{{ item_data|safe }}');
-            } catch (e) {
-                console.error('Error parsing products chart data:', e);
-            }
-            createBarChart('productsChart', itemLabels, itemData);
+    // Start initializing charts when DOM is loaded
+    document.addEventListener("DOMContentLoaded", function () {
+        // Check if Chart.js is already loaded, if not wait for it
+        if (typeof Chart !== 'undefined') {
+            initializeCharts();
+        } else {
+            // Wait for Chart.js to load
+            const checkChart = setInterval(function () {
+                if (typeof Chart !== 'undefined') {
+                    clearInterval(checkChart);
+                    initializeCharts();
+                }
+            }, 100);
         }
     });
 </script>

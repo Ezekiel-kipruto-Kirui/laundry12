@@ -7,6 +7,7 @@ from django.db.models import Sum, Count
 from django.utils import timezone
 from django.db.models.signals import post_save
 from django.dispatch import receiver
+from django.contrib.auth.models import User
 from .sms_utility import send_sms
 from phonenumber_field.modelfields import PhoneNumberField
 import phonenumbers
@@ -23,7 +24,13 @@ except Exception:
 class Customer(models.Model):
     name = models.CharField(max_length=200)
     phone = PhoneNumberField(region="KE", unique=True)
-
+    created_by = models.ForeignKey(
+        User, 
+        on_delete=models.SET_NULL, 
+        null=True, 
+        blank=True,
+        related_name='created_customers'
+    )
     def __str__(self):
         return f"{self.name} ({self.phone})"
 
@@ -53,16 +60,18 @@ class Order(models.Model):
         ('card', 'Credit/Debit Card'),
         ('bank_transfer', 'Bank Transfer'),
         ('other', 'Other'),
+        ('pending_payment', 'Pending Payment'),
     )
-    payment_type = models.CharField(max_length=50, choices=PAYMENT_TYPE_CHOICES)
-    
+    payment_type = models.CharField(max_length=50, choices=PAYMENT_TYPE_CHOICES, default='pending_payment', blank=True)
+
     PAYMENT_STATUS_CHOICES = (
         ('pending', 'Pending'),
         ('completed', 'Completed'),
         ('partial', 'Partial'),
         ('failed', 'Failed'),
+        ('not_required', 'Not Required'),
     )
-    payment_status = models.CharField(max_length=50, choices=PAYMENT_STATUS_CHOICES, default='pending')
+    payment_status = models.CharField(max_length=50, choices=PAYMENT_STATUS_CHOICES, default='pending', blank=True)
     
     SHOP_CHOICE = (
         ('Shop A', 'Shop A'),
@@ -208,12 +217,25 @@ class Payment(models.Model):
         Order, on_delete=models.CASCADE, related_name='order_payments',
         help_text="The order this payment is for."
     )
-    price = models.DecimalField(max_digits=12, decimal_places=2, default=0, editable=False)
-    
-    # Add more fields as needed for payment tracking
+    price = models.DecimalField(max_digits=12, decimal_places=2, default=0)
+
+    # Payment tracking fields
     payment_date = models.DateTimeField(auto_now_add=True)
     payment_method = models.CharField(max_length=50, blank=True, null=True)
     transaction_id = models.CharField(max_length=100, blank=True, null=True)
+
+    # M-Pesa specific fields
+    mpesa_receipt_number = models.CharField(max_length=50, blank=True, null=True)
+    mpesa_transaction_date = models.DateTimeField(blank=True, null=True)
+    phone_number = models.CharField(max_length=20, blank=True, null=True)
+
+    PAYMENT_STATUS_CHOICES = (
+        ('pending', 'Pending'),
+        ('completed', 'Completed'),
+        ('failed', 'Failed'),
+        ('cancelled', 'Cancelled'),
+    )
+    status = models.CharField(max_length=20, choices=PAYMENT_STATUS_CHOICES, default='pending')
     
     class Meta:
         verbose_name = "Payment"
@@ -222,7 +244,17 @@ class Payment(models.Model):
     
     def __str__(self):
         return f"Payment of KSh {self.price} for Order {self.order.uniquecode}"
-
+    @property
+    def itemname_list(self):
+        """Return itemname as a list for template rendering."""
+        if not self.itemname:
+            return []
+        return [item.strip() for item in self.itemname.split(',') if item.strip()]
+    
+    @property
+    def total_price(self):
+        """Calculate total price for this item."""
+        return (self.unit_price or 0) * (self.quantity or 0)
 
 @receiver(post_save, sender=Order)
 def handle_order_sms(sender, instance, created, **kwargs):

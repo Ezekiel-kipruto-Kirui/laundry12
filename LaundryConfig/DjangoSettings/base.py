@@ -253,10 +253,9 @@ UNFOLD = {
             
         },
     },
-    "SIDEBAR": {
+   "SIDEBAR": {
     "show_search": True,
     "navigation": [
-        
         {
             "title": "Dashboard",
             "items": [
@@ -268,7 +267,6 @@ UNFOLD = {
                 {
                     "title": "Analytics Dashboard",
                     "icon": "analytics",
-                    # CORRECTED: Fix the URL name typo from 'loundryapp_dashboard' to 'laundryapp_dashboard'
                     "link": reverse_lazy("admin:laundryapp_dashboard"),
                     "permission": lambda request: request.user.is_superuser
                 },
@@ -278,16 +276,14 @@ UNFOLD = {
             "title": "Operations",
             "items": [
                 {
+                    "title": "Create New Order",  # NEW: Add this item for the order form
+                    "icon": "add_shopping_cart",  # or "add_circle", "create", "note_add"
+                    "link": reverse_lazy("admin:laundryapp_new_order"),
+                },
+                {
                     "title": "Orders",
                     "icon": "receipt",
-                    # CORRECTED: Fix the model name typo from 'orderdetail' to 'order'
                     "link": reverse_lazy("admin:LaundryApp_order_changelist"),
-                },
-                # ADDED: Add a link for the OrderItem model, as it is registered in admin.py
-                {
-                    "title": "Order Items",
-                    "icon": "trolley", # or another icon like 'local_laundry_service'
-                    "link": reverse_lazy("admin:LaundryApp_orderitem_changelist"),
                 },
                 {
                     "title": "Customers",
