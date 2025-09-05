@@ -1,0 +1,337 @@
+{% extends "admin/base_site.html" %}
+{% load static %}
+
+{% block extrahead %}
+{{ block.super }}
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<script src="https://cdn.tailwindcss.com"></script>
+<script>
+    tailwind.config = {
+        theme: {
+            extend: {
+                colors: {
+                    primary: {
+                        50: '#f0f9ff',
+                        100: '#e0f2fe',
+                        500: '#0ea5e9',
+                        600: '#0284c7',
+                        700: '#0369a1',
+                        900: '#0c4a6e',
+                    }
+                }
+            }
+        }
+    }
+</script>
+<style>
+    /* Ensure our custom styles blend with admin */
+    .dashboard #content {
+        padding: 20px 40px;
+    }
+
+    /* Make sure our content doesn't conflict with admin sidebar */
+    #content-main {
+        margin-left: 0;
+    }
+
+    /* Improve mobile responsiveness */
+    @media (max-width: 1024px) {
+        .dashboard #content {
+            padding: 15px;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="min-h-screen bg-gray-50">
+    <div class="max-w-7xl mx-auto">
+        <!-- Header -->
+        <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
+            <div>
+                <h1 class="text-2xl font-bold text-gray-900">Order Management</h1>
+                <p class="text-sm text-gray-600 mt-1">
+                    {% if not user.is_superuser %}
+                    Viewing orders for {{ user.userprofile.shop }}
+                    {% else %}
+                    Viewing all orders (Superuser)
+                    {% endif %}
+                </p>
+            </div>
+            <div class="flex flex-wrap gap-2">
+                <button
+                    class="flex items-center gap-2 px-4 py-2 bg-white border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors shadow-sm">
+                    <i class="fas fa-file-export text-sm"></i>
+                    <span>Export</span>
+                </button>
+                <a href="{% url 'admin:LaundryApp_order_add' %}"
+                    class="flex items-center gap-2 px-4 py-2 bg-primary-600 border border-primary-600 rounded-lg text-white hover:bg-primary-700 transition-colors shadow-sm">
+                    <i class="fas fa-plus text-sm"></i>
+                    <span>New Order</span>
+                </a>
+            </div>
+        </div>
+
+        <!-- Stats Overview -->
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+            <div class="bg-white p-4 rounded-lg shadow border border-gray-100">
+                <div class="flex justify-between items-start">
+                    <div>
+                        <p class="text-sm text-gray-500">Total Orders</p>
+                        <h3 class="text-2xl font-bold text-gray-800 mt-1">{{ total_orders }}</h3>
+                    </div>
+                    <div class="p-3 bg-blue-100 rounded-full">
+                        <i class="fas fa-shopping-cart text-blue-600"></i>
+                    </div>
+                </div>
+                <p class="text-xs text-gray-600 mt-2">All time orders</p>
+            </div>
+
+            <div class="bg-white p-4 rounded-lg shadow border border-gray-100">
+                <div class="flex justify-between items-start">
+                    <div>
+                        <p class="text-sm text-gray-500">Pending Orders</p>
+                        <h3 class="text-2xl font-bold text-gray-800 mt-1">{{ pending_orders }}</h3>
+                    </div>
+                    <div class="p-3 bg-amber-100 rounded-full">
+                        <i class="fas fa-clock text-amber-600"></i>
+                    </div>
+                </div>
+                <p class="text-xs text-gray-600 mt-2">Require attention</p>
+            </div>
+
+            <div class="bg-white p-4 rounded-lg shadow border border-gray-100">
+                <div class="flex justify-between items-start">
+                    <div>
+                        <p class="text-sm text-gray-500">Completed</p>
+                        <h3 class="text-2xl font-bold text-gray-800 mt-1">{{ completed_orders }}</h3>
+                    </div>
+                    <div class="p-3 bg-green-100 rounded-full">
+                        <i class="fas fa-check-circle text-green-600"></i>
+                    </div>
+                </div>
+                <p class="text-xs text-gray-600 mt-2">Successfully delivered</p>
+            </div>
+
+            <div class="bg-white p-4 rounded-lg shadow border border-gray-100">
+                <div class="flex justify-between items-start">
+                    <div>
+                        <p class="text-sm text-gray-500">Total Revenue</p>
+                        <h3 class="text-2xl font-bold text-gray-800 mt-1">KSh {{ total_revenue|floatformat:2 }}</h3>
+                    </div>
+                    <div class="p-3 bg-purple-100 rounded-full">
+                        <i class="fas fa-dollar-sign text-purple-600"></i>
+                    </div>
+                </div>
+                <p class="text-xs text-gray-600 mt-2">All time revenue</p>
+            </div>
+        </div>
+
+        <!-- Filters -->
+        <div class="bg-white p-4 rounded-lg shadow border border-gray-100 mb-6">
+            <form method="get" class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                <div class="flex flex-wrap gap-2">
+                    <!-- All Orders Filter -->
+                    <a href="?{% if request.GET.search %}search={{ request.GET.search }}{% endif %}"
+                        class="px-3 py-1.5 {% if not request.GET.status and not request.GET.payment %}bg-primary-100 text-primary-700{% else %}bg-gray-100 text-gray-700{% endif %} rounded-full text-sm font-medium">
+                        All Orders
+                    </a>
+
+                    <!-- Order Status Filters -->
+                    {% for status_value, status_label in order_status_choices %}
+                    <a href="?{% if request.GET.search %}search={{ request.GET.search }}&{% endif %}status={{ status_value }}{% if request.GET.payment %}&payment={{ request.GET.payment }}{% endif %}"
+                        class="px-3 py-1.5 {% if request.GET.status == status_value %}bg-{% if status_value == 'pending' %}amber{% elif status_value == 'processing' %}blue{% elif status_value == 'completed' %}green{% else %}gray{% endif %}-100 text-{% if status_value == 'pending' %}amber{% elif status_value == 'processing' %}blue{% elif status_value == 'completed' %}green{% else %}gray{% endif %}-700{% else %}bg-gray-100 text-gray-700{% endif %} rounded-full text-sm font-medium">
+                        {{ status_label }}
+                    </a>
+                    {% endfor %}
+
+                    <!-- Payment Status Filters -->
+                    {% for payment_value, payment_label in payment_status_choices %}
+                    <a href="?{% if request.GET.search %}search={{ request.GET.search }}&{% endif %}payment={{ payment_value }}{% if request.GET.status %}&status={{ request.GET.status }}{% endif %}"
+                        class="px-3 py-1.5 {% if request.GET.payment == payment_value %}bg-{% if payment_value == 'pending' %}orange{% elif payment_value == 'partial' %}yellow{% elif payment_value == 'completed' %}green{% else %}gray{% endif %}-100 text-{% if payment_value == 'pending' %}orange{% elif payment_value == 'partial' %}yellow{% elif payment_value == 'completed' %}green{% else %}gray{% endif %}-700{% else %}bg-gray-100 text-gray-700{% endif %} rounded-full text-sm font-medium">
+                        {{ payment_label }}
+                    </a>
+                    {% endfor %}
+                </div>
+                <div class="relative w-full md:w-auto">
+                    <input type="text" name="search" placeholder="Search orders..." value="{{ request.GET.search }}"
+                        class="pl-10 pr-4 py-2 border border-gray-300 rounded-lg w-full md:w-64 focus:ring-2 focus:ring-primary-500 focus:border-primary-500">
+                    <i class="fas fa-search absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"></i>
+                </div>
+            </form>
+        </div>
+
+        <!-- Orders Table -->
+        <div class="bg-white rounded-lg shadow overflow-hidden border border-gray-100">
+            <div class="overflow-x-auto">
+                <table class="w-full">
+                    <thead class="bg-gray-50">
+                        <tr class="text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            <th class="px-6 py-3">Order Code</th>
+                            <th class="px-6 py-3">Customer</th>
+                            <th class="px-6 py-3">Status</th>
+                            <th class="px-6 py-3">Payment</th>
+                            <th class="px-6 py-3">Total</th>
+                            <th class="px-6 py-3">Delivery Date</th>
+                            <th class="px-6 py-3">Created</th>
+                            <th class="px-6 py-3 text-right">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-gray-200">
+                        {% for order in orders %}
+                        <tr class="hover:bg-gray-50 transition-colors">
+                            <td class="px-6 py-4">
+                                <div class="font-medium text-gray-900">{{ order.uniquecode }}</div>
+                                <div class="text-sm text-gray-500">{{ order.shop }}</div>
+                            </td>
+                            <td class="px-6 py-4">
+                                <div class="font-medium">{{ order.customer.name }}</div>
+                                <div class="text-sm text-gray-500">{{ order.customer.phone }}</div>
+                            </td>
+                            <td class="px-6 py-4">
+                                {% if order.order_status == 'completed' %}
+                                <span
+                                    class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                                    <i class="fas fa-check-circle mr-1"></i> Completed
+                                </span>
+                                {% elif order.order_status == 'pending' %}
+                                <span
+                                    class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
+                                    <i class="fas fa-clock mr-1"></i> Pending
+                                </span>
+                                {% elif order.order_status == 'processing' %}
+                                <span
+                                    class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                                    <i class="fas fa-cog mr-1"></i> Processing
+                                </span>
+                                {% else %}
+                                <span
+                                    class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
+                                    <i class="fas fa-question-circle mr-1"></i> {{ order.order_status|title }}
+                                </span>
+                                {% endif %}
+                            </td>
+                            <td class="px-6 py-4">
+                                <div class="text-sm">{{ order.payment_type|title }}</div>
+                                {% if order.payment_status == 'completed' %}
+                                <span
+                                    class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                                    <i class="fas fa-check mr-1"></i> Paid
+                                </span>
+                                {% elif order.payment_status == 'partial' %}
+                                <span
+                                    class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
+                                    <i class="fas fa-exclamation-circle mr-1"></i> Partial
+                                </span>
+                                {% else %}
+                                <span
+                                    class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-orange-100 text-orange-800">
+                                    <i class="fas fa-exclamation-circle mr-1"></i> Pending
+                                </span>
+                                {% endif %}
+                            </td>
+                            <td class="px-6 py-4 font-medium">KSh {{ order.total_price|floatformat:2 }}</td>
+                            <td class="px-6 py-4">
+                                <div class="text-sm">{{ order.delivery_date|date:"M d, Y" }}</div>
+                                <div
+                                    class="text-xs text-gray-500 {% if order.delivery_date < today %}text-red-500{% endif %}">
+                                    {% if order.delivery_date < today %}Past Due{% endif %} </div>
+                            </td>
+                            <td class="px-6 py-4">
+                                <div class="text-sm">{{ order.created_at|date:"M d, Y" }}</div>
+                                <div class="text-xs text-gray-500">{{ order.created_at|date:"h:i A" }}</div>
+                            </td>
+                            <td class="px-6 py-4">
+                                <div class="flex justify-end gap-2">
+                                    <a href="{% url 'admin:LaundryApp_order_change' order.id %}"
+                                        class="p-2 text-gray-500 hover:text-primary-600 hover:bg-primary-50 rounded-full transition-colors"
+                                        title="View">
+                                        <i class="fas fa-eye"></i>
+                                    </a>
+                                    <a href="{% url 'admin:LaundryApp_order_change' order.id %}"
+                                        class="p-2 text-gray-500 hover:text-green-600 hover:bg-green-50 rounded-full transition-colors"
+                                        title="Edit">
+                                        <i class="fas fa-edit"></i>
+                                    </a>
+                                    <a href="{% url 'admin:LaundryApp_order_delete' order.id %}"
+                                        class="p-2 text-gray-500 hover:text-red-600 hover:bg-red-50 rounded-full transition-colors"
+                                        title="Delete">
+                                        <i class="fas fa-trash"></i>
+                                    </a>
+                                </div>
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="8" class="px-6 py-12 text-center">
+                                <div class="inline-flex items-center justify-center rounded-full bg-gray-100 p-4 mb-3">
+                                    <i class="fas fa-inbox text-2xl text-gray-400"></i>
+                                </div>
+                                <h3 class="text-lg font-medium text-gray-900 mb-1">No orders found</h3>
+                                <p class="text-gray-500 max-w-md mx-auto">
+                                    {% if request.GET.search or request.GET.status or request.GET.payment %}
+                                    No orders match your current filters. Try adjusting your search criteria.
+                                    {% else %}
+                                    There are no orders in the system yet. When you have orders, they'll appear here.
+                                    {% endif %}
+                                </p>
+                                <a href="{% url 'admin:LaundryApp_order_add' %}"
+                                    class="mt-4 inline-flex items-center gap-2 px-4 py-2 bg-primary-600 border border-primary-600 rounded-lg text-white hover:bg-primary-700 transition-colors shadow-sm">
+                                    <i class="fas fa-plus text-sm"></i>
+                                    <span>Create New Order</span>
+                                </a>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Pagination -->
+            {% if orders.has_other_pages %}
+            <div class="px-6 py-4 border-t border-gray-200">
+                <div class="flex items-center justify-between">
+                    <div class="text-sm text-gray-700">
+                        Showing {{ orders.start_index }} to {{ orders.end_index }} of {{ orders.paginator.count }}
+                        entries
+                    </div>
+                    <div class="flex space-x-2">
+                        {% if orders.has_previous %}
+                        <a href="?page={{ orders.previous_page_number }}{% if request.GET.status %}&status={{ request.GET.status }}{% endif %}{% if request.GET.payment %}&payment={{ request.GET.payment }}{% endif %}{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}"
+                            class="px-3 py-1 border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50">
+                            Previous
+                        </a>
+                        {% endif %}
+
+                        {% for i in orders.paginator.page_range %}
+                        {% if orders.number == i %}
+                        <span
+                            class="px-3 py-1 border border-primary-500 bg-primary-100 text-primary-700 rounded-md text-sm font-medium">
+                            {{ i }}
+                        </span>
+                        {% else %}
+                        <a href="?page={{ i }}{% if request.GET.status %}&status={{ request.GET.status }}{% endif %}{% if request.GET.payment %}&payment={{ request.GET.payment }}{% endif %}{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}"
+                            class="px-3 py-1 border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50">
+                            {{ i }}
+                        </a>
+                        {% endif %}
+                        {% endfor %}
+
+                        {% if orders.has_next %}
+                        <a href="?page={{ orders.next_page_number }}{% if request.GET.status %}&status={{ request.GET.status }}{% endif %}{% if request.GET.payment %}&payment={{ request.GET.payment }}{% endif %}{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}"
+                            class="px-3 py-1 border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50">
+                            Next
+                        </a>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block sidebar %}
+{{ block.super }}
+{% endblock %}

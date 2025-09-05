@@ -260,12 +260,13 @@ UNFOLD = {
             "title": "Dashboard",
             "items": [
                 {
-                    "title": "Overview",
-                    "icon": "dashboard",
-                    "link": reverse_lazy("admin:index"),
+                    "title": "Dashboard",
+                    "icon": "analytics",
+                    "link": reverse_lazy("admin:generaldashboard"),
+                   
                 },
                 {
-                    "title": "Analytics Dashboard",
+                    "title": "Report",
                     "icon": "analytics",
                     "link": reverse_lazy("admin:laundryapp_dashboard"),
                     "permission": lambda request: request.user.is_superuser
@@ -276,14 +277,14 @@ UNFOLD = {
             "title": "Operations",
             "items": [
                 {
-                    "title": "Create New Order",  # NEW: Add this item for the order form
+                    "title": "Add Order",  # NEW: Add this item for the order form
                     "icon": "add_shopping_cart",  # or "add_circle", "create", "note_add"
-                    "link": reverse_lazy("admin:laundryapp_new_order"),
+                    "link": reverse_lazy("admin:createorder"),
                 },
                 {
-                    "title": "Orders",
+                    "title": "View Orders",
                     "icon": "receipt",
-                    "link": reverse_lazy("admin:LaundryApp_order_changelist"),
+                    "link": reverse_lazy("admin:customordertable"),
                 },
                 {
                     "title": "Customers",
@@ -295,12 +296,14 @@ UNFOLD = {
         {
             "title": "Administration",
             "items": [
+              
                 {
                     "title": "Groups",
                     "icon": "groups",
                     "link": reverse_lazy("admin:auth_group_changelist"),
                     "permission": lambda request: request.user.is_superuser
                 },
+                 
                 {
                     "title": "Users",
                     "icon": "people",

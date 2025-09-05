@@ -1,13 +1,6 @@
-"""
-Django admin configuration for LaundryApp.
-
-This module contains all admin classes and configurations for the laundry management system,
-including custom forms, inlines, actions, and dashboard functionality.
-"""
-
-# Standard library imports
 import logging
 from functools import wraps
+import json
 
 # Django core imports
 from django import forms
@@ -25,6 +18,9 @@ from django.db.models import Q, Count, DecimalField, Max, Sum
 from django.db.models import Value
 from django.db.models.functions import Coalesce
 from django.http import JsonResponse
+from django.db.models import Prefetch,Q
+from django.views.decorators.csrf import csrf_exempt
+from django.views.decorators.http import require_POST
 
 # Third-party imports
 from import_export.admin import ImportExportModelAdmin
@@ -41,7 +37,7 @@ from unfold.widgets import (
 # Local imports
 from .models import Customer, Order, OrderItem, Payment
 from .analytics import DashboardAnalytics
-from .forms import CustomerForm, OrderForm, OrderItemForm, PaymentForm
+from .forms import CustomerForm, OrderForm, OrderItemForm
 
 # Setup logger
 logger = logging.getLogger(__name__)
@@ -70,6 +66,52 @@ def permission_required(perm_code):
             return func(self, request, queryset)
         return wrapper
     return decorator
+
+# --- Utility Functions ---
+def create_laundry_order(customer_name, customer_phone, shop, delivery_date, order_items,
+                        payment_type='pending_payment', payment_status='pending',
+                        order_status='pending', address='', addressdetails='', created_by=None):
+    """Create a new laundry order with customer and order items"""
+    from django.db import transaction
+    from .models import Customer, Order, OrderItem, Payment
+    from datetime import datetime
+
+    with transaction.atomic():
+        # Get or create customer
+        customer, created = Customer.objects.get_or_create(
+            phone=customer_phone,
+            defaults={
+                'name': customer_name,
+                'created_by': created_by
+            }
+        )
+
+        # Create order
+        order = Order.objects.create(
+            customer=customer,
+            shop=shop,
+            delivery_date=datetime.strptime(delivery_date, '%Y-%m-%d').date() if isinstance(delivery_date, str) else delivery_date,
+            payment_type=payment_type,
+            payment_status=payment_status,
+            order_status=order_status,
+            address=address,
+            addressdetails=addressdetails
+        )
+
+        # Create order items
+        for item_data in order_items:
+            OrderItem.objects.create(
+                order=order,
+                servicetype=item_data.get('servicetype', 'Washing'),
+                itemtype=item_data.get('itemtype', 'Clothing'),
+                itemname=item_data.get('itemname', ''),
+                quantity=item_data.get('quantity', 1),
+                itemcondition=item_data.get('itemcondition', 'new'),
+                unit_price=item_data.get('unit_price', 0),
+                additional_info=item_data.get('additional_info', '')
+            )
+
+        return order
 
 # --- Base Admin Classes ---
 class SuperuserOnlyMixin:
@@ -222,7 +264,7 @@ class CustomerAdmin(ShopPermissionMixin, AppPermissionMixin, ModelAdmin, ImportE
     """Admin interface for Customer model."""
     
     model_name = "customer"
-    list_display = ('name', 'phone', 'last_order_date', 'total_spent', 'order_count')
+    list_display = ('name', 'phone','order_count')
     list_display_links = ('name', 'phone')
     search_fields = ('name', 'phone')
     list_per_page = 20
@@ -357,16 +399,15 @@ class OrderItemInline(admin.TabularInline):
         return "Save to calculate"
     total_item_price.short_description = 'Total Price'
 
+# --- Payment Admin ---
 @admin.register(Payment)
 class PaymentAdmin(ShopPermissionMixin, AppPermissionMixin, ModelAdmin):
     """Admin interface for Payment model."""
     
     model_name = "payment"
-    list_display = ('order_link', 'price', 'payment_date', 'payment_method')
+    list_display = ('order_link', 'price')
     list_display_links = ('order_link', 'price')
-    list_filter = ('payment_method', 'payment_date')
-    search_fields = ('order__uniquecode', 'transaction_id')
-    ordering = ('-payment_date',)
+    search_fields = ('order__uniquecode',)
     readonly_fields = ('price',)
 
     def order_link(self, obj):
@@ -538,266 +579,275 @@ class OrderAdmin(ShopPermissionMixin, AppPermissionMixin, ModelAdmin, ImportExpo
             )
     update_status_to_delivered.short_description = "Mark selected orders as delivered"
 
-    
-
     def admin_order_form(self, request):
         """Admin version of the order form with enhanced customer handling"""
+        # Initialize forms
+        customer_form = CustomerForm(request.POST or None)
+        order_form = OrderForm(request.POST or None)
+        order_item_form = OrderItemForm(request.POST or None)
+        
+        # Handle AJAX requests
+        if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+            return self._handle_ajax_requests(request, customer_form, order_form, order_item_form)
+        
+        # Handle regular form submission
         if request.method == 'POST':
-            customer_form = CustomerForm(request.POST)
-            order_form = OrderForm(request.POST)
-            order_item_form = OrderItemForm(request.POST)
-            payment_form = PaymentForm(request.POST)
-            # Check if this is a customer existence check
-            if (request.headers.get('X-Requested-With') == 'XMLHttpRequest' and
-                'check_customer' in request.POST):
-                phone = request.POST.get('phone', '')
-                customer = Customer.objects.filter(phone=phone).first()
-                if customer:
-                    return JsonResponse({
-                        'exists': True,
-                        'customer': {
-                            'id': customer.id,
-                            'name': customer.name,
-                            'phone': str(customer.phone)
-                        }
-                    })
-                return JsonResponse({'exists': False})
+            return self._handle_regular_submission(request, customer_form, order_form, order_item_form)
+        
+        # GET request - render empty forms
+        context = self._build_context(request, customer_form, order_form, order_item_form)
+        return render(request, 'order_form.html', context)
 
-            # Check if this is an AJAX request for customer creation
-            if (request.headers.get('X-Requested-With') == 'XMLHttpRequest' and
-                'customer_only' in request.POST):
-                if customer_form.is_valid():
-                    try:
-                        # Double-check if customer already exists
-                        phone = customer_form.cleaned_data.get('phone')
-                        existing_customer = Customer.objects.filter(phone=phone).first()
-                        if existing_customer:
-                            request.session['customer_id'] = existing_customer.id
-                            return JsonResponse({
-                                'success': True,
-                                'customer_id': existing_customer.id,
-                                'existing_customer': True,
-                                'message': f'Customer already exists: {existing_customer.name}'
-                            })
+    def _handle_ajax_requests(self, request, customer_form, order_form, order_item_form):
+        """Handle all AJAX requests for the order form"""
+        # Customer existence check
+        if 'check_customer' in request.POST:
+            return self._check_customer_existence(request)
+        
+        # Step submission
+        if 'step_submit' in request.POST:
+            return self._handle_step_submission(request, customer_form, order_form, order_item_form)
+        
+        return JsonResponse({'success': False, 'message': 'Invalid AJAX request'})
 
-                        customer = customer_form.save()
-                        request.session['customer_id'] = customer.id
-                        return JsonResponse({
-                            'success': True,
-                            'customer_id': customer.id,
-                            'message': 'New customer created successfully'
-                        })
-                    except Exception as e:
-                        return JsonResponse({
-                            'success': False,
-                            'message': f'Error saving customer: {str(e)}'
-                        })
-                else:
-                    return JsonResponse({
-                        'success': False,
-                        'message': 'Please correct the errors',
-                        'errors': customer_form.errors.get_json_data()
-                    })
+    def _check_customer_existence(self, request):
+        """Check if customer exists by phone number"""
+        phone = request.POST.get('phone', '')
+        customer = Customer.objects.filter(phone=phone).first()
+        
+        if customer:
+            return JsonResponse({
+                'exists': True,
+                'name': customer.name,
+                'customer': {
+                    'id': customer.id,
+                    'name': customer.name,
+                    'phone': str(customer.phone)
+                }
+            })
+        return JsonResponse({'exists': False})
 
-            # Check if this is a step submission (AJAX)
-            if (request.headers.get('X-Requested-With') == 'XMLHttpRequest' and
-                'step_submit' in request.POST):
-                current_step = int(request.POST.get('current_step', 1))
-                forms_valid = True
-                errors = {}
+    def _handle_step_submission(self, request, customer_form, order_form, order_item_form):
+        """Handle multi-step form submission"""
+        current_step = int(request.POST.get('current_step', 1))
+        
+        # Validate current step
+        is_valid, errors = self._validate_step(current_step, customer_form, order_form, order_item_form, request.POST)
+        
+        if not is_valid:
+            return JsonResponse({
+                'success': False,
+                'message': 'Please correct the errors',
+                'errors': errors
+            })
+        
+        # Process valid step
+        try:
+            return self._process_valid_step(current_step, request, customer_form, order_form, order_item_form)
+        except Exception as e:
+            return JsonResponse({
+                'success': False,
+                'message': f'Error saving data: {str(e)}'
+            })
 
-                # Validate only the forms relevant to the current step
-                if current_step == 1:
-                    if not customer_form.is_valid():
-                        forms_valid = False
-                        errors.update(customer_form.errors.get_json_data())
-                elif current_step == 2:
-                    if not order_form.is_valid():
-                        forms_valid = False
-                        errors.update(order_form.errors.get_json_data())
-                elif current_step == 3:
-                    if not order_item_form.is_valid():
-                        forms_valid = False
-                        errors.update(order_item_form.errors.get_json_data())
-                elif current_step == 4:
-                    if not payment_form.is_valid():
-                        forms_valid = False
-                        errors.update(payment_form.errors.get_json_data())
+    def _validate_step(self, current_step, customer_form, order_form, order_item_form, post_data):
+        """Validate the current step of the form"""
+        forms_valid = True
+        errors = {}
+        
+        if current_step == 1:
+            customer_form = CustomerForm(post_data)
+            if not customer_form.is_valid():
+                forms_valid = False
+                errors.update(customer_form.errors.get_json_data())
+        elif current_step == 2:
+            order_form = OrderForm(post_data)
+            if not order_form.is_valid():
+                forms_valid = False
+                errors.update(order_form.errors.get_json_data())
+        elif current_step == 3:
+            order_item_form = OrderItemForm(post_data)
+            if not order_item_form.is_valid():
+                forms_valid = False
+                errors.update(order_item_form.errors.get_json_data())
+        # Step 4 (payment) is optional, no validation needed
+        
+        return forms_valid, errors
 
-                # If forms are valid, try to save the data
-                if forms_valid:
-                    try:
-                        # Save data based on current step
-                        if current_step == 1:
-                            # Enhanced customer handling
-                            phone = request.POST.get('phone', '')
-                            name = request.POST.get('name', '')
+    def _process_valid_step(self, current_step, request, customer_form, order_form, order_item_form):
+        """Process a valid form step"""
+        if current_step == 1:
+            return self._process_customer_step(request, customer_form)
+        elif current_step == 2:
+            return self._process_order_step(request, order_form)
+        elif current_step == 3:
+            return self._process_order_item_step(request, order_item_form)
+        elif current_step == 4:
+            return self._process_payment_step(request)
+        
+        return JsonResponse({'success': False, 'message': 'Invalid step'})
 
-                            # Check if customer already exists
-                            existing_customer = Customer.objects.filter(phone=phone).first()
-
-                            if existing_customer:
-                                # Use existing customer
-                                request.session['customer_id'] = existing_customer.id
-                                return JsonResponse({
-                                    'success': True,
-                                    'customer_id': existing_customer.id,
-                                    'existing_customer': True,
-                                    'customer_name': existing_customer.name,
-                                    'message': f'Using existing customer: {existing_customer.name}'
-                                })
-                            else:
-                                # Create new customer
-                                customer = customer_form.save()
-                                request.session['customer_id'] = customer.id
-                                return JsonResponse({
-                                    'success': True,
-                                    'customer_id': customer.id,
-                                    'message': 'New customer created successfully'
-                                })
-
-                        elif current_step == 2:
-                            if 'customer_id' in request.session:
-                                order = order_form.save(commit=False)
-                                order.customer_id = request.session['customer_id']
-                                order.save()
-                                request.session['order_id'] = order.id
-                                return JsonResponse({
-                                    'success': True,
-                                    'order_id': order.id
-                                })
-                            else:
-                                return JsonResponse({
-                                    'success': False,
-                                    'message': 'Customer information is missing. Please start from step 1.'
-                                })
-
-                        elif current_step == 3:
-                            if 'order_id' in request.session:
-                                order_item = order_item_form.save(commit=False)
-                                order_item.order_id = request.session['order_id']
-                                order_item.save()
-
-                                # Update order total price
-                                order = Order.objects.get(id=request.session['order_id'])
-                                order.total_price = (order_item.unit_price or 0) * (order_item.quantity or 0)
-                                order.save()
-
-                                return JsonResponse({
-                                    'success': True
-                                })
-                            else:
-                                return JsonResponse({
-                                    'success': False,
-                                    'message': 'Order information is missing. Please start from step 2.'
-                                })
-
-                        elif current_step == 4:
-                            if 'order_id' in request.session:
-                                payment = payment_form.save(commit=False)
-                                payment.order_id = request.session['order_id']
-
-                                # Get order total price
-                                order = Order.objects.get(id=request.session['order_id'])
-                                payment.price = order.total_price
-                                payment.payment_date = now()
-                                payment.save()
-
-                                # Clear session data
-                                if 'customer_id' in request.session:
-                                    del request.session['customer_id']
-                                if 'order_id' in request.session:
-                                    del request.session['order_id']
-
-                                return JsonResponse({
-                                    'success': True,
-                                    'redirect_url': reverse('admin:laundryapp_order_success')
-                                })
-                            else:
-                                return JsonResponse({
-                                    'success': False,
-                                    'message': 'Order information is missing. Please start from step 2.'
-                                })
-
-                    except Exception as e:
-                        return JsonResponse({
-                            'success': False,
-                            'message': f'Error saving data: {str(e)}'
-                        })
-
-                else:
-                    # Return validation errors
-                    return JsonResponse({
-                        'success': False,
-                        'message': 'Please correct the errors',
-                        'errors': errors
-                    })
-
-            # Regular form submission (all forms at once)
-            if (customer_form.is_valid() and order_form.is_valid() and
-                order_item_form.is_valid() and payment_form.is_valid()):
-
-                try:
-                    # Enhanced customer handling for regular submission
-                    phone = request.POST.get('phone', '')
-                    existing_customer = Customer.objects.filter(phone=phone).first()
-
-                    if existing_customer:
-                        customer = existing_customer
-                        messages.info(request, f'Using existing customer: {existing_customer.name}')
-                    else:
-                        # Save customer
-                        customer = customer_form.save()
-                        messages.success(request, 'New customer created successfully')
-
-                    # Save order with customer reference
-                    order = order_form.save(commit=False)
-                    order.customer = customer
-                    order.total_price = 0
-                    order.save()
-
-                    # Save order item with order reference
-                    order_item = order_item_form.save(commit=False)
-                    order_item.order = order
-                    order_item.save()
-
-                    # Calculate total price
-                    order.total_price = (order_item.unit_price or 0) * (order_item.quantity or 0)
-                    order.save()
-
-                    # Save payment with order reference
-                    payment = payment_form.save(commit=False)
-                    payment.order = order
-                    payment.price = order.total_price
-                    payment.payment_date = now()
-                    payment.save()
-
-                    messages.success(request, f'Order {order.uniquecode} created successfully!')
-                    return redirect('admin:laundryapp_order_success')
-
-                except Exception as e:
-                    messages.error(request, f'Error saving order: {str(e)}')
-
-            else:
-                messages.error(request, 'Please correct the errors below.')
-
+    def _process_customer_step(self, request, customer_form):
+        """Process customer information step"""
+        phone = request.POST.get('phone', '')
+        name = request.POST.get('name', '')
+        
+        # Check if customer already exists
+        existing_customer = Customer.objects.filter(phone=phone).first()
+        
+        if existing_customer:
+            request.session['customer_id'] = existing_customer.id
+            return JsonResponse({
+                'success': True,
+                'customer_id': existing_customer.id,
+                'existing_customer': True,
+                'customer_name': existing_customer.name,
+                'message': f'Using existing customer: {existing_customer.name}'
+            })
         else:
-            customer_form = CustomerForm()
-            order_form = OrderForm()
-            order_item_form = OrderItemForm()
-            payment_form = PaymentForm()
+            # Create new customer
+            customer = customer_form.save()
+            request.session['customer_id'] = customer.id
+            return JsonResponse({
+                'success': True,
+                'customer_id': customer.id,
+                'message': 'New customer created successfully'
+            })
 
-        context = {
+    def _process_order_step(self, request, order_form):
+        """Process order information step"""
+        if 'customer_id' not in request.session:
+            return JsonResponse({
+                'success': False,
+                'message': 'Customer information is missing. Please start from step 1.'
+            })
+        
+        order = order_form.save(commit=False)
+        order.customer_id = request.session['customer_id']
+        order.total_price = 0  # Initialize total price
+        order.save()
+        request.session['order_id'] = order.id
+        
+        return JsonResponse({
+            'success': True,
+            'order_id': order.id
+        })
+
+    def _process_order_item_step(self, request, order_item_form):
+        """Process order item step"""
+        if 'order_id' not in request.session:
+            return JsonResponse({
+                'success': False,
+                'message': 'Order information is missing. Please start from step 2.'
+            })
+        
+        order_item = order_item_form.save(commit=False)
+        order_item.order_id = request.session['order_id']
+        order_item.save()
+        
+        # Update order total price
+        order = Order.objects.get(id=request.session['order_id'])
+        order.total_price = (order_item.unit_price or 0) * (order_item.quantity or 0)
+        order.save()
+        
+        return JsonResponse({'success': True})
+
+    def _process_payment_step(self, request):
+        """Process payment information step"""
+        if 'order_id' not in request.session:
+            return JsonResponse({
+                'success': False,
+                'message': 'Order information is missing. Please start from step 2.'
+            })
+        
+        # Payment is optional, so only save if data is provided
+        payment_method = request.POST.get('payment_method', '')
+        
+        if payment_method:
+            order = Order.objects.get(id=request.session['order_id'])
+            payment = Payment(
+                order=order,
+                price=order.total_price
+            )
+            payment.save()
+        
+        # Clear session data
+        self._clear_session_data(request)
+        
+        return JsonResponse({
+            'success': True,
+            'redirect_url': reverse('admin:laundryapp_order_success')
+        })
+
+    def _clear_session_data(self, request):
+        """Clear session data used for order creation"""
+        session_keys = ['customer_id', 'order_id']
+        for key in session_keys:
+            if key in request.session:
+                del request.session[key]
+
+    def _handle_regular_submission(self, request, customer_form, order_form, order_item_form):
+        """Handle regular form submission (non-AJAX)"""
+        if not (customer_form.is_valid() and order_form.is_valid() and 
+                order_item_form.is_valid()):
+            messages.error(request, 'Please correct the errors below.')
+            context = self._build_context(request, customer_form, order_form, order_item_form)
+            return render(request, 'order_form.html', context)
+        
+        try:
+            # Enhanced customer handling
+            phone = request.POST.get('phone', '')
+            existing_customer = Customer.objects.filter(phone=phone).first()
+            
+            if existing_customer:
+                customer = existing_customer
+                messages.info(request, f'Using existing customer: {existing_customer.name}')
+            else:
+                customer = customer_form.save()
+                messages.success(request, 'New customer created successfully')
+            
+            # Save order with customer reference
+            order = order_form.save(commit=False)
+            order.customer = customer
+            order.total_price = 0
+            order.save()
+            
+            # Save order item with order reference
+            order_item = order_item_form.save(commit=False)
+            order_item.order = order
+            order_item.save()
+            
+            # Calculate total price
+            order.total_price = (order_item.unit_price or 0) * (order_item.quantity or 0)
+            order.save()
+            
+            # Save payment with order reference (if payment data provided)
+            payment_method = request.POST.get('payment_method', '')
+            if payment_method:
+                payment = Payment(
+                    order=order,
+                    price=order.total_price
+                )
+                payment.save()
+            
+            messages.success(request, f'Order {order.uniquecode} created successfully!')
+            return redirect('admin:laundryapp_order_success')
+        
+        except Exception as e:
+            messages.error(request, f'Error saving order: {str(e)}')
+            context = self._build_context(request, customer_form, order_form, order_item_form)
+            return render(request, 'order_form.html', context)
+
+    def _build_context(self, request, customer_form, order_form, order_item_form):
+        """Build template context"""
+        return {
             'customer_form': customer_form,
             'order_form': order_form,
             'order_item_form': order_item_form,
-            'payment_form': payment_form,
             'title': 'New Laundry Order',
-            'is_admin': True,  # Flag to indicate this is admin interface
+            'is_admin': True,
             **self.admin_site.each_context(request),
         }
-
-        return render(request, 'order_form.html', context)
 
     def admin_order_success(self, request):
         """Admin order success page"""
@@ -835,15 +885,81 @@ class OrderAdmin(ShopPermissionMixin, AppPermissionMixin, ModelAdmin, ImportExpo
         })
     delete_selected.short_description = "Delete selected orders"
 
+    def customordertable(self, request):
+        # Start with base queryset
+        orders = Order.objects.select_related('customer').prefetch_related(
+            Prefetch('items', queryset=OrderItem.objects.only('servicetype', 'itemname', 'quantity'))
+        ).only(
+            'uniquecode', 'order_status', 'payment_status', 'payment_type',
+            'shop', 'delivery_date', 'total_price', 'created_at', 'customer__name'
+        )
+
+        # Apply shop filtering based on user role
+        if not request.user.is_superuser:
+            # For non-superusers, filter by their assigned shop
+            user_shop = request.user.userprofile.shop if hasattr(request.user, 'userprofile') else None
+            if user_shop:
+                orders = orders.filter(shop=user_shop)
+            else:
+                # If user has no shop assigned, show no orders
+                orders = orders.none()
+
+        # Apply status filters
+        status_filter = request.GET.get('status', '')
+        if status_filter:
+            orders = orders.filter(order_status=status_filter)
+
+        # Apply payment status filters
+        payment_filter = request.GET.get('payment', '')
+        if payment_filter:
+            orders = orders.filter(payment_status=payment_filter)
+
+        # Apply search filter
+        search_query = request.GET.get('search', '')
+        if search_query:
+            orders = orders.filter(
+                Q(uniquecode__icontains=search_query) |
+                Q(customer__name__icontains=search_query) |
+                Q(customer__phone__icontains=search_query)
+            )
+
+        # Order by creation date
+        orders = orders.order_by('-created_at')
+
+        # Get counts for stats cards
+        total_orders = orders.count()
+        pending_orders = orders.filter(order_status='pending').count()
+        completed_orders = orders.filter(order_status='completed').count()
+
+        # Calculate total revenue
+        total_revenue = orders.aggregate(total=Sum('total_price'))['total'] or 0
+        avg_order_value = total_revenue / total_orders if total_orders > 0 else 0
+
+        context = {
+            'orders': orders,
+            'total_orders': total_orders,
+            'pending_orders': pending_orders,
+            'completed_orders': completed_orders,
+            'total_revenue': total_revenue,
+            'avg_order_value': avg_order_value,
+            'current_status_filter': status_filter,
+            'current_payment_filter': payment_filter,
+            'search_query': search_query,
+        }
+        return render(request, 'orders_table.html', context)
+    
+    
     def get_urls(self):
         urls = super().get_urls()
         custom_urls = [
             path('dashboard/', self.admin_site.admin_view(cache_page(60 * 5)(self.dashboard_view)),
                  name='laundryapp_dashboard'),
-            path('new-order/', self.admin_site.admin_view(self.admin_order_form),
-                 name='laundryapp_new_order'),
-            path('new-order/success/', self.admin_site.admin_view(self.admin_order_success),
-                 name='laundryapp_order_success'),
+            path('new-order/', self.admin_site.admin_view(self.generaldashboard),
+                 name='generaldashboard'),
+            path('Tables/', self.admin_site.admin_view(self.customordertable),
+                  name='customordertable'),
+            path('createorder/', self.admin_site.admin_view(self.createorder),
+                name='createorder'),
         ]
         return custom_urls + urls
 
@@ -875,4 +991,108 @@ class OrderAdmin(ShopPermissionMixin, AppPermissionMixin, ModelAdmin, ImportExpo
         
         context.update(self.admin_site.each_context(request))
 
-        return render(request, 'Admin/laundry_dashboard.html', context)
+        return render(request, 'Admin/reports.html', context)
+ 
+
+
+
+    @csrf_exempt
+    @require_POST
+    def create_order_api(request):
+        """API endpoint to create a new order"""
+        try:
+            data = json.loads(request.body)
+            
+            # Extract data from request
+            customer_data = data.get('customer', {})
+            order_data = data.get('order', {})
+            items_data = data.get('items', [])
+            
+            # Create the order
+            order = create_laundry_order(
+                customer_name=customer_data.get('name'),
+                customer_phone=customer_data.get('phone'),
+                shop=order_data.get('shop'),
+                delivery_date=order_data.get('delivery_date'),
+                order_items=items_data,
+                payment_type=order_data.get('payment_type', 'pending_payment'),
+                payment_status=order_data.get('payment_status', 'pending'),
+                order_status=order_data.get('order_status', 'pending'),
+                address=order_data.get('address', ''),
+                addressdetails=order_data.get('addressdetails', ''),
+                created_by=request.user if request.user.is_authenticated else None
+            )
+            
+            return JsonResponse({
+                'success': True,
+                'order_code': order.uniquecode,
+                'total_price': float(order.total_price),
+                'message': 'Order created successfully'
+            })
+            
+        except Exception as e:
+            return JsonResponse({
+                'success': False,
+                'message': f'Error creating order: {str(e)}'
+            }, status=400)
+# In your admin.py, update the dashboard_view method
+    def createorder(self,request):
+        return render(request,'order_form.html')
+    def generaldashboard(self, request):
+        if not request.user.is_authenticated:
+            return redirect('admin:login')
+        
+        # Get user's shops
+        user_shops = self.get_user_shops(request)
+        
+        # Base queryset
+        if request.user.is_superuser:
+            # Superuser sees all orders
+            orders = Order.objects.all()
+        elif user_shops:
+            # Staff sees only their shop's orders
+            orders = Order.objects.filter(shop__in=user_shops)
+        else:
+            # Users with no shop assignments see nothing
+            orders = Order.objects.none()
+        
+        # Calculate stats
+        total_orders = orders.count()
+        pending_orders = orders.filter(order_status='Pending').count()
+       
+        completed_orders = orders.filter(order_status='Completed').count()
+    
+        
+        # Get recent orders
+        recent_orders = orders.select_related('customer').order_by('-created_at')[:10]
+        
+        # For superusers, get shop performance data
+        shop_performance = None
+        if request.user.is_superuser:
+            shop_performance = {}
+            shops = Order.objects.values_list('shop', flat=True).distinct()
+            for shop in shops:
+                if shop:  # Ensure shop is not empty
+                    shop_orders = Order.objects.filter(shop=shop)
+                    shop_performance[shop] = {
+                        'total_orders': shop_orders.count(),
+                        'completed_orders': shop_orders.filter(order_status='Completed').count(),
+                        'total_revenue': shop_orders.aggregate(
+                            total=Sum('total_price')
+                        )['total'] or 0
+                    }
+        
+        context = {
+            'user_shops': user_shops,
+            'total_orders': total_orders,
+            'pending_orders': pending_orders,
+        
+            'completed_orders': completed_orders,
+            
+            'recent_orders': recent_orders,
+            'shop_performance': shop_performance,
+            **self.admin_site.each_context(request),
+        }
+        return render(request, 'Admin/dashboard.html', context)
+    
+        

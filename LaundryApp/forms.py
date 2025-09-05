@@ -1,6 +1,6 @@
 # LaundryApp/forms.py
 from django import forms
-from .models import Customer, Order, OrderItem, Payment
+from .models import Customer, Order, OrderItem
 
 class CustomerForm(forms.ModelForm):
     class Meta:
@@ -83,38 +83,3 @@ class OrderForm(forms.ModelForm):
         self.fields['payment_type'].required = False
         self.fields['payment_status'].required = False
 
-class PaymentForm(forms.ModelForm):
-    class Meta:
-        model = Payment
-        fields = ['payment_method', 'transaction_id', 'mpesa_receipt_number', 'phone_number', 'status']
-        widgets = {
-            'payment_method': forms.Select(attrs={
-                'class': 'form-select',
-                'id': 'id_payment_method'
-            }),
-            'transaction_id': forms.TextInput(attrs={
-                'class': 'form-input',
-                'placeholder': 'Transaction ID (if applicable)',
-                'id': 'id_transaction_id'
-            }),
-            'mpesa_receipt_number': forms.TextInput(attrs={
-                'class': 'form-input',
-                'placeholder': 'M-Pesa Receipt Number',
-                'id': 'id_mpesa_receipt_number'
-            }),
-            'phone_number': forms.TextInput(attrs={
-                'class': 'form-input',
-                'placeholder': 'Phone Number for M-Pesa',
-                'id': 'id_phone_number'
-            }),
-            'status': forms.Select(attrs={
-                'class': 'form-select',
-                'id': 'id_payment_status_select'
-            }),
-        }
-
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        # Make all fields optional for optional payment
-        for field in self.fields:
-            self.fields[field].required = False

@@ -813,6 +813,24 @@
             }
         }
 
+        // Function to sort data in descending order (highest first)
+        function sortDataDescending(labels, data) {
+            // Create an array of objects to keep labels and data together
+            const combined = labels.map((label, index) => ({
+                label,
+                value: data[index] || 0
+            }));
+
+            // Sort by value in descending order
+            combined.sort((a, b) => b.value - a.value);
+
+            // Extract the sorted labels and values
+            const sortedLabels = combined.map(item => item.label);
+            const sortedData = combined.map(item => item.value);
+
+            return { sortedLabels, sortedData };
+        }
+
         // ---------------- Pie/Doughnut Chart ----------------
         const revenueCanvas = document.getElementById('revenueChart');
         if (revenueCanvas) {
@@ -844,10 +862,10 @@
                                 COLOR_PALETTE.info
                             ],
                             borderWidth: 0,
-                            cutout: '85%',
-                            spacing: 1,
-                            hoverOffset: 6,
-                            borderRadius: 4
+                            cutout: '82%',
+                            spacing: 0,
+                            hoverOffset: 4,
+                            borderRadius: 0
                         }]
                     },
                     options: {
@@ -960,6 +978,9 @@
             console.log(`${title} Data:`, data);
 
             if (labels.length > 0 && data.length > 0 && labels.length === data.length) {
+                // Sort the data in descending order (highest first)
+                const { sortedLabels, sortedData } = sortDataDescending(labels, data);
+
                 const ctx = canvas.getContext('2d');
                 const barColors = [
                     COLOR_PALETTE.navyBlue,
@@ -971,13 +992,29 @@
                     COLOR_PALETTE.warning
                 ];
 
+                // Custom tooltip for services chart
+                const customTooltip = {
+                    callbacks: {
+                        title: function (context) {
+                            return context[0].label || '';
+                        },
+                        label: function (context) {
+                            if (id === 'servicesChart') {
+                                // Show "X orders" for services chart
+                                return `${context.parsed.x.toLocaleString('en-US')} orders`;
+                            }
+                            return context.parsed.x.toLocaleString('en-US');
+                        }
+                    }
+                };
+
                 new Chart(ctx, {
                     type: 'bar',
                     data: {
-                        labels: labels,
+                        labels: sortedLabels,
                         datasets: [{
-                            data: data,
-                            backgroundColor: labels.map((_, index) => barColors[index % barColors.length]),
+                            data: sortedData,
+                            backgroundColor: sortedLabels.map((_, index) => barColors[index % barColors.length]),
                             borderRadius: 8,
                             borderWidth: 0,
                             barThickness: 10,
@@ -992,6 +1029,11 @@
                             ...getChartOptions().plugins,
                             legend: {
                                 display: false
+                            },
+                            // Disable tooltips for products chart, use custom for services
+                            tooltip: id === 'productsChart' ? { enabled: false } : {
+                                ...getChartOptions().plugins.tooltip,
+                                callbacks: customTooltip.callbacks
                             }
                         },
                         scales: {

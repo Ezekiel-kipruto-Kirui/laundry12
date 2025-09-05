@@ -1,0 +1,548 @@
+{% extends "unfold/layouts/base.html" %}
+{% load static %}
+
+{% block title %}Laundry Management Dashboard{% endblock %}
+
+{% block extrahead %}
+<style>
+    :root {
+        --primary: #4f46e5;
+        --primary-light: #6366f1;
+        --primary-dark: #4338ca;
+        --success: #10b981;
+        --warning: #f59e0b;
+        --info: #3b82f6;
+        --danger: #ef4444;
+        --secondary: #8b5cf6;
+        --gray-50: #f9fafb;
+        --gray-100: #f3f4f6;
+        --gray-200: #e5e7eb;
+        --gray-300: #d1d5db;
+        --gray-700: #374151;
+        --gray-900: #111827;
+    }
+
+    .dashboard-container {
+        max-width: 95rem;
+        margin: 0 auto;
+        padding: 1.5rem 1rem;
+    }
+
+    .stats-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+        gap: 1.5rem;
+        margin-bottom: 2rem;
+    }
+
+    .stat-card {
+        background: white;
+        border-radius: 16px;
+        padding: 1.5rem;
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
+        transition: all 0.3s ease;
+        position: relative;
+        overflow: hidden;
+        border-left: 4px solid;
+        display: flex;
+        align-items: center;
+        height: 100%;
+    }
+
+    .stat-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.08), 0 10px 10px -5px rgba(0, 0, 0, 0.02);
+    }
+
+    .stat-card::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 4px;
+        background: linear-gradient(90deg, rgba(255, 255, 255, 0.3) 0%, rgba(255, 255, 255, 0.1) 100%);
+    }
+
+    .stat-icon {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 60px;
+        height: 60px;
+        border-radius: 12px;
+        margin-right: 1rem;
+        flex-shrink: 0;
+    }
+
+    .stat-content {
+        flex: 1;
+    }
+
+    .stat-label {
+        font-size: 0.875rem;
+        font-weight: 500;
+        color: #6b7280;
+        margin-bottom: 0.25rem;
+    }
+
+    .stat-value {
+        font-size: 1.875rem;
+        font-weight: 700;
+        color: #1f2937;
+        line-height: 1;
+    }
+
+    .pending {
+        border-left-color: #f59e0b;
+    }
+
+    .pending .stat-icon {
+        background-color: rgba(245, 158, 11, 0.1);
+    }
+
+    .processing {
+        border-left-color: #3b82f6;
+    }
+
+    .processing .stat-icon {
+        background-color: rgba(59, 130, 246, 0.1);
+    }
+
+    .completed {
+        border-left-color: #10b981;
+    }
+
+    .completed .stat-icon {
+        background-color: rgba(16, 185, 129, 0.1);
+    }
+
+    .delivered {
+        border-left-color: #8b5cf6;
+    }
+
+    .delivered .stat-icon {
+        background-color: rgba(139, 92, 246, 0.1);
+    }
+
+    .cancelled {
+        border-left-color: #ef4444;
+    }
+
+    .cancelled .stat-icon {
+        background-color: rgba(239, 68, 68, 0.1);
+    }
+
+    .content-grid {
+        display: grid;
+        grid-template-columns: 1fr;
+        gap: 2rem;
+    }
+
+    @media (min-width: 1024px) {
+        .content-grid {
+            grid-template-columns: 1fr 2fr;
+        }
+    }
+
+    .card {
+        background: white;
+        border-radius: 16px;
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
+        overflow: hidden;
+    }
+
+    .card-header {
+        padding: 1.25rem 1.5rem;
+        border-bottom: 1px solid #f3f4f6;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        background-color: #f9fafb;
+    }
+
+    .card-title {
+        font-size: 1.125rem;
+        font-weight: 600;
+        color: #111827;
+    }
+
+    .card-body {
+        padding: 0;
+    }
+
+    .quick-action {
+        display: flex;
+        align-items: center;
+        padding: 1rem 1.5rem;
+        transition: all 0.2s ease;
+        border-bottom: 1px solid #f9fafb;
+    }
+
+    .quick-action:last-child {
+        border-bottom: none;
+    }
+
+    .quick-action:hover {
+        background-color: #f9fafb;
+        transform: translateX(4px);
+    }
+
+    .quick-action-icon {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 40px;
+        height: 40px;
+        border-radius: 10px;
+        margin-right: 1rem;
+        flex-shrink: 0;
+    }
+
+    .quick-action-content {
+        flex: 1;
+    }
+
+    .quick-action-title {
+        font-size: 0.875rem;
+        font-weight: 500;
+        color: #111827;
+        margin-bottom: 0.25rem;
+    }
+
+    .quick-action-desc {
+        font-size: 0.75rem;
+        color: #6b7280;
+    }
+
+    .table-container {
+        overflow-x: auto;
+    }
+
+    table {
+        width: 100%;
+        border-collapse: separate;
+        border-spacing: 0;
+    }
+
+    th {
+        background-color: #f9fafb;
+        padding: 0.875rem 1.25rem;
+        text-align: left;
+        font-weight: 500;
+        color: #6b7280;
+        text-transform: uppercase;
+        font-size: 0.75rem;
+        letter-spacing: 0.05em;
+        white-space: nowrap;
+    }
+
+    td {
+        padding: 1rem 1.25rem;
+        border-bottom: 1px solid #f3f4f6;
+        white-space: nowrap;
+    }
+
+    tr:last-child td {
+        border-bottom: none;
+    }
+
+    .status-badge {
+        padding: 0.35rem 0.75rem;
+        border-radius: 9999px;
+        font-size: 0.75rem;
+        font-weight: 600;
+        display: inline-flex;
+        align-items: center;
+        white-space: nowrap;
+    }
+
+    .status-badge::before {
+        content: '';
+        display: inline-block;
+        width: 6px;
+        height: 6px;
+        border-radius: 50%;
+        margin-right: 4px;
+    }
+
+    .status-pending {
+        background-color: #fef3c7;
+        color: #d97706;
+    }
+
+    .status-pending::before {
+        background-color: #d97706;
+    }
+
+    .status-processing {
+        background-color: #dbeafe;
+        color: #1d4ed8;
+    }
+
+    .status-processing::before {
+        background-color: #1d4ed8;
+    }
+
+    .status-completed {
+        background-color: #d1fae5;
+        color: #065f46;
+    }
+
+    .status-completed::before {
+        background-color: #065f46;
+    }
+
+    .status-delivered {
+        background-color: #ede9fe;
+        color: #5b21b6;
+    }
+
+    .status-delivered::before {
+        background-color: #5b21b6;
+    }
+
+    .view-all-link {
+        color: #4f46e5;
+        font-size: 0.875rem;
+        font-weight: 500;
+        display: inline-flex;
+        align-items: center;
+    }
+
+    .view-all-link:hover {
+        color: #3730a3;
+    }
+
+    .view-all-link svg {
+        width: 16px;
+        height: 16px;
+        margin-left: 0.25rem;
+    }
+
+    @media (max-width: 768px) {
+        .dashboard-container {
+            padding: 1rem 0.5rem;
+        }
+
+        .stats-grid {
+            grid-template-columns: 1fr;
+            gap: 1rem;
+        }
+
+        .stat-card {
+            padding: 1.25rem;
+        }
+
+        .stat-icon {
+            width: 50px;
+            height: 50px;
+        }
+
+        .stat-value {
+            font-size: 1.5rem;
+        }
+
+        .card-header {
+            padding: 1rem 1.25rem;
+        }
+
+        th,
+        td {
+            padding: 0.75rem 1rem;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="dashboard-container">
+    <!-- Stats Section -->
+    <div class="stats-grid">
+        <!-- Total Orders Card -->
+        <div class="stat-card pending">
+            <div class="stat-icon">
+                <svg class="h-6 w-6 text-amber-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
+                    stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+                </svg>
+            </div>
+            <div class="stat-content">
+                <div class="stat-label">Total Orders</div>
+                <div class="stat-value">{{ total_orders }}</div>
+            </div>
+        </div>
+
+        <!-- Pending Orders Card -->
+        <div class="stat-card pending">
+            <div class="stat-icon">
+                <svg class="h-6 w-6 text-amber-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
+                    stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+            </div>
+            <div class="stat-content">
+                <div class="stat-label">Pending</div>
+                <div class="stat-value">{{ pending_orders }}</div>
+            </div>
+        </div>
+
+        <!-- Processing Orders Card -->
+       
+        <!-- Completed Orders Card -->
+        <div class="stat-card completed">
+            <div class="stat-icon">
+                <svg class="h-6 w-6 text-green-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
+                    stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+            </div>
+            <div class="stat-content">
+                <div class="stat-label">Completed</div>
+                <div class="stat-value">{{ completed_orders }}</div>
+            </div>
+        </div>
+
+        <!-- Delivered Orders Card -->
+      
+    </div>
+
+    <!-- Quick Actions & Recent Orders -->
+    <div class="content-grid">
+        <!-- Quick Actions -->
+        <div class="card">
+            <div class="card-header">
+                <h3 class="card-title">Quick Actions</h3>
+            </div>
+            <div class="card-body">
+                <a href="{% url 'admin:LaundryApp_order_add' %}" class="quick-action">
+                    <div class="quick-action-icon bg-blue-100">
+                        <svg class="h-5 w-5 text-blue-600" xmlns="http://www.w3.org/2000/svg" fill="none"
+                            viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                        </svg>
+                    </div>
+                    <div class="quick-action-content">
+                        <p class="quick-action-title">Create New Order</p>
+                        <p class="quick-action-desc">Add a new laundry order</p>
+                    </div>
+                </a>
+
+                <a href="{% url 'admin:LaundryApp_order_changelist' %}?order_status__exact=Pending"
+                    class="quick-action">
+                    <div class="quick-action-icon bg-amber-100">
+                        <svg class="h-5 w-5 text-amber-600" xmlns="http://www.w3.org/2000/svg" fill="none"
+                            viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                    </div>
+                    <div class="quick-action-content">
+                        <p class="quick-action-title">View Pending Orders</p>
+                        <p class="quick-action-desc">{{ pending_orders }} orders awaiting processing</p>
+                    </div>
+                </a>
+
+                <a href="{% url 'admin:LaundryApp_order_changelist' %}?order_status__exact=Processing"
+                    class="quick-action">
+                    <div class="quick-action-icon bg-blue-100">
+                        <svg class="h-5 w-5 text-blue-600" xmlns="http://www.w3.org/2000/svg" fill="none"
+                            viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                        </svg>
+                    </div>
+                    <div class="quick-action-content">
+                        <p class="quick-action-title">View Processing Orders</p>
+                        <p class="quick-action-desc">{{ processing_orders }} orders in progress</p>
+                    </div>
+                </a>
+
+                <a href="{% url 'admin:LaundryApp_customer_changelist' %}" class="quick-action">
+                    <div class="quick-action-icon bg-green-100">
+                        <svg class="h-5 w-5 text-green-600" xmlns="http://www.w3.org/2000/svg" fill="none"
+                            viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+                        </svg>
+                    </div>
+                    <div class="quick-action-content">
+                        <p class="quick-action-title">Manage Customers</p>
+                        <p class="quick-action-desc">View and edit customer information</p>
+                    </div>
+                </a>
+            </div>
+        </div>
+
+        <!-- Recent Orders -->
+        <div class="card">
+            <div class="card-header">
+                <h3 class="card-title">Recent Orders</h3>
+                <a href="{% url 'admin:LaundryApp_order_changelist' %}" class="view-all-link">
+                    View all
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+                    </svg>
+                </a>
+            </div>
+            <div class="table-container">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Order Code</th>
+                            <th>Customer</th>
+                            <th>Status</th>
+                            <th>Delivery Date</th>
+                            {% if request.user.is_superuser %}<th>Shop</th>{% endif %}
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for order in recent_orders %}
+                        <tr class="hover:bg-gray-50">
+                            <td>
+                                <a href="{% url 'admin:LaundryApp_order_change' order.id %}"
+                                    class="text-sm font-medium text-primary-600 hover:text-primary-800">
+                                    {{order.uniquecode}}
+                                </a>
+                            </td>
+                            <td>
+                                <div class="text-sm font-medium text-gray-900">{{ order.customer.name }}</div>
+                                <div class="text-sm text-gray-500">{{ order.customer.phone }}</div>
+                            </td>
+                            <td>
+                                {% if order.order_status == 'Pending' %}
+                                <span class="status-badge status-pending">Pending</span>
+                                {% elif order.order_status == 'Processing' %}
+                                <span class="status-badge status-processing">Processing</span>
+                                {% elif order.order_status == 'Completed' %}
+                                <span class="status-badge status-completed">Completed</span>
+                                {% elif order.order_status == 'Delivered' %}
+                                <span class="status-badge status-delivered">Delivered</span>
+                                {% else %}
+                                <span class="status-badge bg-gray-100 text-gray-800">{{order.order_status}}</span>
+                                {% endif %}
+                            </td>
+                            <td class="text-sm text-gray-900 font-medium">{{order.delivery_date|date:"M d, Y" }}</td>
+                            {% if request.user.is_superuser %}
+                            <td class="text-sm text-gray-500">{{order.shop}}</td>
+                            {% endif %}
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="{% if request.user.is_superuser %}5{% else %}4{% endif %}"
+                                class="px-6 py-4 text-center text-sm text-gray-500">
+                                No orders found
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

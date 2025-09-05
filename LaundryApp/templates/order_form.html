@@ -1,1232 +1,601 @@
-{% extends "admin/base_site.html" %}
-{% load static %}
+<!DOCTYPE html>
+<html lang="en">
 
-{% block extrahead %}
-{{ block.super }}
-<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
-<script src="https://cdn.tailwindcss.com"></script>
-<script>
-    tailwind.config = {
-        darkMode: 'class',
-        theme: {
-            extend: {
-                colors: {
-                    primary: {
-                        50: 'var(--color-primary-50)',
-                        100: 'var(--color-primary-100)',
-                        200: 'var(--color-primary-200)',
-                        300: 'var(--color-primary-300)',
-                        400: 'var(--color-primary-400)',
-                        500: 'var(--color-primary-500)',
-                        600: 'var(--color-primary-600)',
-                        700: 'var(--color-primary-700)',
-                        800: 'var(--color-primary-800)',
-                        900: 'var(--color-primary-900)',
-                    },
-                    success: {
-                        50: '#f0fdf4',
-                        500: '#22c55e',
-                        600: '#16a34a',
-                    },
-                    warning: {
-                        50: '#fffbeb',
-                        500: '#f59e0b',
-                        600: '#d97706',
-                    }
-                }
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Create New Order</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                                            primary: '#4f46e5',
+                                            secondary: '#7c3aed',
+                                            light: '#f8fafc',
+                                            dark: '#1f2937'
+                                        }
+                                    }
+                                }
+                            }
+                        </script>
+    <style>
+        .fade-in {
+            animation: fadeIn 0.5s ease-in-out;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
             }
         }
-    }
-</script>
-<style>
-    .required-field::after {
-        content: " *";
-        color: #ef4444;
-    }
 
-    .dark .required-field::after {
-        color: #f87171;
-    }
+        .slide-in {
+            animation: slideIn 0.3s ease-out;
+        }
 
-    .form-input {
-        width: 100%;
-        padding: 0.625rem 0.75rem;
-        border: 1px solid #e5e7eb;
-        border-radius: 0.5rem;
-        box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
-        transition: all 0.2s;
-        background-color: white;
-        color: #374151;
-    }
+        @keyframes slideIn {
+            from {
+                transform: translateX(10px);
+                opacity: 0;
+            }
 
-    .dark .form-input {
-        background-color: var(--color-background-default);
-        border-color: var(--color-border-default);
-        color: var(--color-font-default);
-    }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
 
-    .form-input:focus {
-        outline: none;
-        border-color: var(--color-primary-500);
-        box-shadow: 0 0 0 2px var(--color-primary-500);
-    }
+        input:focus,
+        select:focus,
+        textarea:focus {
+            box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+        }
 
-    .form-select {
-        width: 100%;
-        padding: 0.625rem 0.75rem;
-        border: 1px solid #e5e7eb;
-        border-radius: 0.5rem;
-        box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
-        background-color: white;
-        color: #374151;
-        transition: all 0.2s;
-    }
+        .loading {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid rgba(255, 255, 255, .3);
+            border-radius: 50%;
+            border-top-color: #fff;
+            animation: spin 1s ease-in-out infinite;
+        }
 
-    .dark .form-select {
-        background-color: var(--color-background-default);
-        border-color: var(--color-border-default);
-        color: var(--color-font-default);
-    }
+        @keyframes spin {
+            to {
+                transform: rotate(360deg);
+            }
+        }
 
-    .form-select:focus {
-        outline: none;
-        border-color: var(--color-primary-500);
-        box-shadow: 0 0 0 2px var(--color-primary-500);
-    }
+        .toast {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 15px 20px;
+            border-radius: 8px;
+            color: white;
+            z-index: 1000;
+            opacity: 0;
+            transform: translateY(-20px);
+            transition: opacity 0.3s, transform 0.3s;
+        }
 
-    .form-textarea {
-        width: 100%;
-        padding: 0.625rem 0.75rem;
-        border: 1px solid #e5e7eb;
-        border-radius: 0.5rem;
-        box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
-        resize: none;
-        transition: all 0.2s;
-        background-color: white;
-        color: #374151;
-    }
-
-    .dark .form-textarea {
-        background-color: var(--color-background-default);
-        border-color: var(--color-border-default);
-        color: var(--color-font-default);
-    }
-
-    .form-textarea:focus {
-        outline: none;
-        border-color: var(--color-primary-500);
-        box-shadow: 0 0 0 2px var(--color-primary-500);
-    }
-
-    .form-section {
-        background: linear-gradient(to bottom right, #ffffff, #f9fafb);
-        border-radius: 0.75rem;
-        padding: 1.5rem;
-        border: 1px solid #f3f4f6;
-        box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
-        transition: box-shadow 0.2s;
-    }
-
-    .dark .form-section {
-        background: linear-gradient(to bottom right, var(--color-background-elevated), var(--color-background-default));
-        border-color: var(--color-border-default);
-    }
-
-    .form-section:hover {
-        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
-    }
-
-    .form-section-header {
-        display: flex;
-        align-items: center;
-        margin-bottom: 1.5rem;
-        padding-bottom: 1rem;
-        border-bottom: 1px solid #f3f4f6;
-    }
-
-    .dark .form-section-header {
-        border-bottom-color: var(--color-border-default);
-    }
-
-    .form-section-title {
-        font-size: 1.25rem;
-        font-weight: 600;
-        color: #374151;
-        display: flex;
-        align-items: center;
-    }
-
-    .dark .form-section-title {
-        color: var(--color-font-default);
-    }
-
-    .form-section-icon {
-        width: 2.5rem;
-        height: 2.5rem;
-        background-color: var(--color-primary-100);
-        border-radius: 50%;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        margin-right: 0.75rem;
-    }
-
-    .total-display {
-        background: linear-gradient(to right, var(--color-primary-50), var(--color-primary-100));
-        border: 1px solid var(--color-primary-200);
-        border-radius: 0.75rem;
-        padding: 1.25rem;
-    }
-
-    .submit-button {
-        background: linear-gradient(to right, var(--color-primary-600), var(--color-primary-700));
-        color: white;
-        font-weight: 600;
-        padding: 0.75rem 2rem;
-        border-radius: 0.75rem;
-        transition: all 0.2s;
-        transform: scale(1);
-        outline: none;
-        box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
-    }
-
-    .submit-button:hover {
-        background: linear-gradient(to right, var(--color-primary-700), var(--color-primary-800));
-        transform: scale(1.05);
-        box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
-    }
-
-    .submit-button:focus {
-        outline: none;
-        box-shadow: 0 0 0 2px var(--color-primary-500), 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
-    }
-
-    .badge {
-        display: inline-flex;
-        align-items: center;
-        padding: 0.125rem 0.5rem;
-        border-radius: 9999px;
-        font-size: 0.75rem;
-        font-weight: 500;
-    }
-
-    .badge-primary {
-        background-color: var(--color-primary-100);
-        color: var(--color-primary-800);
-    }
-
-    .dark .badge-primary {
-        background-color: var(--color-primary-900);
-        color: var(--color-primary-200);
-    }
-
-    .badge-success {
-        background-color: #dcfce7;
-        color: #166534;
-    }
-
-    .dark .badge-success {
-        background-color: #14532d;
-        color: #bbf7d0;
-    }
-
-    .animate-pulse {
-        animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
-    }
-
-    @keyframes pulse {
-
-        0%,
-        100% {
+        .toast.show {
             opacity: 1;
+            transform: translateY(0);
         }
 
-        50% {
-            opacity: 0.5;
+        .toast.success {
+            background-color: #10B981;
         }
-    }
 
-    /* New styles for navigation buttons */
-    .nav-button {
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-        padding: 0.75rem 1.5rem;
-        font-weight: 600;
-        border-radius: 0.75rem;
-        transition: all 0.3s ease;
-        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-        position: relative;
-        overflow: hidden;
-    }
-
-    .nav-button:disabled {
-        opacity: 0.6;
-        cursor: not-allowed;
-    }
-
-    .nav-button:not(:disabled):hover {
-        transform: translateY(-2px);
-        box-shadow: 0 6px 12px rgba(0, 0, 0, 0.15);
-    }
-
-    .nav-button:not(:disabled):active {
-        transform: translateY(0);
-    }
-
-    .nav-button.next {
-        background: linear-gradient(135deg, var(--color-primary-600), var(--color-primary-700));
-        color: white;
-    }
-
-    .nav-button.next:hover {
-        background: linear-gradient(135deg, var(--color-primary-700), var(--color-primary-800));
-    }
-
-    .nav-button.prev {
-        background: white;
-        color: var(--color-primary-700);
-        border: 2px solid var(--color-primary-200);
-    }
-
-    .dark .nav-button.prev {
-        background: var(--color-background-default);
-        border-color: var(--color-primary-600);
-    }
-
-    .nav-button.prev:hover {
-        background: var(--color-primary-50);
-        border-color: var(--color-primary-300);
-    }
-
-    .dark .nav-button.prev:hover {
-        background: var(--color-primary-900);
-    }
-
-    .button-spinner {
-        display: none;
-        width: 1rem;
-        height: 1rem;
-        border: 2px solid transparent;
-        border-radius: 50%;
-        border-top-color: currentColor;
-        animation: spin 1s linear infinite;
-        margin-left: 0.5rem;
-    }
-
-    @keyframes spin {
-        to {
-            transform: rotate(360deg);
+        .toast.error {
+            background-color: #EF4444;
         }
-    }
+    </style>
+</head>
 
-    .button-container {
-        display: flex;
-        justify-content: space-between;
-        margin-top: 2rem;
-        padding-top: 1.5rem;
-        border-top: 1px solid #e5e7eb;
-    }
-
-    .dark .button-container {
-        border-top-color: #4b5563;
-    }
-</style>
-{% endblock %}
-
-{% block content %}
-<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 dark:bg-gray-900">
-    <!-- Progress Steps -->
-    <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-6 mb-8">
-        <div class="flex justify-center">
-            <div class="flex items-center space-x-8">
-                <div class="flex flex-col items-center">
-                    <div id="step-1-indicator"
-                        class="w-12 h-12 bg-primary-600 text-white rounded-full flex items-center justify-center font-bold text-lg">
-                        1
-                    </div>
-                    <span class="text-sm font-medium text-gray-700 dark:text-gray-300 mt-2">Customer</span>
-                </div>
-                <div class="w-16 h-0.5 bg-primary-200 dark:bg-primary-700"></div>
-                <div class="flex flex-col items-center">
-                    <div id="step-2-indicator"
-                        class="w-12 h-12 bg-primary-200 dark:bg-primary-700 text-gray-600 dark:text-gray-400 rounded-full flex items-center justify-center font-bold text-lg">
-                        2
-                    </div>
-                    <span class="text-sm font-medium text-gray-500 dark:text-gray-400 mt-2">Order</span>
-                </div>
-                <div class="w-16 h-0.5 bg-gray-200 dark:bg-gray-600"></div>
-                <div class="flex flex-col items-center">
-                    <div id="step-3-indicator"
-                        class="w-12 h-12 bg-gray-200 dark:bg-gray-600 text-gray-600 dark:text-gray-400 rounded-full flex items-center justify-center font-bold text-lg">
-                        3
-                    </div>
-                    <span class="text-sm font-medium text-gray-500 dark:text-gray-400 mt-2">Items</span>
-                </div>
-                <div class="w-16 h-0.5 bg-gray-200 dark:bg-gray-600"></div>
-                <div class="flex flex-col items-center">
-                    <div id="step-4-indicator"
-                        class="w-12 h-12 bg-gray-200 dark:bg-gray-600 text-gray-600 dark:text-gray-400 rounded-full flex items-center justify-center font-bold text-lg">
-                        4
-                    </div>
-                    <span class="text-sm font-medium text-gray-500 dark:text-gray-400 mt-2">Payment</span>
-                </div>
-            </div>
-        </div>
+<body class="bg-gray-50 min-h-screen">
+    <!-- Toast Notification -->
+    <div id="toast" class="toast">
+        <span id="toast-message"></span>
     </div>
-
-    {% if messages %}
-    <div class="mb-8">
-        {% for message in messages %}
-        <div
-            class="{% if message.tags == 'success' %}bg-success-50 dark:bg-green-900/20 border border-success-200 dark:border-green-700 text-success-800 dark:text-green-300{% else %}bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-700 text-red-800 dark:text-red-300{% endif %} rounded-xl p-4 shadow-sm">
+<!-- Navigation Bar -->
+<nav class="bg-white shadow-md">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="flex justify-between h-16">
             <div class="flex items-center">
-                <i
-                    class="fas {% if message.tags == 'success' %}fa-check-circle{% else %}fa-exclamation-circle{% endif %} mr-3 text-lg"></i>
-                <span class="font-medium">{{ message }}</span>
-            </div>
-        </div>
-        {% endfor %}
-    </div>
-    {% endif %}
-
-    <form method="post" id="laundryForm" class="space-y-8">
-        {% csrf_token %}
-        <input type="hidden" id="current_step" name="current_step" value="1">
-
-        <!-- Customer Information -->
-        <div class="div-content">
-            <!-- Content will be dynamically updated via JavaScript -->
-        </div>
-
-        <!-- Navigation Buttons -->
-        <div class="button-container">
-            <button type="button" id="prevButton" class="nav-button prev" disabled>
-                <i class="fas fa-arrow-left mr-2"></i> Previous
-            </button>
-            <button type="button" id="nextButton" class="nav-button next">
-                Next <i class="fas fa-arrow-right ml-2"></i>
-                <span class="button-spinner"></span>
-            </button>
-        </div>
-
-        <!-- Action Buttons (Final Step) -->
-        <div id="finalActions" class="bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-6 hidden">
-            <div class="flex flex-col sm:flex-row justify-between items-center space-y-4 sm:space-y-0">
-                <a href="{% url 'admin:LaundryApp_order_changelist' %}"
-                    class="text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:text-gray-200 transition-colors duration-200 flex items-center">
-                    <i class="fas fa-arrow-left mr-2"></i>
-                    Back to Orders List
-                </a>
-                <div class="flex space-x-4">
-                    <button type="reset"
-                        class="px-6 py-3 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-700 transition-all duration-200">
-                        <i class="fas fa-redo mr-2"></i>Reset Form
-                    </button>
-                    <button type="submit" class="submit-button">
-                        <i class="fas fa-paper-plane mr-2"></i>Create Order
-                    </button>
-                </div>
-            </div>
-        </div>
-    </form>
-</div>
-
-<script>
-    // Define step templates
-    const customerinfo = `
-    <div class="form-section">
-        <div class="form-section-header">
-            <div class="form-section-title">
-                <div class="form-section-icon">
-                    <i class="fas fa-user text-primary-600 dark:text-primary-400"></i>
-                </div>
-                Customer Information
-            </div>
-            <span class="badge badge-primary">Step 1 of 4</span>
-        </div>
-
-
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div>
-                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-3 required-field">Customer Name</label>
-                {{ customer_form.name }}
-                {% if customer_form.name.errors %}
-                <div class="text-red-600 text-sm mt-2 flex items-center">
-                    <i class="fas fa-exclamation-circle mr-1"></i>
-                    {{ customer_form.name.errors }}
-                </div>
-                {% endif %}
-            </div>
-
-            <div>
-                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-3 required-field">Phone Number</label>
-                {{ customer_form.phone }}
-                <p class="text-gray-500 dark:text-gray-400 text-xs mt-2 flex items-center">
-                    <i class="fas fa-info-circle mr-1"></i>
-                    {% if is_admin %}
-                        System will automatically detect existing customers
-                    {% else %}
-                        We'll check if you're an existing customer
-                    {% endif %}
-                </p>
-                {% if customer_form.phone.errors %}
-                <div class="text-red-600 text-sm mt-2 flex items-center">
-                    <i class="fas fa-exclamation-circle mr-1"></i>
-                    {{ customer_form.phone.errors }}
-                </div>
-                {% endif %}
-            </div>
-        </div>
-
-    </div>`;
-
-    const orderDetails = `
-    <div class="form-section">
-        <div class="form-section-header">
-            <div class="form-section-title">
-                <div class="form-section-icon">
-                    <i class="fas fa-clipboard-list text-primary-600 dark:text-primary-400"></i>
-                </div>
-                Order Details
-            </div>
-            <span class="badge badge-primary">Step 2 of 4</span>
-        </div>
-
-        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {% for field in order_form %}
-            {% if field.name != 'address' and field.name != 'addressdetails' %}
-            <div>
-                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-3 {% if field.field.required %}required-field{% endif %}">
-                    {{ field.label }}
-                </label>
-                {{ field }}
-                {% if field.errors %}
-                <div class="text-red-600 text-sm mt-2 flex items-center">
-                    <i class="fas fa-exclamation-circle mr-1"></i>
-                    {{ field.errors }}
-                </div>
-                {% endif %}
-            </div>
-            {% endif %}
-            {% endfor %}
-        </div>
-
-        <div class="grid grid-cols-1 gap-6 mt-6">
-            <div>
-                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">Address</label>
-                {{ order_form.address }}
-                {% if order_form.address.errors %}
-                <div class="text-red-600 text-sm mt-2 flex items-center">
-                    <i class="fas fa-exclamation-circle mr-1"></i>
-                    {{ order_form.address.errors }}
-                </div>
-                {% endif %}
-            </div>
-
-            <div>
-                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">Address Details</label>
-                {{ order_form.addressdetails }}
-                <p class="text-gray-500 dark:text-gray-400 text-xs mt-2 flex items-center">
-                    <i class="fas fa-info-circle mr-1"></i>
-                    Additional address information (optional)
-                </p>
-                {% if order_form.addressdetails.errors %}
-                <div class="text-red-600 text-sm mt-2 flex items-center">
-                    <i class="fas fa-exclamation-circle mr-1"></i>
-                    {{ order_form.addressdetails.errors }}
-                </div>
-                {% endif %}
-            </div>
-        </div>
-    </div>`;
-
-    const laundryItems = `
-    <div class="form-section">
-        <div class="form-section-header">
-            <div class="form-section-title">
-                <div class="form-section-icon">
-                    <i class="fas fa-tshirt text-primary-600 dark:text-primary-400"></i>
-                </div>
-                Laundry Items
-            </div>
-            <span class="badge badge-primary">Step 3 of 4</span>
-        </div>
-
-        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {% for field in order_item_form %}
-            {% if field.name != 'itemname' and field.name != 'additional_info' %}
-            <div>
-                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-3 {% if field.field.required %}required-field{% endif %}">
-                    {{ field.label }}
-                </label>
-                {{ field }}
-                {% if field.errors %}
-                <div class="text-red-600 text-sm mt-2 flex items-center">
-                    <i class="fas fa-exclamation-circle mr-1"></i>
-                    {{ field.errors }}
-                </div>
-                {% endif %}
-            </div>
-            {% endif %}
-            {% endfor %}
-        </div>
-
-        <div class="grid grid-cols-1 gap-6 mt-6">
-            <div>
-                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-3 required-field">Item Names</label>
-                {{ order_item_form.itemname }}
-                <p class="text-gray-500 dark:text-gray-400 text-xs mt-2 flex items-center">
-                    <i class="fas fa-info-circle mr-1"></i>
-                    Separate multiple items with commas
-                </p>
-                {% if order_item_form.itemname.errors %}
-                <div class="text-red-600 text-sm mt-2 flex items-center">
-                    <i class="fas fa-exclamation-circle mr-1"></i>
-                    {{ order_item_form.itemname.errors }}
-                </div>
-                {% endif %}
-            </div>
-
-            <div>
-                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">Additional Information</label>
-                {{ order_item_form.additional_info }}
-                <p class="text-gray-500 dark:text-gray-400 text-xs mt-2 flex items-center">
-                    <i class="fas fa-info-circle mr-1"></i>
-                    Special instructions or notes (optional)
-                </p>
-                {% if order_item_form.additional_info.errors %}
-                <div class="text-red-600 text-sm mt-2 flex items-center">
-                    <i class="fas fa-exclamation-circle mr-1"></i>
-                    {{ order_item_form.additional_info.errors }}
-                </div>
-                {% endif %}
-            </div>
-        </div>
-
-        <!-- Total Price Display -->
-        <div class="total-display mt-8">
-            <div class="flex justify-between items-center">
-                <div>
-                    <span class="text-lg font-semibold text-gray-800 dark:text-gray-200">Estimated Total:</span>
-                    <p class="text-sm text-gray-600 dark:text-gray-400 mt-1">Based on quantity and unit price</p>
-                </div>
-                <span id="totalPrice" class="text-3xl font-bold text-primary-600 dark:text-primary-400 animate-pulse">KSh 0.00</span>
-            </div>
-        </div>
-    </div>`;
-
-    const paymentInfo = `
-    <div class="form-section">
-        <div class="form-section-header">
-            <div class="form-section-title">
-                <div class="form-section-icon">
-                    <i class="fas fa-credit-card text-primary-600 dark:text-primary-400"></i>
-                </div>
-                Payment Information <span class="text-sm text-gray-500">(Optional)</span>
-            </div>
-            <span class="badge badge-primary">Step 4 of 4</span>
-        </div>
-
-        <div class="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-700 rounded-lg p-4 mb-6">
-            <div class="flex items-center">
-                <i class="fas fa-info-circle text-blue-600 dark:text-blue-400 mr-2"></i>
-                <span class="text-sm text-blue-800 dark:text-blue-200">
-                    Payment is optional. You can create the order now and collect payment later, or process payment immediately.
+                <span class="text-primary text-xl font-bold">
+                    <i class="fas fa-tshirt mr-2"></i>LaundryPro
                 </span>
-            </div>
-        </div>
-
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div>
-                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">
-                    Payment Method
-                </label>
-                <select id="id_payment_method" name="payment_method" class="form-select">
-                    <option value="">Select payment method (optional)</option>
-                    <option value="cash">Cash</option>
-                    <option value="mpesa">M-Pesa</option>
-                    <option value="card">Credit/Debit Card</option>
-                    <option value="bank_transfer">Bank Transfer</option>
-                    <option value="other">Other</option>
-                </select>
-            </div>
-
-            <div id="mpesaFields" style="display: none;">
-                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">
-                    Phone Number for M-Pesa
-                </label>
-                <input type="text" id="id_phone_number" name="phone_number" class="form-input"
-                       placeholder="e.g., +254712345678 or 0712345678">
-                <p class="text-gray-500 dark:text-gray-400 text-xs mt-2 flex items-center">
-                    <i class="fas fa-info-circle mr-1"></i>
-                    Phone number linked to M-Pesa
-                </p>
-            </div>
-
-            <div>
-                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">
-                    Transaction ID
-                </label>
-                <input type="text" id="id_transaction_id" name="transaction_id" class="form-input"
-                       placeholder="Transaction ID (if applicable)">
-                <p class="text-gray-500 dark:text-gray-400 text-xs mt-2 flex items-center">
-                    <i class="fas fa-info-circle mr-1"></i>
-                    For online payments or receipts
-                </p>
-            </div>
-
-            <div id="mpesaReceiptField" style="display: none;">
-                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">
-                    M-Pesa Receipt Number
-                </label>
-                <input type="text" id="id_mpesa_receipt_number" name="mpesa_receipt_number" class="form-input"
-                       placeholder="e.g., QF123456789">
-                <p class="text-gray-500 dark:text-gray-400 text-xs mt-2 flex items-center">
-                    <i class="fas fa-info-circle mr-1"></i>
-                    Receipt number from M-Pesa message
-                </p>
-            </div>
-        </div>
-
-        <div class="mt-6 p-4 bg-gray-50 dark:bg-gray-800 rounded-lg">
-            <div class="flex items-center justify-between">
-                <div>
-                    <h4 class="text-sm font-medium text-gray-900 dark:text-white">Skip Payment</h4>
-                    <p class="text-xs text-gray-600 dark:text-gray-400">Create order without payment - can be collected later</p>
                 </div>
-                <button type="button" id="skipPaymentBtn" class="px-4 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700 text-sm">
-                    Skip Payment
-                </button>
+                <div class="flex items-center space-x-4">
+                    <a href="#" class="text-gray-600 hover:text-primary transition-colors">
+                        <i class="fas fa-home mr-1"></i> Dashboard
+                    </a>
+                    <a href="#" class="text-gray-600 hover:text-primary transition-colors">
+                        <i class="fas fa-list mr-1"></i> Orders
+                    </a>
+                    <a href="#" class="text-primary font-medium">
+                        <i class="fas fa-plus-circle mr-1"></i> New Order
+                    </a>
+                </div>
             </div>
         </div>
-    </div>`;
+    </nav>
 
-    // Initialize variables
-    const divContent = document.querySelector('.div-content');
-    const currentStepInput = document.getElementById('current_step');
-    const nextButton = document.getElementById('nextButton');
-    const prevButton = document.getElementById('prevButton');
-    const finalActions = document.getElementById('finalActions');
-    let currentStep = 1;
-    const totalSteps = 4;
-    let orderId = null; // To store the order ID once created
+    <!-- Main Content -->
+    <div class="max-w-4xl mx-auto px-4 py-8 fade-in">
+        <div class="bg-white rounded-xl shadow-lg overflow-hidden mb-8">
+            <div class="bg-gradient-to-r from-primary to-secondary p-6 text-white">
+                <h1 class="text-2xl font-bold flex items-center">
+                    <i class="fas fa-plus-circle mr-3"></i>Create New Order
+                </h1>
+                <p class="mt-2 opacity-90">Add a new laundry order for your customer</p>
+            </div>
 
-    // Set initial content
-    divContent.innerHTML = customerinfo;
-    updateStepIndicators();
+            <form id="order-form" class="p-6 space-y-6">
+                {% csrf_token %}
 
-    // Add event listeners
-    nextButton.addEventListener('click', handleNextStep);
-    prevButton.addEventListener('click', handlePrevStep);
+                <!-- Customer Information Section -->
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6 slide-in">
+                    <div>
+                        <h2 class="text-lg font-semibold text-gray-800 mb-4 flex items-center">
+                            <i class="fas fa-user-circle mr-2 text-primary"></i>Customer Information
+                        </h2>
 
-    // Function to handle next step
-     function handleNextStep() {
-         // Validate current step
-         if (!validateStep(currentStep)) {
-             return;
-         }
+                        <div class="mb-4">
+                            <label class="block text-gray-700 text-sm font-medium mb-2" for="customer-name">
+                                Customer Name *
+                            </label>
+                            <input type="text" id="customer-name" name="customer_name" required
+                                class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
+                                placeholder="Enter customer name">
+                        </div>
 
-         // Show loading spinner
-         const spinner = nextButton.querySelector('.button-spinner');
-         spinner.style.display = 'inline-block';
-         nextButton.disabled = true;
+                        <div class="mb-4">
+                            <label class="block text-gray-700 text-sm font-medium mb-2" for="customer-phone">
+                                Phone Number *
+                            </label>
+                            <input type="tel" id="customer-phone" name="customer_phone" required
+                                class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
+                                placeholder="e.g. +254712345678">
+                        </div>
+                        </div>
 
-         // Submit step data
-         submitStepData()
-             .then(handleStepResponse)
-             .catch(handleStepError)
-             .finally(() => {
-                 spinner.style.display = 'none';
-                 nextButton.disabled = false;
-             });
-     }
+                    <div class="flex flex-col justify-center">
+                        <div class="bg-blue-50 border border-blue-100 rounded-lg p-4">
+                            <h3 class="font-medium text-blue-800 flex items-center">
+                                <i class="fas fa-info-circle mr-2"></i>Customer Tips
+                            </h3>
+                            <p class="text-sm text-blue-600 mt-2">
+                                If the customer already exists in the system, their information will auto-populate after
+                                entering the phone number.
+                            </p>
+                        </div>
+                    </div>
+                </div>
 
-        // Function to check if customer already exists (handled in step submission now)
-        function checkCustomerExists() {
-            return new Promise((resolve) => {
-                // Since customer check is now handled in step submission,
-                // we'll resolve to false and let the backend handle it
-                resolve(false);
-            });
-        }
+                <!-- Order Details Section -->
+                <div class="border-t pt-6 mt-6 slide-in">
+                    <h2 class="text-lg font-semibold text-gray-800 mb-4 flex items-center">
+                        <i class="fas fa-clipboard-list mr-2 text-primary"></i>Order Details
+                    </h2>
 
-        // Function to show customer exists message
-        function showCustomerExistsMessage(customerName) {
-            // Create a temporary success message
-            const messageDiv = document.createElement('div');
-            messageDiv.className = 'fixed top-4 right-4 bg-blue-100 border border-blue-400 text-blue-700 px-4 py-3 rounded z-50';
-            messageDiv.innerHTML = `
-                <div class="flex items-center">
-                    <i class="fas fa-user-check mr-2"></i>
-                    <span>Existing customer <strong>${customerName}</strong> found. Proceeding to next step.</span>
-                    <button onclick="this.parentElement.parentElement.remove()" class="ml-4 text-blue-700 hover:text-blue-900">
-                        <i class="fas fa-times"></i>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div>
+                            <label class="block text-gray-700 text-sm font-medium mb-2" for="shop">
+                                Shop *
+                            </label>
+                            <select id="shop" name="shop" required
+                                class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary">
+                                <option value="">Select a shop</option>
+                                <option value="Shop A">Shop A</option>
+                                <option value="Shop B">Shop B</option>
+                            </select>
+                            </div>
+
+                        <div>
+                            <label class="block text-gray-700 text-sm font-medium mb-2" for="delivery-date">
+                                Delivery Date *
+                            </label>
+                            <input type="date" id="delivery-date" name="delivery_date" required
+                                class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary">
+                            </div>
+                            </div>
+
+                    <div class="mt-4">
+                        <label class="block text-gray-700 text-sm font-medium mb-2" for="address">
+                            Delivery Address
+                        </label>
+                        <input type="text" id="address" name="address"
+                            class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
+                            placeholder="Enter delivery address">
+                    </div>
+
+                    <div class="mt-4">
+                        <label class="block text-gray-700 text-sm font-medium mb-2" for="address-details">
+                            Address Details
+                        </label>
+                        <textarea id="address-details" name="address_details" rows="2"
+                            class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
+                            placeholder="Any additional address details (apartment number, landmarks, etc.)"></textarea>
+                        </div>
+                </div>
+<!-- Order Items Section -->
+<div class="border-t pt-6 mt-6 slide-in">
+    <div class="flex justify-between items-center mb-4">
+        <h2 class="text-lg font-semibold text-gray-800 flex items-center">
+            <i class="fas fa-tshirt mr-2 text-primary"></i>Order Items
+        </h2>
+        <button type="button" id="add-item-btn"
+            class="bg-primary hover:bg-secondary text-white px-4 py-2 rounded-lg flex items-center transition-colors">
+            <i class="fas fa-plus mr-2"></i> Add Item
+        </button>
+    </div>
+
+                    <div id="order-items-container" class="space-y-4">
+                        <!-- Item template (will be cloned by JavaScript) -->
+                        <div class="item-card bg-gray-50 p-4 rounded-lg border">
+                            <div class="flex justify-between items-start mb-3">
+                                <span class="font-medium text-gray-700">Item #1</span>
+                                <button type="button" class="remove-item text-red-500 hover:text-red-700">
+                                    <i class="fas fa-times-circle"></i>
+                                </button>
+                            </div>
+                    
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div>
+                                    <label class="block text-gray-700 text-sm font-medium mb-2">Service Type *</label>
+                                    <select name="servicetype" required
+                                        class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary">
+                                        <option value="Washing">Washing</option>
+                                        <option value="Folding">Folding</option>
+                                        <option value="Ironing">Ironing</option>
+                                        <option value="Dry cleaning">Dry cleaning</option>
+                                    </select>
+                                    </div>
+
+                                <div>
+                                    <label class="block text-gray-700 text-sm font-medium mb-2">Item Category *</label>
+                                    <select name="itemtype" required
+                                        class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary">
+                                        <option value="Clothing">Clothing</option>
+                                        <option value="Bedding">Bedding</option>
+                                        <option value="Household items">Household items</option>
+                                        <option value="Footwares">Footwares</option>
+                                    </select>
+                                    </div>
+                            </div>
+
+                            <div class="mt-4">
+                                <label class="block text-gray-700 text-sm font-medium mb-2">Item Names *</label>
+                                <input type="text" name="itemname" required
+                                    class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
+                                    placeholder="e.g. Shirts, Trousers, Jackets">
+                                <p class="text-xs text-gray-500 mt-1">Separate multiple items with commas</p>
+                            </div>
+
+                            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
+                                <div>
+                                    <label class="block text-gray-700 text-sm font-medium mb-2">Quantity *</label>
+                                    <input type="number" name="quantity" min="1" value="1" required
+                                        class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary">
+                                    </div>
+
+                                <div>
+                                    <label class="block text-gray-700 text-sm font-medium mb-2">Unit Price (KSh)
+                                        *</label>
+                                    <input type="number" name="unit_price" min="0" step="0.01" required
+                                        class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary" placeholder="0.00">
+                                    </div>
+
+                                <div>
+                                    <label class="block text-gray-700 text-sm font-medium mb-2">Item Condition</label>
+                                    <select name="itemcondition"
+                                        class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary">
+                                        <option value="new">New</option>
+                                        <option value="Old">Old</option>
+                                        <option value="Torn">Torn</option>
+                                    </select>
+                                    </div>
+                                    </div>
+
+                            <div class="mt-4">
+                                <label class="block text-gray-700 text-sm font-medium mb-2">Additional
+                                    Information</label>
+                                <textarea name="additional_info" rows="2"
+                                    class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
+                                    placeholder="Any special instructions or notes"></textarea>
+                            </div>
+                        </div>
+                        </div>
+
+                    <div class="mt-6 p-4 bg-blue-50 rounded-lg border border-blue-100">
+                        <div class="flex justify-between items-center">
+                            <span class="font-medium text-blue-800">Order Total:</span>
+                            <span id="order-total" class="text-2xl font-bold text-primary">KSh 0.00</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Payment Information -->
+                <div class="border-t pt-6 mt-6 slide-in">
+                    <h2 class="text-lg font-semibold text-gray-800 mb-4 flex items-center">
+                        <i class="fas fa-credit-card mr-2 text-primary"></i>Payment Information
+                    </h2>
+
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div>
+                            <label class="block text-gray-700 text-sm font-medium mb-2" for="payment-type">
+                                Payment Type *
+                            </label>
+                            <select id="payment-type" name="payment_type" required
+                                class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary">
+                                <option value="pending_payment">Pending Payment</option>
+                                <option value="cash">Cash</option>
+                                <option value="mpesa">M-Pesa</option>
+                                <option value="card">Credit/Debit Card</option>
+                                <option value="bank_transfer">Bank Transfer</option>
+                                <option value="other">Other</option>
+                            </select>
+                            </div>
+
+                        <div>
+                            <label class="block text-gray-700 text-sm font-medium mb-2" for="payment-status">
+                                Payment Status *
+                            </label>
+                            <select id="payment-status" name="payment_status" required
+                                class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary">
+                                <option value="pending">Pending</option>
+                                <option value="completed">Completed</option>
+                                <option value="partial">Partial</option>
+                                <option value="failed">Failed</option>
+                                <option value="not_required">Not Required</option>
+                            </select>
+                            </div>
+                    </div>
+                    </div>
+
+                <!-- Form Actions -->
+                <div class="border-t pt-6 mt-6 flex justify-end space-x-4 slide-in">
+                    <button type="button" id="cancel-btn"
+                        class="px-6 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors">
+                        Cancel
                     </button>
-                </div>
-            `;
+                    <button type="submit" id="submit-btn"
+                        class="px-6 py-2 bg-primary hover:bg-secondary text-white rounded-lg font-medium transition-colors flex items-center">
+                        <i class="fas fa-check-circle mr-2"></i> Create Order
+                    </button>
+                    </div>
+                    </form>
+        </div>
+        </div>
 
-            document.body.appendChild(messageDiv);
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            // Set minimum date for delivery date to today
+            const today = new Date().toISOString().split('T')[0];
+            document.getElementById('delivery-date').min = today;
 
-            // Auto remove after 3 seconds
-            setTimeout(() => {
-                if (messageDiv.parentElement) {
-                    messageDiv.remove();
-                }
-            }, 3000);
-        }
+            let itemCount = 1;
 
-        // Function to handle step response
-        function handleStepResponse(response) {
-            if (response.success) {
-                // Handle customer information for step 1
-                if (currentStep === 1 && response.customer_exists !== undefined) {
-                    if (response.customer_exists) {
-                        // Auto-fill the name field with existing customer's name
-                        const nameField = document.getElementById('{{ customer_form.name.id_for_label }}');
-                        if (nameField) {
-                            nameField.value = response.customer_name;
-                        }
-                        // Show a brief message that existing customer was found
-                        showCustomerExistsMessage(response.customer_name);
-                        // Proceed to next step automatically
+            // Add new item
+            document.getElementById('add-item-btn').addEventListener('click', function () {
+                itemCount++;
+                const itemTemplate = document.querySelector('.item-card').cloneNode(true);
+
+                // Update item number
+                itemTemplate.querySelector('.font-medium').textContent = `Item #${itemCount}`;
+
+                // Clear input values
+                const inputs = itemTemplate.querySelectorAll('input, textarea, select');
+                inputs.forEach(input => {
+                    if (input.type !== 'button') {
+                        input.value = '';
                     }
-                }
+                });
 
-                // If we just created an order, store the order ID
-                if (response.order_id) {
-                    orderId = response.order_id;
-                }
+                // Set quantity back to 1
+                itemTemplate.querySelector('input[name="quantity"]').value = 1;
 
-                // Move to next step
-                currentStep++;
-                currentStepInput.value = currentStep;
-
-                // Update UI
-                updateStepContent();
-                updateStepIndicators();
-                updateNavigationButtons();
-
-                // Scroll to top
-                window.scrollTo({ top: 0, behavior: 'smooth' });
-
-                // If we have a redirect URL (final step), redirect
-                if (response.redirect_url) {
-                    window.location.href = response.redirect_url;
-                }
-            } else {
-                // Show validation errors
-                if (response.errors) {
-                    displayFormErrors(response.errors);
-                } else {
-                    alert(response.message || 'Please fix the errors before proceeding.');
-                }
-            }
-        }
-
-        // Function to handle step error
-        function handleStepError(error) {
-            console.error('Error:', error);
-            alert('An error occurred. Please try again.');
-        }
-    // Function to handle previous step
-    function handlePrevStep() {
-        currentStep--;
-        currentStepInput.value = currentStep;
-
-        // Update UI
-        updateStepContent();
-        updateStepIndicators();
-        updateNavigationButtons();
-
-        // Scroll to top
-        window.scrollTo({ top: 0, behavior: 'smooth' });
-    }
-
-    // Function to update step content
-    function updateStepContent() {
-        switch (currentStep) {
-            case 1:
-                divContent.innerHTML = customerinfo;
-                break;
-            case 2:
-                divContent.innerHTML = orderDetails;
-                break;
-            case 3:
-                divContent.innerHTML = laundryItems;
-                // Reattach event listeners for calculation
-                setTimeout(() => {
-                    if (document.getElementById('{{ order_item_form.quantity.id_for_label }}') &&
-                        document.getElementById('{{ order_item_form.unit_price.id_for_label }}')) {
-                        document.getElementById('{{ order_item_form.quantity.id_for_label }}').addEventListener('input', calculateTotal);
-                        document.getElementById('{{ order_item_form.unit_price.id_for_label }}').addEventListener('input', calculateTotal);
+                // Add remove functionality
+                itemTemplate.querySelector('.remove-item').addEventListener('click', function () {
+                    if (document.querySelectorAll('.item-card').length > 1) {
+                        itemTemplate.remove();
                         calculateTotal();
                     }
-                }, 100);
-                break;
-            case 4:
-                divContent.innerHTML = paymentInfo;
-                break;
-        }
-    }
-
-    // Function to update step indicators
-    function updateStepIndicators() {
-        // Reset all indicators
-        for (let i = 1; i <= totalSteps; i++) {
-            const indicator = document.getElementById(`step-${i}-indicator`);
-            if (i < currentStep) {
-                // Completed steps
-                indicator.className = 'w-12 h-12 bg-success-500 text-white rounded-full flex items-center justify-center font-bold text-lg';
-                indicator.innerHTML = '<i class="fas fa-check"></i>';
-            } else if (i === currentStep) {
-                // Current step
-                indicator.className = 'w-12 h-12 bg-primary-600 text-white rounded-full flex items-center justify-center font-bold text-lg';
-                indicator.textContent = i;
-            } else {
-                // Upcoming steps
-                indicator.className = 'w-12 h-12 bg-gray-200 dark:bg-gray-600 text-gray-600 dark:text-gray-400 rounded-full flex items-center justify-center font-bold text-lg';
-                indicator.textContent = i;
-            }
-        }
-    }
-
-    // Function to update navigation buttons
-    function updateNavigationButtons() {
-        // Previous button
-        if (currentStep === 1) {
-            prevButton.disabled = true;
-        } else {
-            prevButton.disabled = false;
-        }
-
-        // Next button
-        if (currentStep === totalSteps) {
-            nextButton.classList.add('hidden');
-            finalActions.classList.remove('hidden');
-        } else {
-            nextButton.classList.remove('hidden');
-            finalActions.classList.add('hidden');
-        }
-    }
-
-    // Function to validate current step
-    function validateStep(step) {
-        // This is a simplified validation - you should implement proper validation
-        // based on your form fields
-        let isValid = true;
-
-        switch (step) {
-            case 1:
-                // Validate customer info
-                const nameField = document.getElementById('{{ customer_form.name.id_for_label }}');
-                const phoneField = document.getElementById('{{ customer_form.phone.id_for_label }}');
-
-                if (!nameField.value.trim()) {
-                    highlightError(nameField);
-                    isValid = false;
-                }
-
-                if (!phoneField.value.trim()) {
-                    highlightError(phoneField);
-                    isValid = false;
-                }
-                break;
-
-            case 2:
-                // Validate order details
-                const deliveryDateField = document.getElementById('{{ order_form.delivery_date.id_for_label }}');
-                if (!deliveryDateField.value) {
-                    highlightError(deliveryDateField);
-                    isValid = false;
-                }
-                break;
-
-            case 3:
-                // Validate laundry items
-                const quantityField = document.getElementById('{{ order_item_form.quantity.id_for_label }}');
-                const unitPriceField = document.getElementById('{{ order_item_form.unit_price.id_for_label }}');
-                const itemNameField = document.getElementById('{{ order_item_form.itemname.id_for_label }}');
-
-                if (!quantityField.value || parseFloat(quantityField.value) <= 0) {
-                    highlightError(quantityField);
-                    isValid = false;
-                }
-
-                if (!unitPriceField.value || parseFloat(unitPriceField.value) <= 0) {
-                    highlightError(unitPriceField);
-                    isValid = false;
-                }
-
-                if (!itemNameField.value.trim()) {
-                    highlightError(itemNameField);
-                    isValid = false;
-                }
-                break;
-
-            case 4:
-                // Payment step is now optional - no validation required
-                // But if payment method is selected, validate related fields
-                const paymentMethod = document.getElementById('id_payment_method');
-                if (paymentMethod && paymentMethod.value === 'mpesa') {
-                    const phoneField = document.getElementById('id_phone_number');
-                    if (!phoneField.value.trim()) {
-                        highlightError(phoneField);
-                        isValid = false;
-                    }
-                }
-                break;
-        }
-
-        return isValid;
-    }
-
-    // Function to highlight field with error
-    function highlightError(field) {
-        field.classList.add('border-red-500');
-        setTimeout(() => {
-            field.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        }, 100);
-    }
-
-    // Function to display form errors from server response
-    function submitStepData() {
-        return new Promise((resolve, reject) => {
-            // Create a FormData object from the form
-            const formData = new FormData(document.getElementById('laundryForm'));
-
-            // Add a flag to indicate this is a step submission
-            formData.append('step_submit', 'true');
-            formData.append('current_step', currentStep);
-
-            // Send AJAX request
-            fetch('', {
-                method: 'POST',
-                body: formData,
-                headers: {
-                    'X-Requested-With': 'XMLHttpRequest',
-                }
-            })
-                .then(response => {
-                    // First check if response is JSON
-                    const contentType = response.headers.get('content-type');
-                    if (contentType && contentType.includes('application/json')) {
-                        return response.json();
-                    } else {
-                        // If not JSON, it's probably HTML (error page)
-                        throw new Error('Server returned HTML instead of JSON');
-                    }
-                })
-                .then(data => {
-                    resolve(data);
-                })
-                .catch(error => {
-                    console.error('Error:', error);
-                    alert('An error occurred. Please try again.');
-                    reject(error);
                 });
-        });
-    }
 
-    // Function to display form errors from server response
-    function displayFormErrors(errors) {
-        // Clear previous errors
-        const errorElements = document.querySelectorAll('.field-error');
-        errorElements.forEach(el => el.remove());
+                // Add event listeners for price calculation
+                const quantityInput = itemTemplate.querySelector('input[name="quantity"]');
+                const priceInput = itemTemplate.querySelector('input[name="unit_price"]');
 
-        // Remove error highlighting
-        const errorFields = document.querySelectorAll('.border-red-500');
-        errorFields.forEach(field => field.classList.remove('border-red-500'));
+                quantityInput.addEventListener('input', calculateTotal);
+                priceInput.addEventListener('input', calculateTotal);
 
-        // Add new errors
-        for (const [fieldName, errorList] of Object.entries(errors)) {
-            const fieldId = `id_${fieldName}`;
-            const field = document.getElementById(fieldId);
+                document.getElementById('order-items-container').appendChild(itemTemplate);
 
-            if (field) {
-                field.classList.add('border-red-500');
-                const errorDiv = document.createElement('div');
-                errorDiv.className = 'field-error text-red-600 text-sm mt-2 flex items-center';
+                // Animate new item
+                itemTemplate.style.opacity = '0';
+                itemTemplate.style.transform = 'translateY(10px)';
 
-                // Extract error messages
-                const errorMessages = errorList.map(error => error.message).join(', ');
-                errorDiv.innerHTML = `<i class="fas fa-exclamation-circle mr-1"></i> ${errorMessages}`;
+                setTimeout(() => {
+                    itemTemplate.style.transition = 'opacity 0.3s, transform 0.3s';
+                    itemTemplate.style.opacity = '1';
+                    itemTemplate.style.transform = 'translateY(0)';
+                }, 10);
+            });
 
-                field.parentNode.appendChild(errorDiv);
+            // Remove item functionality for initial item
+            document.querySelector('.remove-item').addEventListener('click', function () {
+                if (document.querySelectorAll('.item-card').length > 1) {
+                    this.closest('.item-card').remove();
+                    calculateTotal();
+                }
+            });
+
+            // Calculate order total
+            function calculateTotal() {
+                let total = 0;
+
+                document.querySelectorAll('.item-card').forEach(item => {
+                    const quantity = parseFloat(item.querySelector('input[name="quantity"]').value) || 0;
+                    const unitPrice = parseFloat(item.querySelector('input[name="unit_price"]').value) || 0;
+
+                    total += quantity * unitPrice;
+                });
+
+                document.getElementById('order-total').textContent = `KSh ${total.toFixed(2)}`;
             }
-        }
-    }
-    // Calculate total price in real-time
-    function calculateTotal() {
-        const quantityField = document.getElementById('{{ order_item_form.quantity.id_for_label }}');
-        const unitPriceField = document.getElementById('{{ order_item_form.unit_price.id_for_label }}');
-        const totalElement = document.getElementById('totalPrice');
 
-        if (quantityField && unitPriceField && totalElement) {
-            const quantity = parseFloat(quantityField.value) || 0;
-            const unitPrice = parseFloat(unitPriceField.value) || 0;
-            const total = quantity * unitPrice;
+            // Add event listeners for price calculation to initial inputs
+            document.querySelectorAll('input[name="quantity"], input[name="unit_price"]').forEach(input => {
+                input.addEventListener('input', calculateTotal);
+            });
 
-            totalElement.textContent = `KSh ${total.toFixed(2)}`;
+            // Initial calculation
+            calculateTotal();
 
-            // Remove animation when we have a valid total
-            if (total > 0) {
-                totalElement.classList.remove('animate-pulse');
-                totalElement.classList.add('text-success-600', 'dark:text-green-400');
-            } else {
-                totalElement.classList.add('animate-pulse');
-                totalElement.classList.remove('text-success-600', 'dark:text-green-400');
-            }
-        }
-    }
-
-    // Add focus styles to form elements
-    document.addEventListener('input', function (e) {
-        if (e.target.classList.contains('form-input') ||
-            e.target.classList.contains('form-select') ||
-            e.target.classList.contains('form-textarea')) {
-            e.target.parentElement.classList.add('ring-2', 'ring-primary-100', 'rounded-lg');
-        }
-    });
-
-    document.addEventListener('blur', function (e) {
-        if (e.target.classList.contains('form-input') ||
-            e.target.classList.contains('form-select') ||
-            e.target.classList.contains('form-textarea')) {
-            e.target.parentElement.classList.remove('ring-2', 'ring-primary-100', 'rounded-lg');
-        }
-    }, true);
-
-    // Payment method selection handler
-    document.addEventListener('change', function(e) {
-        if (e.target.id === 'id_payment_method') {
-            handlePaymentMethodChange(e.target.value);
-        }
-    });
-
-    // Skip payment button handler
-    document.addEventListener('click', function(e) {
-        if (e.target.id === 'skipPaymentBtn') {
-            handleSkipPayment();
-        }
-    });
-
-    function handlePaymentMethodChange(paymentMethod) {
-        const mpesaFields = document.getElementById('mpesaFields');
-        const mpesaReceiptField = document.getElementById('mpesaReceiptField');
-
-        if (paymentMethod === 'mpesa') {
-            mpesaFields.style.display = 'block';
-            mpesaReceiptField.style.display = 'block';
-        } else {
-            mpesaFields.style.display = 'none';
-            mpesaReceiptField.style.display = 'none';
-            // Clear M-Pesa fields when not selected
-            document.getElementById('id_phone_number').value = '';
-            document.getElementById('id_mpesa_receipt_number').value = '';
-        }
-    }
-
-    function handleSkipPayment() {
-        // Clear all payment fields
-        document.getElementById('id_payment_method').value = '';
-        document.getElementById('id_transaction_id').value = '';
-        document.getElementById('id_phone_number').value = '';
-        document.getElementById('id_mpesa_receipt_number').value = '';
-
-        // Hide M-Pesa fields
-        document.getElementById('mpesaFields').style.display = 'none';
-        document.getElementById('mpesaReceiptField').style.display = 'none';
-
-        // Show success message
-        showSkipPaymentMessage();
-    }
-
-    function showSkipPaymentMessage() {
-        // Create a temporary success message
-        const messageDiv = document.createElement('div');
-        messageDiv.className = 'fixed top-4 right-4 bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded z-50';
-        messageDiv.innerHTML = `
-            <div class="flex items-center">
-                <i class="fas fa-check-circle mr-2"></i>
-                <span>Payment skipped. Order will be created without payment.</span>
-                <button onclick="this.parentElement.parentElement.remove()" class="ml-4 text-green-700 hover:text-green-900">
-                    <i class="fas fa-times"></i>
-                </button>
-            </div>
-        `;
-
-        document.body.appendChild(messageDiv);
-
-        // Auto remove after 3 seconds
-        setTimeout(() => {
-            if (messageDiv.parentElement) {
-                messageDiv.remove();
-            }
-        }, 3000);
-    }
-
-    // Automatic customer detection for admin
-    function initializeCustomerDetection() {
-        // Add phone blur listener for automatic customer detection
-        const phoneField = document.getElementById('{{ customer_form.phone.id_for_label }}');
-        if (phoneField) {
-            phoneField.addEventListener('blur', function() {
+            // Phone number validation
+            const phoneInput = document.getElementById('customer-phone');
+            phoneInput.addEventListener('blur', function () {
                 const phone = this.value.trim();
-                if (phone.length > 5) {
-                    checkCustomerExists(phone);
+                if (phone && !phone.startsWith('+254') && phone.length === 9 && !isNaN(phone)) {
+                    this.value = '+254' + phone;
+                } else if (phone && phone.startsWith('0') && phone.length === 10) {
+                    this.value = '+254' + phone.substring(1);
+                }
+
+                // Here you would typically check if customer exists in database
+                // and auto-populate their name if they do
+            });
+
+            // Form submission
+            const orderForm = document.getElementById('order-form');
+            const submitBtn = document.getElementById('submit-btn');
+            const originalBtnText = submitBtn.innerHTML;
+
+            orderForm.addEventListener('submit', async function (e) {
+                e.preventDefault();
+
+                // Show loading state
+                submitBtn.disabled = true;
+                submitBtn.innerHTML = '<span class="loading"></span> Processing...';
+
+                try {
+                    // Collect form data
+                    const formData = {
+                        customer: {
+                            name: document.getElementById('customer-name').value,
+                            phone: document.getElementById('customer-phone').value
+                        },
+                        order: {
+                            shop: document.getElementById('shop').value,
+                            delivery_date: document.getElementById('delivery-date').value,
+                            address: document.getElementById('address').value,
+                            addressdetails: document.getElementById('address-details').value,
+                            payment_type: document.getElementById('payment-type').value,
+                            payment_status: document.getElementById('payment-status').value,
+                            order_status: 'pending' // Default status
+                        },
+                        items: []
+                    };
+
+                    // Collect items data
+                    document.querySelectorAll('.item-card').forEach(item => {
+                        formData.items.push({
+                            servicetype: item.querySelector('select[name="servicetype"]').value,
+                            itemtype: item.querySelector('select[name="itemtype"]').value,
+                            itemname: item.querySelector('input[name="itemname"]').value,
+                            quantity: parseInt(item.querySelector('input[name="quantity"]').value),
+                            unit_price: parseFloat(item.querySelector('input[name="unit_price"]').value),
+                            itemcondition: item.querySelector('select[name="itemcondition"]').value,
+                            additional_info: item.querySelector('textarea[name="additional_info"]').value
+                        });
+                    });
+
+                    // Send to API
+                    const response = await fetch('/api/orders/create/', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRFToken': getCookie('csrftoken')
+                        },
+                        body: JSON.stringify(formData)
+                    });
+
+                    const result = await response.json();
+
+                    if (result.success) {
+                        showToast('Order created successfully! Order code: ' + result.order_code, 'success');
+                        // Reset form after successful submission
+                        orderForm.reset();
+                        // Reset items to just one
+                        const itemsContainer = document.getElementById('order-items-container');
+                        while (itemsContainer.children.length > 1) {
+                            itemsContainer.removeChild(itemsContainer.lastChild);
+                        }
+                        calculateTotal();
+                    } else {
+                        throw new Error(result.message);
+                    }
+                } catch (error) {
+                    showToast('Error: ' + error.message, 'error');
+                    console.error('Error creating order:', error);
+                } finally {
+                    // Restore button state
+                    submitBtn.disabled = false;
+                    submitBtn.innerHTML = originalBtnText;
                 }
             });
-        }
-    }
 
-    // Function to check if customer exists by phone
-    function checkCustomerExists(phone) {
-        const formData = new FormData();
-        formData.append('check_customer', 'true');
-        formData.append('phone', phone);
-        formData.append('csrfmiddlewaretoken', document.querySelector('[name=csrfmiddlewaretoken]').value);
-
-        fetch('', {
-            method: 'POST',
-            body: formData,
-            headers: {
-                'X-Requested-With': 'XMLHttpRequest',
-            }
-        })
-        .then(response => response.json())
-        .then(data => {
-            if (data.exists) {
-                const nameField = document.getElementById('{{ customer_form.name.id_for_label }}');
-                if (!nameField.value.trim()) {
-                    nameField.value = data.customer.name;
+            // Cancel button
+            document.getElementById('cancel-btn').addEventListener('click', function () {
+                if (confirm('Are you sure you want to cancel? All entered data will be lost.')) {
+                    window.location.href = '/'; // Redirect to home or orders list
                 }
-                showCustomerExistsMessage(data.customer.name);
-            }
-        })
-        .catch(error => console.error('Error checking customer:', error));
-    }
-
-    // Initialize payment method handler when step 4 is loaded
-    function initializePaymentStep() {
-        const paymentMethodSelect = document.getElementById('id_payment_method');
-        if (paymentMethodSelect) {
-            paymentMethodSelect.addEventListener('change', function() {
-                handlePaymentMethodChange(this.value);
             });
-        }
-    }
 
-    // Update the updateStepContent function to initialize payment step and customer detection
-    const originalUpdateStepContent = updateStepContent;
-    updateStepContent = function() {
-        originalUpdateStepContent();
-        if (currentStep === 1) {
-            setTimeout(initializeCustomerDetection, 100);
-        }
-        if (currentStep === 4) {
-            setTimeout(initializePaymentStep, 100);
-        }
-    };
+            // Helper function to get CSRF token
+            function getCookie(name) {
+                let cookieValue = null;
+                if (document.cookie && document.cookie !== '') {
+                    const cookies = document.cookie.split(';');
+                    for (let i = 0; i < cookies.length; i++) {
+                        const cookie = cookies[i].trim();
+                        if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                            cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                            break;
+                        }
+                    }
+                }
+                return cookieValue;
+            }
+
+            // Toast notification function
+            function showToast(message, type) {
+                const toast = document.getElementById('toast');
+                const toastMessage = document.getElementById('toast-message');
+
+                toastMessage.textContent = message;
+                toast.className = 'toast ' + type + ' show';
+
+                setTimeout(() => {
+                    toast.className = 'toast';
+                }, 3000);
+            }
+        });
 </script>
-{% endblock %}
+</body>
+
+</html>

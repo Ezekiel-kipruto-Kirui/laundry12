@@ -14,12 +14,35 @@ import phonenumbers
 
 logger = logging.getLogger(__name__)
 
-# JSONField compatibility
 try:
     from django.db.models import JSONField
 except Exception:
     from django.contrib.postgres.fields import JSONField
+# models.py - Add this to your existing models
+class UserProfile(models.Model):
+    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='profile')
+    SHOP_CHOICES = (
+        ('Shop A', 'Shop A'),
+        ('Shop B', 'Shop B'),
+        ('None', 'None'),
+    )
+    shop = models.CharField(max_length=50, choices=SHOP_CHOICES, default='None')
+    
+    def __str__(self):
+        return f"{self.user.username} - {self.shop}"
 
+# Create user profile when a new user is created
+@receiver(post_save, sender=User)
+def create_user_profile(sender, instance, created, **kwargs):
+    if created:
+        UserProfile.objects.create(user=instance)
+
+@receiver(post_save, sender=User)
+def save_user_profile(sender, instance, **kwargs):
+    if hasattr(instance, 'profile'):
+        instance.profile.save()
+    else:
+        UserProfile.objects.create(user=instance)
 
 class Customer(models.Model):
     name = models.CharField(max_length=200)
@@ -86,7 +109,7 @@ class Order(models.Model):
         ('pending', 'Pending'),
         ('processing', 'Processing'),
         ('Completed', 'Completed'),
-        ('Delivered', 'Delivered'),
+       
     )
     order_status = models.CharField(max_length=50, choices=ORDER_STATUS_CHOICES, default='pending', db_index=True)
     
@@ -212,50 +235,18 @@ class OrderItem(models.Model):
         return f"{self.quantity} x {', '.join(items)} ({self.servicetype})"
 
 
+# In your models.py file, update the Payment model:
 class Payment(models.Model):
-    order = models.ForeignKey(
-        Order, on_delete=models.CASCADE, related_name='order_payments',
-        help_text="The order this payment is for."
-    )
-    price = models.DecimalField(max_digits=12, decimal_places=2, default=0)
-
-    # Payment tracking fields
-    payment_date = models.DateTimeField(auto_now_add=True)
-    payment_method = models.CharField(max_length=50, blank=True, null=True)
-    transaction_id = models.CharField(max_length=100, blank=True, null=True)
-
-    # M-Pesa specific fields
-    mpesa_receipt_number = models.CharField(max_length=50, blank=True, null=True)
-    mpesa_transaction_date = models.DateTimeField(blank=True, null=True)
-    phone_number = models.CharField(max_length=20, blank=True, null=True)
-
-    PAYMENT_STATUS_CHOICES = (
-        ('pending', 'Pending'),
-        ('completed', 'Completed'),
-        ('failed', 'Failed'),
-        ('cancelled', 'Cancelled'),
-    )
-    status = models.CharField(max_length=20, choices=PAYMENT_STATUS_CHOICES, default='pending')
+    order = models.OneToOneField(Order, on_delete=models.CASCADE, related_name='payment')
+    price = models.DecimalField(max_digits=10, decimal_places=2)
     
+    # Remove any ordering that references payment_date
     class Meta:
-        verbose_name = "Payment"
-        verbose_name_plural = "Payments"
-        ordering = ['-payment_date']
+        # Remove any ordering that references non-existent fields
+        ordering = ['-id']  # Order by ID descending instead
     
     def __str__(self):
-        return f"Payment of KSh {self.price} for Order {self.order.uniquecode}"
-    @property
-    def itemname_list(self):
-        """Return itemname as a list for template rendering."""
-        if not self.itemname:
-            return []
-        return [item.strip() for item in self.itemname.split(',') if item.strip()]
-    
-    @property
-    def total_price(self):
-        """Calculate total price for this item."""
-        return (self.unit_price or 0) * (self.quantity or 0)
-
+        return f"Payment for {self.order.uniquecode} - KSh {self.price}"
 @receiver(post_save, sender=Order)
 def handle_order_sms(sender, instance, created, **kwargs):
     customer_phone = str(instance.customer.phone)
