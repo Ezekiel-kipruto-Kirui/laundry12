@@ -1,5 +1,7 @@
 {% extends "admin/base_site.html" %}
-{% load static %}
+{% load static i18n %}
+
+{% block title %}Order Management{% endblock %}
 
 {% block extrahead %}
 {{ block.super }}
@@ -24,20 +26,41 @@
     }
 </script>
 <style>
-    /* Ensure our custom styles blend with admin */
     .dashboard #content {
         padding: 20px 40px;
     }
 
-    /* Make sure our content doesn't conflict with admin sidebar */
     #content-main {
         margin-left: 0;
     }
 
-    /* Improve mobile responsiveness */
     @media (max-width: 1024px) {
         .dashboard #content {
             padding: 15px;
+        }
+    }
+
+    .table-container {
+        overflow-x: auto;
+        width: 100%;
+    }
+
+    .order-table {
+        width: 100%;
+        border-collapse: collapse;
+    }
+
+    .order-table th {
+        white-space: nowrap;
+        position: sticky;
+        top: 0;
+        background-color: #f9fafb;
+        z-index: 10;
+    }
+
+    @media (max-width: 1280px) {
+        .order-table {
+            min-width: 1200px;
         }
     }
 </style>
@@ -45,14 +68,20 @@
 
 {% block content %}
 <div class="min-h-screen bg-gray-50">
-    <div class="max-w-7xl mx-auto">
+    <div class="max-w-full mx-auto">
         <!-- Header -->
         <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
             <div>
                 <h1 class="text-2xl font-bold text-gray-900">Order Management</h1>
                 <p class="text-sm text-gray-600 mt-1">
                     {% if not user.is_superuser %}
-                    Viewing orders for {{ user.userprofile.shop }}
+                    {% if user.groups.all.0.name == 'Shop A Staff' %}
+                    Viewing orders for Shop A
+                    {% elif user.groups.all.0.name == 'Shop B Staff' %}
+                    Viewing orders for Shop B
+                    {% else %}
+                    Viewing orders
+                    {% endif %}
                     {% else %}
                     Viewing all orders (Superuser)
                     {% endif %}
@@ -73,7 +102,7 @@
         </div>
 
         <!-- Stats Overview -->
-        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
             <div class="bg-white p-4 rounded-lg shadow border border-gray-100">
                 <div class="flex justify-between items-start">
                     <div>
@@ -81,10 +110,10 @@
                         <h3 class="text-2xl font-bold text-gray-800 mt-1">{{ total_orders }}</h3>
                     </div>
                     <div class="p-3 bg-blue-100 rounded-full">
-                        <i class="fas fa-shopping-cart text-blue-600"></i>
+                        <i class="fas fa-clipboard-list text-blue-600"></i>
                     </div>
                 </div>
-                <p class="text-xs text-gray-600 mt-2">All time orders</p>
+                <p class="text-xs text-gray-600 mt-2">All orders</p>
             </div>
 
             <div class="bg-white p-4 rounded-lg shadow border border-gray-100">
@@ -94,7 +123,7 @@
                         <h3 class="text-2xl font-bold text-gray-800 mt-1">{{ pending_orders }}</h3>
                     </div>
                     <div class="p-3 bg-amber-100 rounded-full">
-                        <i class="fas fa-clock text-amber-600"></i>
+                        <i class="fas fa-hourglass-half text-amber-600"></i>
                     </div>
                 </div>
                 <p class="text-xs text-gray-600 mt-2">Require attention</p>
@@ -107,51 +136,45 @@
                         <h3 class="text-2xl font-bold text-gray-800 mt-1">{{ completed_orders }}</h3>
                     </div>
                     <div class="p-3 bg-green-100 rounded-full">
-                        <i class="fas fa-check-circle text-green-600"></i>
+                        <i class="fas fa-check-double text-green-600"></i>
                     </div>
                 </div>
                 <p class="text-xs text-gray-600 mt-2">Successfully delivered</p>
-            </div>
-
-            <div class="bg-white p-4 rounded-lg shadow border border-gray-100">
-                <div class="flex justify-between items-start">
-                    <div>
-                        <p class="text-sm text-gray-500">Total Revenue</p>
-                        <h3 class="text-2xl font-bold text-gray-800 mt-1">KSh {{ total_revenue|floatformat:2 }}</h3>
-                    </div>
-                    <div class="p-3 bg-purple-100 rounded-full">
-                        <i class="fas fa-dollar-sign text-purple-600"></i>
-                    </div>
-                </div>
-                <p class="text-xs text-gray-600 mt-2">All time revenue</p>
             </div>
         </div>
 
         <!-- Filters -->
         <div class="bg-white p-4 rounded-lg shadow border border-gray-100 mb-6">
-            <form method="get" class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+            <form method="get"
+                class="flex flex-col md:flex-row justify-between w-full items-start md:items-center gap-4">
                 <div class="flex flex-wrap gap-2">
                     <!-- All Orders Filter -->
                     <a href="?{% if request.GET.search %}search={{ request.GET.search }}{% endif %}"
-                        class="px-3 py-1.5 {% if not request.GET.status and not request.GET.payment %}bg-primary-100 text-primary-700{% else %}bg-gray-100 text-gray-700{% endif %} rounded-full text-sm font-medium">
+                        class="px-3 py-1.5 justify-between {% if not request.GET.status and not request.GET.payment %}bg-primary-100 text-primary-700{% else %}bg-gray-100 text-gray-700{% endif %} rounded-full text-sm font-medium">
                         All Orders
                     </a>
 
                     <!-- Order Status Filters -->
-                    {% for status_value, status_label in order_status_choices %}
-                    <a href="?{% if request.GET.search %}search={{ request.GET.search }}&{% endif %}status={{ status_value }}{% if request.GET.payment %}&payment={{ request.GET.payment }}{% endif %}"
-                        class="px-3 py-1.5 {% if request.GET.status == status_value %}bg-{% if status_value == 'pending' %}amber{% elif status_value == 'processing' %}blue{% elif status_value == 'completed' %}green{% else %}gray{% endif %}-100 text-{% if status_value == 'pending' %}amber{% elif status_value == 'processing' %}blue{% elif status_value == 'completed' %}green{% else %}gray{% endif %}-700{% else %}bg-gray-100 text-gray-700{% endif %} rounded-full text-sm font-medium">
-                        {{ status_label }}
-                    </a>
-                    {% endfor %}
+                    <div class="flex flex-wrap items-center gap-2">
+                        <span class="text-sm text-gray-500 font-medium">Status:</span>
+                        {% for status_value, status_label in order_status_choices %}
+                        <a href="?{% if request.GET.search %}search={{ request.GET.search }}&{% endif %}status={{ status_value }}{% if request.GET.payment %}&payment={{ request.GET.payment }}{% endif %}"
+                            class="px-3 py-1.5 {% if request.GET.status == status_value %}bg-{% if status_value == 'pending' %}amber{% elif status_value == 'processing' %}blue{% elif status_value == 'Completed' %}green{% else %}gray{% endif %}-100 text-{% if status_value == 'pending' %}amber{% elif status_value == 'processing' %}blue{% elif status_value == 'Completed' %}green{% else %}gray{% endif %}-700{% else %}bg-gray-100 text-gray-700{% endif %} rounded-full text-sm font-medium">
+                            {{ status_label }}
+                        </a>
+                        {% endfor %}
+                    </div>
 
                     <!-- Payment Status Filters -->
-                    {% for payment_value, payment_label in payment_status_choices %}
-                    <a href="?{% if request.GET.search %}search={{ request.GET.search }}&{% endif %}payment={{ payment_value }}{% if request.GET.status %}&status={{ request.GET.status }}{% endif %}"
-                        class="px-3 py-1.5 {% if request.GET.payment == payment_value %}bg-{% if payment_value == 'pending' %}orange{% elif payment_value == 'partial' %}yellow{% elif payment_value == 'completed' %}green{% else %}gray{% endif %}-100 text-{% if payment_value == 'pending' %}orange{% elif payment_value == 'partial' %}yellow{% elif payment_value == 'completed' %}green{% else %}gray{% endif %}-700{% else %}bg-gray-100 text-gray-700{% endif %} rounded-full text-sm font-medium">
-                        {{ payment_label }}
-                    </a>
-                    {% endfor %}
+                    <div class="flex flex-wrap items-center gap-2">
+                        <span class="text-sm text-gray-500 font-medium">Payment:</span>
+                        {% for payment_value, payment_label in payment_status_choices %}
+                        <a href="?{% if request.GET.search %}search={{ request.GET.search }}&{% endif %}payment={{ payment_value }}{% if request.GET.status %}&status={{ request.GET.status }}{% endif %}"
+                            class="px-3 py-1.5 {% if request.GET.payment == payment_value %}bg-{% if payment_value == 'pending' %}orange{% elif payment_value == 'partial' %}yellow{% elif payment_value == 'completed' %}green{% else %}gray{% endif %}-100 text-{% if payment_value == 'pending' %}orange{% elif payment_value == 'partial' %}yellow{% elif payment_value == 'completed' %}green{% else %}gray{% endif %}-700{% else %}bg-gray-100 text-gray-700{% endif %} rounded-full text-sm font-medium">
+                            {{ payment_label }}
+                        </a>
+                        {% endfor %}
+                    </div>
                 </div>
                 <div class="relative w-full md:w-auto">
                     <input type="text" name="search" placeholder="Search orders..." value="{{ request.GET.search }}"
@@ -163,17 +186,21 @@
 
         <!-- Orders Table -->
         <div class="bg-white rounded-lg shadow overflow-hidden border border-gray-100">
-            <div class="overflow-x-auto">
-                <table class="w-full">
+            <div class="table-container">
+                <table class="order-table">
                     <thead class="bg-gray-50">
                         <tr class="text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                             <th class="px-6 py-3">Order Code</th>
                             <th class="px-6 py-3">Customer</th>
-                            <th class="px-6 py-3">Status</th>
-                            <th class="px-6 py-3">Payment</th>
+                            <th class="px-6 py-3">Address</th>
+                            <th class="px-6 py-3">Service Type</th>
+                            <th class="px-6 py-3">Items Type</th>
+                            <th class="px-6 py-3">Items</th>
+                            <th class="px-6 py-3">Quantity</th>
+                            <th class="px-6 py-3">Item Condition</th>
                             <th class="px-6 py-3">Total</th>
-                            <th class="px-6 py-3">Delivery Date</th>
-                            <th class="px-6 py-3">Created</th>
+                            <th class="px-6 py-3">Order Status</th>
+                            <th class="px-6 py-3">Payment Status</th>
                             <th class="px-6 py-3 text-right">Actions</th>
                         </tr>
                     </thead>
@@ -189,7 +216,66 @@
                                 <div class="text-sm text-gray-500">{{ order.customer.phone }}</div>
                             </td>
                             <td class="px-6 py-4">
-                                {% if order.order_status == 'completed' %}
+                                <div class="text-sm">{{ order.address|truncatewords:5 }}</div>
+                                {% if order.addressdetails %}
+                                <div class="text-xs text-gray-500 mt-1" title="{{ order.addressdetails }}">
+                                    {{ order.addressdetails|truncatewords:3 }}
+                                </div>
+                                {% endif %}
+                            </td>
+                            <td class="px-6 py-4">
+                                {% for item in order.items.all|slice:":2" %}
+                                <div class="text-sm">{{ item.servicetype }}</div>
+                                {% endfor %}
+                                {% if order.items.count > 2 %}
+                                <div class="text-xs text-gray-500">+{{ order.items.count|add:"-2" }} more</div>
+                                {% endif %}
+                            </td>
+                            <td class="px-6 py-4">
+                                {% for item in order.items.all|slice:":2" %}
+                                <div class="text-sm">{{ item.itemtype }}</div>
+                                {% endfor %}
+                                {% if order.items.count > 2 %}
+                                <div class="text-xs text-gray-500">+{{ order.items.count|add:"-2" }} more</div>
+                                {% endif %}
+                            </td>
+                            <td class="px-6 py-4">
+                                {% for item in order.items.all|slice:":2" %}
+                                <div class="text-sm">
+                                    {{ item.itemname|truncatewords:3 }}
+                                </div>
+                                {% endfor %}
+                                {% if order.items.count > 2 %}
+                                <div class="text-xs text-gray-500">+{{ order.items.count|add:"-2" }} more items</div>
+                                {% endif %}
+                            </td>
+                            <td class="px-6 py-4">
+                                {% for item in order.items.all|slice:":2" %}
+                                <div class="text-sm">{{ item.quantity }}</div>
+                                {% endfor %}
+                                {% if order.items.count > 2 %}
+                                <div class="text-xs text-gray-500">...</div>
+                                {% endif %}
+                            </td>
+                            <td class="px-6 py-4">
+                                {% for item in order.items.all|slice:":2" %}
+                                <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium 
+                                    {% if item.itemcondition == 'new' %}bg-green-100 text-green-800
+                                    {% elif item.itemcondition == 'Old' %}bg-yellow-100 text-yellow-800
+                                    {% elif item.itemcondition == 'Torn' %}bg-red-100 text-red-800
+                                    {% else %}bg-gray-100 text-gray-800{% endif %}">
+                                    {{ item.itemcondition }}
+                                </span>
+                                {% endfor %}
+                                {% if order.items.count > 2 %}
+                                <div class="text-xs text-gray-500">...</div>
+                                {% endif %}
+                            </td>
+                            <td class="px-6 py-4">
+                                <div class="font-medium text-gray-900">KSh {{ order.total_price }}</div>
+                            </td>
+                            <td class="px-6 py-4">
+                                {% if order.order_status == 'Completed' %}
                                 <span
                                     class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
                                     <i class="fas fa-check-circle mr-1"></i> Completed
@@ -203,6 +289,11 @@
                                 <span
                                     class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
                                     <i class="fas fa-cog mr-1"></i> Processing
+                                </span>
+                                {% elif order.order_status == 'Delivered' %}
+                                <span
+                                    class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-purple-100 text-purple-800">
+                                    <i class="fas fa-truck mr-1"></i> Delivered
                                 </span>
                                 {% else %}
                                 <span
@@ -230,17 +321,6 @@
                                 </span>
                                 {% endif %}
                             </td>
-                            <td class="px-6 py-4 font-medium">KSh {{ order.total_price|floatformat:2 }}</td>
-                            <td class="px-6 py-4">
-                                <div class="text-sm">{{ order.delivery_date|date:"M d, Y" }}</div>
-                                <div
-                                    class="text-xs text-gray-500 {% if order.delivery_date < today %}text-red-500{% endif %}">
-                                    {% if order.delivery_date < today %}Past Due{% endif %} </div>
-                            </td>
-                            <td class="px-6 py-4">
-                                <div class="text-sm">{{ order.created_at|date:"M d, Y" }}</div>
-                                <div class="text-xs text-gray-500">{{ order.created_at|date:"h:i A" }}</div>
-                            </td>
                             <td class="px-6 py-4">
                                 <div class="flex justify-end gap-2">
                                     <a href="{% url 'admin:LaundryApp_order_change' order.id %}"
@@ -263,7 +343,7 @@
                         </tr>
                         {% empty %}
                         <tr>
-                            <td colspan="8" class="px-6 py-12 text-center">
+                            <td colspan="12" class="px-6 py-12 text-center">
                                 <div class="inline-flex items-center justify-center rounded-full bg-gray-100 p-4 mb-3">
                                     <i class="fas fa-inbox text-2xl text-gray-400"></i>
                                 </div>
@@ -275,7 +355,7 @@
                                     There are no orders in the system yet. When you have orders, they'll appear here.
                                     {% endif %}
                                 </p>
-                                <a href="{% url 'admin:LaundryApp_order_add' %}"
+                                <a href="{% url 'admin:createorder' %}"
                                     class="mt-4 inline-flex items-center gap-2 px-4 py-2 bg-primary-600 border border-primary-600 rounded-lg text-white hover:bg-primary-700 transition-colors shadow-sm">
                                     <i class="fas fa-plus text-sm"></i>
                                     <span>Create New Order</span>
@@ -333,5 +413,8 @@
 {% endblock %}
 
 {% block sidebar %}
+{% endblock %}
+
+{% block extrastyle %}
 {{ block.super }}
 {% endblock %}

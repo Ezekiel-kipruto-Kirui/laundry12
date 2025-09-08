@@ -1,0 +1,266 @@
+{% extends 'admin/base.html' %}
+
+{% block title %}Order Details - Laundry Management System{% endblock %}
+
+{% block content %}
+<div class="mb-6 flex justify-between items-center">
+    <div>
+        <h1 class="text-2xl font-bold text-gray-800">Order Details</h1>
+        <p class="text-gray-600">Order code: {{ order.uniquecode }}</p>
+    </div>
+    <div class="flex space-x-2">
+        <a href="{% url 'edit_order' order.id %}"
+            class="bg-yellow-500 hover:bg-yellow-600 text-white px-4 py-2 rounded-lg flex items-center">
+            <i class="fas fa-edit mr-2"></i> Edit Order
+        </a>
+        <a href="{% url 'order_management' %}"
+            class="bg-gray-500 hover:bg-gray-600 text-white px-4 py-2 rounded-lg flex items-center">
+            <i class="fas fa-arrow-left mr-2"></i> Back to Orders
+        </a>
+    </div>
+</div>
+
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+    <!-- Order Information -->
+    <div class="lg:col-span-2">
+        <div class="bg-white rounded-lg shadow overflow-hidden mb-6">
+            <div class="p-6 border-b border-gray-200">
+                <h2 class="text-xl font-bold text-gray-800">Order Information</h2>
+            </div>
+            <div class="p-6">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                        <p class="text-sm text-gray-600">Order Code</p>
+                        <p class="text-lg font-medium text-gray-900">{{ order.uniquecode }}</p>
+                    </div>
+                    <div>
+                        <p class="text-sm text-gray-600">Order Status</p>
+                        <p class="text-lg font-medium">
+                            <span class="px-2 py-1 text-xs font-semibold rounded-full 
+                                {% if order.order_status == 'Completed' %}bg-green-100 text-green-800
+                                {% elif order.order_status == 'Pending' %}bg-yellow-100 text-yellow-800
+                                {% else %}bg-blue-100 text-blue-800{% endif %}">
+                                {{ order.order_status }}
+                            </span>
+                        </p>
+                    </div>
+                    <div>
+                        <p class="text-sm text-gray-600">Created Date</p>
+                        <p class="text-lg font-medium text-gray-900">{{ order.created_at|date:"M d, Y H:i" }}</p>
+                    </div>
+                    <div>
+                        <p class="text-sm text-gray-600">Delivery Date</p>
+                        <p class="text-lg font-medium text-gray-900">{{ order.delivery_date|date:"M d, Y" }}</p>
+                    </div>
+                    <div>
+                        <p class="text-sm text-gray-600">Payment Status</p>
+                        <p class="text-lg font-medium">
+                            <span class="px-2 py-1 text-xs font-semibold rounded-full 
+                                {% if order.payment_status == 'completed' %}bg-green-100 text-green-800
+                                {% elif order.payment_status == 'pending' %}bg-yellow-100 text-yellow-800
+                                {% else %}bg-red-100 text-red-800{% endif %}">
+                                {{ order.payment_status|title }}
+                            </span>
+                        </p>
+                    </div>
+                    <div>
+                        <p class="text-sm text-gray-600">Payment Type</p>
+                        <p class="text-lg font-medium text-gray-900">{{ order.payment_type|title }}</p>
+                    </div>
+                    <div>
+                        <p class="text-sm text-gray-600">Shop</p>
+                        <p class="text-lg font-medium text-gray-900">{{ order.shop }}</p>
+                    </div>
+                    <div>
+                        <p class="text-sm text-gray-600">Total Amount</p>
+                        <p class="text-lg font-medium text-primary">KSh {{ order.total_price|floatformat:2 }}</p>
+                    </div>
+                </div>
+
+                {% if order.address or order.addressdetails %}
+                <div class="mt-6">
+                    <p class="text-sm text-gray-600">Delivery Address</p>
+                    <p class="text-lg font-medium text-gray-900">{{ order.address }}</p>
+                    {% if order.addressdetails %}
+                    <p class="text-sm text-gray-600 mt-2">Address Details</p>
+                    <p class="text-gray-900">{{ order.addressdetails }}</p>
+                    {% endif %}
+                </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Order Items -->
+        <div class="bg-white rounded-lg shadow overflow-hidden">
+            <div class="p-6 border-b border-gray-200">
+                <h2 class="text-xl font-bold text-gray-800">Order Items</h2>
+            </div>
+            <div class="p-6">
+                <div class="overflow-x-auto">
+                    <table class="min-w-full divide-y divide-gray-200">
+                        <thead class="bg-gray-50">
+                            <tr>
+                                <th
+                                    class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                    Service</th>
+                                <th
+                                    class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                    Items</th>
+                                <th
+                                    class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                    Quantity</th>
+                                <th
+                                    class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                    Unit Price</th>
+                                <th
+                                    class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                    Total</th>
+                            </tr>
+                        </thead>
+                        <tbody class="bg-white divide-y divide-gray-200">
+                            {% for item in order.items.all %}
+                            <tr>
+                                <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{{
+                                    item.servicetype }}</td>
+                                <td class="px-6 py-4 text-sm text-gray-900">
+                                    {{ item.itemname }}
+                                    {% if item.itemcondition != 'new' %}
+                                    <span class="text-xs text-gray-500">({{ item.itemcondition }})</span>
+                                    {% endif %}
+                                    {% if item.additional_info %}
+                                    <p class="text-xs text-gray-500 mt-1">{{ item.additional_info }}</p>
+                                    {% endif %}
+                                </td>
+                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ item.quantity }}</td>
+                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">KSh {{
+                                    item.unit_price|floatformat:2 }}</td>
+                                <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">KSh {{
+                                    item.total_item_price|floatformat:2 }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                        <tfoot class="bg-gray-50">
+                            <tr>
+                                <td colspan="4" class="px-6 py-4 text-right text-sm font-medium text-gray-900">Total
+                                </td>
+                                <td class="px-6 py-4 text-sm font-bold text-primary">KSh {{
+                                    order.total_price|floatformat:2 }}</td>
+                            </tr>
+                        </tfoot>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Customer Information -->
+    <div>
+        <div class="bg-white rounded-lg shadow overflow-hidden mb-6">
+            <div class="p-6 border-b border-gray-200">
+                <h2 class="text-xl font-bold text-gray-800">Customer Information</h2>
+            </div>
+            <div class="p-6">
+                <div class="flex items-center mb-4">
+                    <div class="flex-shrink-0 h-12 w-12">
+                        <img class="h-12 w-12 rounded-full"
+                            src="https://ui-avatars.com/api/?name={{ order.customer.name }}&background=4f46e5&color=fff"
+                            alt="">
+                    </div>
+                    <div class="ml-4">
+                        <div class="text-lg font-medium text-gray-900">{{ order.customer.name }}</div>
+                        <div class="text-sm text-gray-500">{{ order.customer.phone }}</div>
+                    </div>
+                </div>
+
+                <a href="{% url 'customer_detail' order.customer.id %}"
+                    class="block w-full bg-primary hover:bg-secondary text-white text-center px-4 py-2 rounded-lg mt-4">
+                    View Customer Profile
+                </a>
+            </div>
+        </div>
+
+        <!-- Order Actions -->
+        <div class="bg-white rounded-lg shadow overflow-hidden">
+            <div class="p-6 border-b border-gray-200">
+                <h2 class="text-xl font-bold text-gray-800">Order Actions</h2>
+            </div>
+            <div class="p-6 space-y-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Update Status</label>
+                    <select id="status-select"
+                        class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary">
+                        <option value="pending" {% if order.order_status=='pending' %}selected{% endif %}>Pending
+                        </option>
+                        <option value="processing" {% if order.order_status=='processing' %}selected{% endif %}>
+                            Processing</option>
+                        <option value="Completed" {% if order.order_status=='Completed' %}selected{% endif %}>Completed
+                        </option>
+                    </select>
+                </div>
+                <button id="update-status-btn"
+                    class="w-full bg-primary hover:bg-secondary text-white px-4 py-2 rounded-lg">
+                    Update Status
+                </button>
+
+                <hr class="my-4">
+
+                <a href="#"
+                    class="block w-full bg-green-600 hover:bg-green-700 text-white text-center px-4 py-2 rounded-lg">
+                    <i class="fas fa-receipt mr-2"></i> Generate Invoice
+                </a>
+
+                <a href="#"
+                    class="block w-full bg-blue-600 hover:bg-blue-700 text-white text-center px-4 py-2 rounded-lg">
+                    <i class="fas fa-sms mr-2"></i> Send SMS Notification
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    document.getElementById('update-status-btn').addEventListener('click', function () {
+        const newStatus = document.getElementById('status-select').value;
+        const orderId = "{{order.id}}";
+
+    fetch('{% url "update_order_status" order.id %}', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+            'X-CSRFToken': getCookie('csrftoken'),
+            'X-Requested-With': 'XMLHttpRequest'
+        },
+        body: `status=${newStatus}`
+    })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                alert('Order status updated successfully!');
+                location.reload();
+            } else {
+                alert('Error: ' + data.message);
+            }
+        })
+        .catch(error => {
+            console.error('Error updating status:', error);
+            alert('An error occurred while updating the status.');
+        });
+    });
+
+    // Helper function to get CSRF token
+    function getCookie(name) {
+        let cookieValue = null;
+        if (document.cookie && document.cookie !== '') {
+            const cookies = document.cookie.split(';');
+            for (let i = 0; i < cookies.length; i++) {
+                const cookie = cookies[i].trim();
+                if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                    break;
+                }
+            }
+        }
+        return cookieValue;
+    }
+</script>
+{% endblock %}

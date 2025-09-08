@@ -1,0 +1,138 @@
+{% extends 'admin/base.html' %}
+
+{% block title %}Dashboard - Laundry Management System{% endblock %}
+
+{% block content %}
+<div class="mb-6">
+    <h1 class="text-2xl font-bold text-gray-800">Dashboard</h1>
+    <p class="text-gray-600">Welcome to the laundry management system</p>
+</div>
+
+<!-- Stats Cards -->
+<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+    <div class="bg-white rounded-lg shadow p-6">
+        <div class="flex items-center">
+            <div class="p-3 rounded-full bg-blue-100 text-blue-600 mr-4">
+                <i class="fas fa-users text-xl"></i>
+            </div>
+            <div>
+                <p class="text-sm text-gray-600">Total Users</p>
+                <h2 class="text-2xl font-bold text-gray-800">{{ total_users }}</h2>
+            </div>
+        </div>
+    </div>
+
+    <div class="bg-white rounded-lg shadow p-6">
+        <div class="flex items-center">
+            <div class="p-3 rounded-full bg-green-100 text-green-600 mr-4">
+                <i class="fas fa-user-friends text-xl"></i>
+            </div>
+            <div>
+                <p class="text-sm text-gray-600">Total Customers</p>
+                <h2 class="text-2xl font-bold text-gray-800">{{ total_customers }}</h2>
+            </div>
+        </div>
+    </div>
+
+    <div class="bg-white rounded-lg shadow p-6">
+        <div class="flex items-center">
+            <div class="p-3 rounded-full bg-purple-100 text-purple-600 mr-4">
+                <i class="fas fa-shopping-cart text-xl"></i>
+            </div>
+            <div>
+                <p class="text-sm text-gray-600">Total Orders</p>
+                <h2 class="text-2xl font-bold text-gray-800">{{ total_orders }}</h2>
+            </div>
+        </div>
+    </div>
+
+    <div class="bg-white rounded-lg shadow p-6">
+        <div class="flex items-center">
+            <div class="p-3 rounded-full bg-yellow-100 text-yellow-600 mr-4">
+                <i class="fas fa-store text-xl"></i>
+            </div>
+            <div>
+                <p class="text-sm text-gray-600">Shops</p>
+                <h2 class="text-2xl font-bold text-gray-800">{{ shop_performance|length }}</h2>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Shop Performance -->
+<div class="bg-white rounded-lg shadow mb-8">
+    <div class="p-6 border-b border-gray-200">
+        <h2 class="text-xl font-bold text-gray-800">Shop Performance</h2>
+    </div>
+    <div class="p-6">
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            {% for shop, data in shop_performance.items %}
+            <div class="border border-gray-200 rounded-lg p-4">
+                <h3 class="text-lg font-semibold text-gray-800 mb-2">{{ shop }}</h3>
+                <div class="space-y-2">
+                    <p class="text-sm text-gray-600">Total Orders: <span class="font-medium">{{ data.total_orders
+                            }}</span></p>
+                    <p class="text-sm text-gray-600">Completed Orders: <span class="font-medium">{{
+                            data.completed_orders }}</span></p>
+                    <p class="text-sm text-gray-600">Total Revenue: <span class="font-medium">KSh {{
+                            data.total_revenue|floatformat:2 }}</span></p>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+
+<!-- Recent Orders -->
+<div class="bg-white rounded-lg shadow">
+    <div class="p-6 border-b border-gray-200 flex justify-between items-center">
+        <h2 class="text-xl font-bold text-gray-800">Recent Orders</h2>
+        <a href="{% url 'order_management' %}" class="text-primary hover:text-secondary">View All</a>
+    </div>
+    <div class="p-6">
+        <div class="overflow-x-auto">
+            <table class="min-w-full divide-y divide-gray-200">
+                <thead class="bg-gray-50">
+                    <tr>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Order
+                            Code</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            Customer</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            Status</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Total
+                        </th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date
+                        </th>
+                    </tr>
+                </thead>
+                <tbody class="bg-white divide-y divide-gray-200">
+                    {% for order in recent_orders %}
+                    <tr>
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            <a href="{% url 'order_detail' order.id %}"
+                                class="text-primary hover:text-secondary font-medium">{{ order.uniquecode }}</a>
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap">{{ order.customer.name }}</td>
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            <span class="px-2 py-1 text-xs font-semibold rounded-full 
+                                {% if order.order_status == 'Completed' %}bg-green-100 text-green-800
+                                {% elif order.order_status == 'Pending' %}bg-yellow-100 text-yellow-800
+                                {% else %}bg-blue-100 text-blue-800{% endif %}">
+                                {{ order.order_status }}
+                            </span>
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap">KSh {{ order.total_price|floatformat:2 }}</td>
+                        <td class="px-6 py-4 whitespace-nowrap">{{ order.created_at|date:"M d, Y" }}</td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="5" class="px-6 py-4 text-center text-gray-500">No orders found</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

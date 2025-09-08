@@ -24,7 +24,7 @@ class UserProfile(models.Model):
     SHOP_CHOICES = (
         ('Shop A', 'Shop A'),
         ('Shop B', 'Shop B'),
-        ('None', 'None'),
+        
     )
     shop = models.CharField(max_length=50, choices=SHOP_CHOICES, default='None')
     
@@ -92,7 +92,7 @@ class Order(models.Model):
         ('completed', 'Completed'),
         ('partial', 'Partial'),
         ('failed', 'Failed'),
-        ('not_required', 'Not Required'),
+       
     )
     payment_status = models.CharField(max_length=50, choices=PAYMENT_STATUS_CHOICES, default='pending', blank=True)
     
@@ -107,8 +107,9 @@ class Order(models.Model):
     
     ORDER_STATUS_CHOICES = (
         ('pending', 'Pending'),
-        ('processing', 'Processing'),
+       
         ('Completed', 'Completed'),
+         ('Delivered', 'Delivered'),
        
     )
     order_status = models.CharField(max_length=50, choices=ORDER_STATUS_CHOICES, default='pending', db_index=True)

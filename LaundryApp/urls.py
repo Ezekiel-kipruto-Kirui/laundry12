@@ -5,17 +5,11 @@ from . import views
 
 urlpatterns = [
     path('', admin.site.urls),
-   # path('tables/',views.customordertable, name='table'),
     path('home',views.home, name='home'),
     path('accounts/', include('django_registration.backends.activation.urls')),
     path('accounts/', include('django.contrib.auth.urls')),
-    # path('orders/', views.customordertable, name='customordertable'),
-    # # Add other URLs for update/delete operations
-    # path('orders/update/<int:pk>/', views.update_order, name='update_order'),
-    # path('orders/delete/<int:pk>/', views.delete_order, name='delete_order'),
-    
     path('Mpesa',views.index, name='index'),
     path('daraja/stk_push',views.stk_push_callback, name='stk_push_callback'),
     path('mpesa/callback/', views.stk_push_callback, name='mpesa_callback'),
-
+    
 ]

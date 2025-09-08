@@ -262,7 +262,7 @@ UNFOLD = {
                 {
                     "title": "Dashboard",
                     "icon": "analytics",
-                    "link": reverse_lazy("admin:generaldashboard"),
+                    "link": reverse_lazy("admin:index"),
                    
                 },
                 {

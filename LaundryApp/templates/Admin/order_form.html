@@ -1,0 +1,879 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Create New Order - Laundry Management System</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #4f46e5;
+            --primary-dark: #4338ca;
+            --secondary: #7c3aed;
+            --light: #f8fafc;
+            --dark: #1f2937;
+            --success: #10b981;
+            --error: #ef4444;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
+            min-height: 100vh;
+        }
+
+        .glass-card {
+            background: rgba(255, 255, 255, 0.85);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+        }
+
+        .glass-header {
+            background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+        }
+
+        .fade-in {
+            animation: fadeIn 0.6s ease-in-out;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(15px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .slide-in {
+            animation: slideIn 0.4s ease-out;
+        }
+
+        @keyframes slideIn {
+            from {
+                transform: translateX(15px);
+                opacity: 0;
+            }
+
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+
+        input:focus,
+        select:focus,
+        textarea:focus {
+            box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.2);
+            border-color: var(--primary);
+        }
+
+        .loading {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid rgba(255, 255, 255, .3);
+            border-radius: 50%;
+            border-top-color: #fff;
+            animation: spin 1s ease-in-out infinite;
+        }
+
+        @keyframes spin {
+            to {
+                transform: rotate(360deg);
+            }
+        }
+
+        .toast {
+            position: fixed;
+            top: 25px;
+            right: 25px;
+            padding: 16px 24px;
+            border-radius: 12px;
+            color: white;
+            z-index: 1000;
+            opacity: 0;
+            transform: translateY(-30px);
+            transition: opacity 0.3s, transform 0.3s;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+        }
+
+        .toast.show {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        .toast.success {
+            background: linear-gradient(135deg, var(--success) 0%, #059669 100%);
+        }
+
+        .toast.error {
+            background: linear-gradient(135deg, var(--error) 0%, #dc2626 100%);
+        }
+
+        .step-indicator {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 2.5rem;
+            position: relative;
+            padding: 0 2rem;
+        }
+
+        .step-indicator::before {
+            content: '';
+            position: absolute;
+            top: 22px;
+            left: 60px;
+            right: 60px;
+            height: 3px;
+            background: linear-gradient(to right, var(--primary) 0%, var(--primary) 50%, #e5e7eb 50%, #e5e7eb 100%);
+            background-size: 200% 100%;
+            background-position: 100% 0;
+            transition: background-position 0.5s ease;
+            z-index: 1;
+        }
+
+        .step {
+            position: relative;
+            z-index: 2;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .step-number {
+            width: 46px;
+            height: 46px;
+            border-radius: 50%;
+            background-color: white;
+            color: #6b7280;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 600;
+            margin-bottom: 0.75rem;
+            transition: all 0.3s ease;
+            border: 3px solid #e5e7eb;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+        }
+
+        .step.active .step-number {
+            background-color: var(--primary);
+            color: white;
+            border-color: var(--primary);
+        }
+
+        .step.completed .step-number {
+            background-color: var(--success);
+            color: white;
+            border-color: var(--success);
+        }
+
+        .step-label {
+            font-size: 0.875rem;
+            color: #6b7280;
+            font-weight: 500;
+        }
+
+        .step.active .step-label {
+            color: var(--primary);
+            font-weight: 600;
+        }
+
+        .form-step {
+            display: none;
+            animation: fadeIn 0.5s ease-in-out;
+        }
+
+        .form-step.active {
+            display: block;
+        }
+
+        .form-actions {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 2.5rem;
+            padding-top: 1.5rem;
+            border-top: 1px solid #e5e7eb;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+            color: white;
+            padding: 0.75rem 1.5rem;
+            border-radius: 12px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 6px -1px rgba(79, 70, 229, 0.3), 0 2px 4px -1px rgba(79, 70, 229, 0.1);
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 15px -3px rgba(79, 70, 229, 0.4), 0 4px 6px -2px rgba(79, 70, 229, 0.2);
+        }
+
+        .btn-secondary {
+            background: white;
+            color: var(--dark);
+            padding: 0.75rem 1.5rem;
+            border-radius: 12px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            border: 1px solid #e5e7eb;
+            box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1);
+        }
+
+        .btn-secondary:hover {
+            background: #f9fafb;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+        }
+
+        .item-card {
+            background: white;
+            padding: 1.5rem;
+            border-radius: 16px;
+            border: 1px solid #e5e7eb;
+            box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.05);
+            transition: all 0.3s ease;
+        }
+
+        .item-card:hover {
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+        }
+
+        .nav-card {
+            background: rgba(255, 255, 255, 0.7);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+        }
+
+        .floating-label {
+            position: relative;
+            margin-bottom: 1.5rem;
+        }
+
+        .floating-input {
+            width: 100%;
+            padding: 1.2rem 1rem 0.6rem;
+            border: 1.5px solid #e2e8f0;
+            border-radius: 8px;
+            font-size: 1rem;
+            transition: all 0.2s ease;
+            background: #f8fafc;
+        }
+
+        .floating-input:focus {
+            outline: none;
+            border-color: var(--primary);
+            background: white;
+        }
+
+        .floating-label-text {
+            position: absolute;
+            top: 0.9rem;
+            left: 1rem;
+            color: #64748b;
+            transition: all 0.2s ease;
+            pointer-events: none;
+        }
+
+        .floating-input:focus+.floating-label-text,
+        .floating-input:not(:placeholder-shown)+.floating-label-text {
+            top: 0.4rem;
+            left: 0.8rem;
+            font-size: 0.75rem;
+            color: var(--primary);
+            font-weight: 600;
+        }
+    </style>
+</head>
+
+<body class="min-h-screen flex items-center justify-center py-8 px-4">
+    <!-- Toast Notification -->
+    <div id="toast" class="toast">
+        <span id="toast-message"></span>
+    </div>
+
+    <!-- Navigation Bar -->
+    <nav class="fixed top-0 left-0 right-0 z-50 nav-card py-3 px-6">
+        <div class="max-w-6xl mx-auto flex justify-between items-center">
+            <div class="flex items-center space-x-2">
+                <div class="bg-gradient-to-r from-primary to-secondary p-2 rounded-lg">
+                    <i class="fas fa-shirt text-white text-lg"></i>
+                </div>
+                <span class="text-lg font-semibold text-dark">LaundryManager</span>
+            </div>
+
+            <div class="flex items-center space-x-4">
+                <a href="#" class="text-dark hover:text-primary transition-colors">
+                    <i class="fas fa-bell"></i>
+                </a>
+                <a href="#" class="text-dark hover:text-primary transition-colors">
+                    <i class="fas fa-cog"></i>
+                </a>
+               
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <div class="w-full max-w-6xl mt-16 fade-in">
+        <!-- Dashboard Link -->
+        <div class="mb-6">
+            <a href="{% url 'admin:index' %}"
+                class="inline-flex items-center text-primary hover:text-primary-dark font-medium transition-colors">
+                <i class="fas fa-arrow-left mr-2"></i> Back to Dashboard
+            </a>
+        </div>
+
+        <div class="glass-card rounded-2xl overflow-hidden">
+            <div class="glass-header p-8 text-white">
+                <h1 class="text-3xl font-bold flex items-center">
+                    <i class="fas fa-plus-circle mr-4"></i>Create New Order
+                </h1>
+                <p class="mt-2 opacity-90 text-lg">Add a new laundry order for your customer</p>
+            </div>
+
+            <!-- Step Indicator -->
+            <div class="step-indicator px-8 pt-8">
+                <div class="step active" data-step="1">
+                    <div class="step-number">
+                        <i class="fas fa-user"></i>
+                    </div>
+                    <div class="step-label">Customer</div>
+                </div>
+                <div class="step" data-step="2">
+                    <div class="step-number">
+                        <i class="fas fa-clipboard-list"></i>
+                    </div>
+                    <div class="step-label">Order Details</div>
+                </div>
+                <div class="step" data-step="3">
+                    <div class="step-number">
+                        <i class="fas fa-tshirt"></i>
+                    </div>
+                    <div class="step-label">Items</div>
+                </div>
+                <div class="step" data-step="4">
+                    <div class="step-number">
+                        <i class="fas fa-credit-card"></i>
+                    </div>
+                    <div class="step-label">Payment</div>
+                </div>
+            </div>
+
+            <form id="order-form" class="p-8 space-y-8">
+                <input type="hidden" name="csrfmiddlewaretoken" value="mock-csrf-token-for-demonstration">
+                <input type="hidden" name="step_submit" value="1">
+
+                <!-- Step 1: Customer Information -->
+                <div class="form-step active" data-step="1">
+                    <h2 class="text-xl font-semibold text-gray-800 mb-6 flex items-center">
+                        <i class="fas fa-user-circle mr-3 text-primary"></i>Customer Information
+                    </h2>
+                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 slide-in">
+                        <div class="space-y-6">
+                            <div class="floating-label">
+                                <input type="text" id="id_name" name="name" required placeholder=" "
+                                    class="floating-input">
+                                <label for="id_name" class="floating-label-text">Customer Name *</label>
+                            </div>
+
+                            <div class="floating-label">
+                                <input type="tel" id="id_phone" name="phone" required placeholder=" "
+                                    class="floating-input">
+                                <label for="id_phone" class="floating-label-text">Phone Number *</label>
+                            </div>
+
+                            <button type="button" id="check-customer-btn"
+                                class="flex items-center text-primary hover:text-primary-dark transition-colors">
+                                <i class="fas fa-search mr-2"></i> Check if customer exists
+                            </button>
+                        </div>
+                        
+                    </div>
+                </div>
+
+                <!-- Step 2: Order Details -->
+                <div class="form-step" data-step="2">
+                    <h2 class="text-xl font-semibold text-gray-800 mb-6 flex items-center">
+                        <i class="fas fa-clipboard-list mr-3 text-primary"></i>Order Details
+                    </h2>
+
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div class="floating-label">
+                            <select id="id_shop" name="shop" required class="floating-input">
+                                <option value=""></option>
+                                <option value="1">Shop A</option>
+                                <option value="2">Shop B</option>
+                            </select>
+                            <label for="id_shop" class="floating-label-text">Shop *</label>
+                        </div>
+
+                        <div class="floating-label">
+                            <input type="date" id="id_delivery_date" name="delivery_date" required placeholder=" "
+                                class="floating-input">
+                            <label for="id_delivery_date" class="floating-label-text">Delivery Date *</label>
+                        </div>
+                    </div>
+
+                    <div class="floating-label mt-6">
+                        <input type="text" id="id_address" name="address" placeholder=" " class="floating-input">
+                        <label for="id_address" class="floating-label-text">Delivery Address</label>
+                    </div>
+
+                    <div class="floating-label mt-6">
+                        <textarea id="id_address_details" name="address_details" rows="2" placeholder=" "
+                            class="floating-input"></textarea>
+                        <label for="id_address_details" class="floating-label-text">Address Details</label>
+                    </div>
+                </div>
+
+                <!-- Step 3: Order Items -->
+                <div class="form-step" data-step="3">
+                    <div class="flex justify-between items-center mb-6">
+                        <h2 class="text-xl font-semibold text-gray-800 flex items-center">
+                            <i class="fas fa-tshirt mr-3 text-primary"></i>Order Items
+                        </h2>
+                        <button type="button" id="add-item-btn" class="btn-primary flex items-center">
+                            <i class="fas fa-plus mr-2"></i> Add Item
+                        </button>
+                    </div>
+
+                    <div id="order-items-container" class="space-y-6">
+                        <!-- Item template (will be cloned by JavaScript) -->
+                        <div class="item-card">
+                            <div class="flex justify-between items-start mb-4">
+                                <span class="font-medium text-gray-700">Item #1</span>
+                                <button type="button"
+                                    class="remove-item text-red-500 hover:text-red-700 transition-colors">
+                                    <i class="fas fa-times-circle text-lg"></i>
+                                </button>
+                            </div>
+
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+                                <div class="floating-label">
+                                    <select name="servicetype" required class="floating-input">
+                                        <option value=""></option>
+                                        <option value="Washing">Washing</option>
+                                        <option value="Folding">Folding</option>
+                                        <option value="Ironing">Ironing</option>
+                                        <option value="Dry cleaning">Dry cleaning</option>
+                                    </select>
+                                    <label class="floating-label-text">Service Type *</label>
+                                </div>
+
+                                <div class="floating-label">
+                                    <select name="itemtype" required class="floating-input">
+                                        <option value=""></option>
+                                        <option value="Clothing">Clothing</option>
+                                        <option value="Bedding">Bedding</option>
+                                        <option value="Household items">Household items</option>
+                                        <option value="Footwares">Footwares</option>
+                                    </select>
+                                    <label class="floating-label-text">Item Category *</label>
+                                </div>
+                            </div>
+
+                            <div class="floating-label mt-5">
+                                <input type="text" name="itemname" required placeholder=" " class="floating-input">
+                                <label class="floating-label-text">Item Names *</label>
+                                <p class="text-xs text-gray-500 mt-2">Separate multiple items with commas</p>
+                            </div>
+
+                            <div class="grid grid-cols-1 md:grid-cols-3 gap-5 mt-5">
+                                <div class="floating-label">
+                                    <input type="number" name="quantity" min="1" value="1" required placeholder=" "
+                                        class="floating-input">
+                                    <label class="floating-label-text">Quantity *</label>
+                                </div>
+
+                                <div class="floating-label">
+                                    <input type="number" name="unit_price" min="0" step="0.01" required placeholder=" "
+                                        class="floating-input">
+                                    <label class="floating-label-text">Unit Price (KSh) *</label>
+                                </div>
+
+                                <div class="floating-label">
+                                    <select name="itemcondition" class="floating-input">
+                                        <option value=""></option>
+                                        <option value="new">New</option>
+                                        <option value="Old">Old</option>
+                                        <option value="Torn">Torn</option>
+                                    </select>
+                                    <label class="floating-label-text">Item Condition</label>
+                                </div>
+                            </div>
+
+                            <div class="floating-label mt-5">
+                                <textarea name="additional_info" rows="2" placeholder=" "
+                                    class="floating-input"></textarea>
+                                <label class="floating-label-text">Additional Information</label>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="mt-8 p-5 bg-gradient-to-r from-primary to-secondary rounded-xl text-white">
+                        <div class="flex justify-between items-center">
+                            <span class="font-medium text-lg">Order Total:</span>
+                            <span id="order-total" class="text-3xl font-bold">KSh 0.00</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Step 4: Payment Information -->
+                <div class="form-step" data-step="4">
+                    <h2 class="text-xl font-semibold text-gray-800 mb-6 flex items-center">
+                        <i class="fas fa-credit-card mr-3 text-primary"></i>Payment Information
+                    </h2>
+
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div class="floating-label">
+                            <select id="id_payment_method" name="payment_method" class="floating-input">
+                                <option value=""></option>
+                                <option value="cash">Cash</option>
+                                <option value="mpesa">M-Pesa</option>
+                                <option value="card">Credit/Debit Card</option>
+                                <option value="bank_transfer">Bank Transfer</option>
+                            </select>
+                            <label for="id_payment_method" class="floating-label-text">Payment Method</label>
+                        </div>
+
+                        <div class="floating-label">
+                            <select id="id_payment_status" name="payment_status" class="floating-input">
+                                <option value="pending">Pending</option>
+                                <option value="completed">Completed</option>
+                                <option value="partial">Partial</option>
+                            </select>
+                            <label for="id_payment_status" class="floating-label-text">Payment Status</label>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Form Actions -->
+                <div class="form-actions">
+                    <button type="button" id="prev-btn" class="btn-secondary hidden">
+                        <i class="fas fa-arrow-left mr-2"></i> Previous
+                    </button>
+                    <button type="button" id="next-btn" class="btn-primary ml-auto">
+                        Next <i class="fas fa-arrow-right ml-2"></i>
+                    </button>
+                    <button type="submit" id="submit-btn" class="btn-primary flex items-center hidden">
+                        <i class="fas fa-check-circle mr-2"></i> Create Order
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            // Set minimum date for delivery date to today
+            const today = new Date().toISOString().split('T')[0];
+            document.getElementById('id_delivery_date').min = today;
+
+            // Multi-step form functionality
+            const steps = document.querySelectorAll('.form-step');
+            const stepIndicators = document.querySelectorAll('.step');
+            const prevBtn = document.getElementById('prev-btn');
+            const nextBtn = document.getElementById('next-btn');
+            const submitBtn = document.getElementById('submit-btn');
+            let currentStep = 1;
+
+            // Update form steps
+            function updateFormSteps() {
+                steps.forEach(step => {
+                    step.classList.remove('active');
+                    if (parseInt(step.dataset.step) === currentStep) {
+                        step.classList.add('active');
+                    }
+                });
+
+                stepIndicators.forEach(indicator => {
+                    indicator.classList.remove('active', 'completed');
+                    const stepNum = parseInt(indicator.dataset.step);
+
+                    if (stepNum === currentStep) {
+                        indicator.classList.add('active');
+                    } else if (stepNum < currentStep) {
+                        indicator.classList.add('completed');
+                    }
+                });
+
+                // Show/hide buttons based on current step
+                if (currentStep === 1) {
+                    prevBtn.classList.add('hidden');
+                } else {
+                    prevBtn.classList.remove('hidden');
+                }
+
+                if (currentStep === steps.length) {
+                    nextBtn.classList.add('hidden');
+                    submitBtn.classList.remove('hidden');
+                } else {
+                    nextBtn.classList.remove('hidden');
+                    submitBtn.classList.add('hidden');
+                }
+
+                // Update step progress indicator
+                const progress = ((currentStep - 1) / (steps.length - 1)) * 100;
+                document.querySelector('.step-indicator::before').style.backgroundPosition = `${100 - progress}% 0`;
+            }
+
+            // Next button click
+            nextBtn.addEventListener('click', function () {
+                // Validate current step before proceeding
+                const currentStepEl = document.querySelector(`.form-step[data-step="${currentStep}"]`);
+                const requiredFields = currentStepEl.querySelectorAll('[required]');
+                let isValid = true;
+
+                requiredFields.forEach(field => {
+                    if (!field.value.trim()) {
+                        isValid = false;
+                        field.classList.add('border-red-500');
+                    } else {
+                        field.classList.remove('border-red-500');
+                    }
+                });
+
+                if (isValid) {
+                    currentStep++;
+                    updateFormSteps();
+                } else {
+                    showToast('Please fill in all required fields', 'error');
+                }
+            });
+
+            // Previous button click
+            prevBtn.addEventListener('click', function () {
+                currentStep--;
+                updateFormSteps();
+            });
+
+            // Customer check functionality
+            document.getElementById('check-customer-btn').addEventListener('click', function () {
+                const phone = document.getElementById('id_phone').value;
+                if (!phone) {
+                    showToast('Please enter a phone number first', 'error');
+                    return;
+                }
+
+                // Simulate customer check
+                showToast('Checking customer...', 'success');
+
+                // Simulate API call delay
+                setTimeout(() => {
+                    // This is a mock response - in a real app, you would make an API call
+                    const mockCustomers = {
+                        '+254712345678': { name: 'John Doe', id: 101 },
+                        '+254723456789': { name: 'Jane Smith', id: 102 },
+                        '+254734567890': { name: 'Robert Johnson', id: 103 }
+                    };
+
+                    if (mockCustomers[phone]) {
+                        document.getElementById('id_name').value = mockCustomers[phone].name;
+                        showToast(`Customer found: ${mockCustomers[phone].name}`, 'success');
+                    } else {
+                        showToast('No existing customer found with this number', 'error');
+                    }
+                }, 1000);
+            });
+
+            // Item management functionality
+            let itemCount = 1;
+
+            // Add new item
+            document.getElementById('add-item-btn').addEventListener('click', function () {
+                itemCount++;
+                const itemTemplate = document.querySelector('.item-card').cloneNode(true);
+
+                // Update item number
+                itemTemplate.querySelector('.font-medium').textContent = `Item #${itemCount}`;
+
+                // Clear input values
+                const inputs = itemTemplate.querySelectorAll('input, textarea, select');
+                inputs.forEach(input => {
+                    if (input.type !== 'button') {
+                        input.value = '';
+                    }
+                });
+
+                // Set quantity back to 1
+                itemTemplate.querySelector('input[name="quantity"]').value = 1;
+
+                // Add remove functionality
+                itemTemplate.querySelector('.remove-item').addEventListener('click', function () {
+                    if (document.querySelectorAll('.item-card').length > 1) {
+                        itemTemplate.remove();
+                        calculateTotal();
+                    }
+                });
+
+                // Add event listeners for price calculation
+                const quantityInput = itemTemplate.querySelector('input[name="quantity"]');
+                const priceInput = itemTemplate.querySelector('input[name="unit_price"]');
+
+                quantityInput.addEventListener('input', calculateTotal);
+                priceInput.addEventListener('input', calculateTotal);
+
+                document.getElementById('order-items-container').appendChild(itemTemplate);
+
+                // Animate new item
+                itemTemplate.style.opacity = '0';
+                itemTemplate.style.transform = 'translateY(10px)';
+
+                setTimeout(() => {
+                    itemTemplate.style.transition = 'opacity 0.3s, transform 0.3s';
+                    itemTemplate.style.opacity = '1';
+                    itemTemplate.style.transform = 'translateY(0)';
+                }, 10);
+            });
+
+            // Remove item functionality for initial item
+            document.querySelector('.remove-item').addEventListener('click', function () {
+                if (document.querySelectorAll('.item-card').length > 1) {
+                    this.closest('.item-card').remove();
+                    calculateTotal();
+                }
+            });
+
+            // Calculate order total
+            function calculateTotal() {
+                let total = 0;
+
+                document.querySelectorAll('.item-card').forEach(item => {
+                    const quantity = parseFloat(item.querySelector('input[name="quantity"]').value) || 0;
+                    const unitPrice = parseFloat(item.querySelector('input[name="unit_price"]').value) || 0;
+
+                    total += quantity * unitPrice;
+                });
+
+                document.getElementById('order-total').textContent = `KSh ${total.toFixed(2)}`;
+            }
+
+            // Add event listeners for price calculation to initial inputs
+            document.querySelectorAll('input[name="quantity"], input[name="unit_price"]').forEach(input => {
+                input.addEventListener('input', calculateTotal);
+            });
+
+            // Initial calculation
+            calculateTotal();
+
+            // Form submission
+            const orderForm = document.getElementById('order-form');
+            const originalBtnText = submitBtn.innerHTML;
+
+            orderForm.addEventListener('submit', async function (e) {
+                e.preventDefault();
+
+                // Show loading state
+                submitBtn.disabled = true;
+                submitBtn.innerHTML = '<span class="loading"></span> Processing...';
+
+                try {
+                    // Collect form data in the format expected by the Django view
+                    const formData = new FormData();
+
+                    // Add customer data
+                    formData.append('name', document.getElementById('id_name').value);
+                    formData.append('phone', document.getElementById('id_phone').value);
+
+                    // Add order data
+                    formData.append('shop', document.getElementById('id_shop').value);
+                    formData.append('delivery_date', document.getElementById('id_delivery_date').value);
+                    formData.append('address', document.getElementById('id_address').value);
+                    formData.append('address_details', document.getElementById('id_address_details').value);
+
+                    // Add payment data
+                    formData.append('payment_method', document.getElementById('id_payment_method').value);
+                    formData.append('payment_status', document.getElementById('id_payment_status').value);
+
+                    // Add step_submit flag
+                    formData.append('step_submit', '1');
+                    formData.append('current_step', '4'); // Final step
+
+                    // Add order items
+                    document.querySelectorAll('.item-card').forEach((item, index) => {
+                        formData.append(`form-${index}-servicetype`, item.querySelector('select[name="servicetype"]').value);
+                        formData.append(`form-${index}-itemtype`, item.querySelector('select[name="itemtype"]').value);
+                        formData.append(`form-${index}-itemname`, item.querySelector('input[name="itemname"]').value);
+                        formData.append(`form-${index}-quantity`, item.querySelector('input[name="quantity"]').value);
+                        formData.append(`form-${index}-unit_price`, item.querySelector('input[name="unit_price"]').value);
+                        formData.append(`form-${index}-itemcondition`, item.querySelector('select[name="itemcondition"]').value);
+                        formData.append(`form-${index}-additional_info`, item.querySelector('textarea[name="additional_info"]').value);
+                    });
+
+                    // For demonstration purposes, we'll simulate a successful response
+                    // In a real application, you would send this to your Django backend
+                    setTimeout(() => {
+                        showToast('Order created successfully!', 'success');
+
+                        // Reset form after successful submission
+                        orderForm.reset();
+
+                        // Reset to first step
+                        currentStep = 1;
+                        updateFormSteps();
+
+                        // Reset items to just one
+                        const itemsContainer = document.getElementById('order-items-container');
+                        while (itemsContainer.children.length > 1) {
+                            itemsContainer.removeChild(itemsContainer.lastChild);
+                        }
+                        calculateTotal();
+
+                        // Restore button state
+                        submitBtn.disabled = false;
+                        submitBtn.innerHTML = originalBtnText;
+                    }, 1500);
+
+                } catch (error) {
+                    showToast('Error: ' + error.message, 'error');
+                    console.error('Error creating order:', error);
+
+                    // Restore button state
+                    submitBtn.disabled = false;
+                    submitBtn.innerHTML = originalBtnText;
+                }
+            });
+
+            // Toast notification function
+            function showToast(message, type) {
+                const toast = document.getElementById('toast');
+                const toastMessage = document.getElementById('toast-message');
+
+                toastMessage.textContent = message;
+                toast.className = 'toast ' + type + ' show';
+
+                setTimeout(() => {
+                    toast.className = 'toast';
+                }, 3000);
+            }
+
+            // Initialize the step progress indicator
+            const style = document.createElement('style');
+            style.textContent = `
+                .step-indicator::before {
+                    background: linear-gradient(to right, var(--primary) 0%, var(--primary) 0%, #e5e7eb 0%, #e5e7eb 100%);
+                    background-size: 200% 100%;
+                    background-position: 100% 0;
+                    transition: background-position 0.5s ease;
+                }
+            `;
+            document.head.appendChild(style);
+
+            // Initialize the step indicator
+            updateFormSteps();
+        });
+    </script>
+</body>
+
+</html>

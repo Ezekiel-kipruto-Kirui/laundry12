@@ -14,13 +14,16 @@ from django.urls import path, reverse
 from django.utils.html import format_html
 from django.utils.timezone import now
 from django.views.decorators.cache import cache_page
-from django.db.models import Q, Count, DecimalField, Max, Sum
+from django.db.models import Q, Count, DecimalField, Max, Sum,Prefetch
 from django.db.models import Value
+from django.utils.decorators import method_decorator
 from django.db.models.functions import Coalesce
 from django.http import JsonResponse
-from django.db.models import Prefetch,Q
+
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_POST
+from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
+from django.utils import timezone
 
 # Third-party imports
 from import_export.admin import ImportExportModelAdmin
@@ -32,6 +35,7 @@ from unfold.widgets import (
     UnfoldAdminSelectWidget,
     UnfoldAdminTextareaWidget,
     UnfoldAdminTextInputWidget,
+   
 )
 
 # Local imports
@@ -45,8 +49,15 @@ logger = logging.getLogger(__name__)
 # Unregister default User and Group
 admin.site.unregister(User)
 admin.site.unregister(Group)
+from django.contrib import admin
 
+# class CustomAdminSite(admin.AdminSite):
+#     site_header = "Laundry Admin"
+#     index_template = "admin/index.html"   # 👈 your new file
+
+# custom_admin_site = CustomAdminSite(name="custom_admin")
 # --- Utility Functions ---
+ 
 def permission_required(perm_code):
     """Decorator to check permissions for admin actions."""
     def decorator(func):
@@ -588,7 +599,10 @@ class OrderAdmin(ShopPermissionMixin, AppPermissionMixin, ModelAdmin, ImportExpo
         
         # Handle AJAX requests
         if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
-            return self._handle_ajax_requests(request, customer_form, order_form, order_item_form)
+            try:
+                return self._handle_ajax_requests(request, customer_form, order_form, order_item_form)
+            except Exception as e:
+                return JsonResponse({'success': False, 'message': str(e)}, status=500)
         
         # Handle regular form submission
         if request.method == 'POST':
@@ -596,20 +610,29 @@ class OrderAdmin(ShopPermissionMixin, AppPermissionMixin, ModelAdmin, ImportExpo
         
         # GET request - render empty forms
         context = self._build_context(request, customer_form, order_form, order_item_form)
-        return render(request, 'order_form.html', context)
-
+        return render(request, 'Admin/order_form.html', context)
     def _handle_ajax_requests(self, request, customer_form, order_form, order_item_form):
         """Handle all AJAX requests for the order form"""
-        # Customer existence check
-        if 'check_customer' in request.POST:
-            return self._check_customer_existence(request)
-        
-        # Step submission
-        if 'step_submit' in request.POST:
-            return self._handle_step_submission(request, customer_form, order_form, order_item_form)
-        
-        return JsonResponse({'success': False, 'message': 'Invalid AJAX request'})
-
+        try:
+            # Customer existence check
+            if 'check_customer' in request.POST:
+                return self._check_customer_existence(request)
+            
+            # Step submission
+            if 'step_submit' in request.POST:
+                return self._handle_step_submission(request, customer_form, order_form, order_item_form)
+            
+            return JsonResponse({'success': False, 'message': 'Invalid AJAX request'})
+        except Exception as e:
+            # Log the exception for debugging
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.exception("Error in AJAX request")
+            
+            return JsonResponse({
+                'success': False,
+                'message': f'An error occurred: {str(e)}'
+            }, status=500)
     def _check_customer_existence(self, request):
         """Check if customer exists by phone number"""
         phone = request.POST.get('phone', '')
@@ -792,7 +815,7 @@ class OrderAdmin(ShopPermissionMixin, AppPermissionMixin, ModelAdmin, ImportExpo
                 order_item_form.is_valid()):
             messages.error(request, 'Please correct the errors below.')
             context = self._build_context(request, customer_form, order_form, order_item_form)
-            return render(request, 'order_form.html', context)
+            return render(request, 'Admin/order_form.html', context)
         
         try:
             # Enhanced customer handling
@@ -836,7 +859,7 @@ class OrderAdmin(ShopPermissionMixin, AppPermissionMixin, ModelAdmin, ImportExpo
         except Exception as e:
             messages.error(request, f'Error saving order: {str(e)}')
             context = self._build_context(request, customer_form, order_form, order_item_form)
-            return render(request, 'order_form.html', context)
+            return render(request, 'Admin/order_form.html', context)
 
     def _build_context(self, request, customer_form, order_form, order_item_form):
         """Build template context"""
@@ -855,7 +878,7 @@ class OrderAdmin(ShopPermissionMixin, AppPermissionMixin, ModelAdmin, ImportExpo
             'title': 'Order Success',
             **self.admin_site.each_context(request),
         }
-        return render(request, 'order_success.html', context)
+        return render(request, 'Admin/order_success.html', context)
 
     @permission_required('LaundryApp.delete_order')
     def delete_selected(self, request, queryset):
@@ -886,28 +909,38 @@ class OrderAdmin(ShopPermissionMixin, AppPermissionMixin, ModelAdmin, ImportExpo
     delete_selected.short_description = "Delete selected orders"
 
     def customordertable(self, request):
-        # Start with base queryset
+        # Start with base queryset - exclude delivered orders from the main query
         orders = Order.objects.select_related('customer').prefetch_related(
-            Prefetch('items', queryset=OrderItem.objects.only('servicetype', 'itemname', 'quantity'))
+            Prefetch('items', queryset=OrderItem.objects.only(
+                'servicetype', 'itemname', 'quantity', 'itemtype', 
+                'itemcondition', 'total_item_price'
+            ))
         ).only(
             'uniquecode', 'order_status', 'payment_status', 'payment_type',
-            'shop', 'delivery_date', 'total_price', 'created_at', 'customer__name'
-        )
+            'shop', 'delivery_date', 'total_price', 'created_at', 
+            'customer__name', 'customer__phone', 'address', 'addressdetails'
+        ).exclude(order_status='delivered')  # Exclude delivered orders
 
-        # Apply shop filtering based on user role
+        # Apply shop filtering based on user group
         if not request.user.is_superuser:
-            # For non-superusers, filter by their assigned shop
-            user_shop = request.user.userprofile.shop if hasattr(request.user, 'userprofile') else None
-            if user_shop:
-                orders = orders.filter(shop=user_shop)
+            # Check if user belongs to Shop A or Shop B group
+            user_groups = request.user.groups.all()
+            shop_a_group = Group.objects.filter(name='Shop A').first()
+            shop_b_group = Group.objects.filter(name='Shop B').first()
+            
+            if shop_a_group and shop_a_group in user_groups:
+                orders = orders.filter(shop='Shop A')
+            elif shop_b_group and shop_b_group in user_groups:
+                orders = orders.filter(shop='Shop B')
             else:
-                # If user has no shop assigned, show no orders
+                # If user doesn't belong to any shop group, show no orders
                 orders = orders.none()
 
         # Apply status filters
         status_filter = request.GET.get('status', '')
         if status_filter:
             orders = orders.filter(order_status=status_filter)
+            
 
         # Apply payment status filters
         payment_filter = request.GET.get('payment', '')
@@ -920,46 +953,58 @@ class OrderAdmin(ShopPermissionMixin, AppPermissionMixin, ModelAdmin, ImportExpo
             orders = orders.filter(
                 Q(uniquecode__icontains=search_query) |
                 Q(customer__name__icontains=search_query) |
-                Q(customer__phone__icontains=search_query)
-            )
+                Q(customer__phone__icontains=search_query) |
+                Q(items__servicetype__icontains=search_query) |
+                Q(items__itemname__icontains=search_query) |
+                Q(address__icontains=search_query)
+            ).distinct()
 
         # Order by creation date
         orders = orders.order_by('-created_at')
 
-        # Get counts for stats cards
+        # Pagination
+        paginator = Paginator(orders, 25)  # Show 25 orders per page
+        page_number = request.GET.get('page')
+        try:
+            page_obj = paginator.page(page_number)
+        except PageNotAnInteger:
+            page_obj = paginator.page(1)
+        except EmptyPage:
+            page_obj = paginator.page(paginator.num_pages)
+
+        # Get counts for stats cards - exclude delivered orders from all counts
         total_orders = orders.count()
         pending_orders = orders.filter(order_status='pending').count()
-        completed_orders = orders.filter(order_status='completed').count()
+        completed_orders = orders.filter(order_status='Completed').count()
 
-        # Calculate total revenue
-        total_revenue = orders.aggregate(total=Sum('total_price'))['total'] or 0
-        avg_order_value = total_revenue / total_orders if total_orders > 0 else 0
+        # Get status choices for filters
+        order_status_choices = Order.ORDER_STATUS_CHOICES
+        payment_status_choices = Order.PAYMENT_STATUS_CHOICES
 
         context = {
-            'orders': orders,
+            'orders': page_obj,
             'total_orders': total_orders,
             'pending_orders': pending_orders,
             'completed_orders': completed_orders,
-            'total_revenue': total_revenue,
-            'avg_order_value': avg_order_value,
-            'current_status_filter': status_filter,
-            'current_payment_filter': payment_filter,
-            'search_query': search_query,
+            'order_status_choices': order_status_choices,
+            'payment_status_choices': payment_status_choices,
+            'today': timezone.now().date(),
         }
-        return render(request, 'orders_table.html', context)
-    
+        return render(request, 'Admin/orders_table.html', context)
     
     def get_urls(self):
         urls = super().get_urls()
         custom_urls = [
             path('dashboard/', self.admin_site.admin_view(cache_page(60 * 5)(self.dashboard_view)),
                  name='laundryapp_dashboard'),
-            path('new-order/', self.admin_site.admin_view(self.generaldashboard),
-                 name='generaldashboard'),
+            path('', self.admin_site.admin_view(self.generaldashboard),
+                 name='index'),
             path('Tables/', self.admin_site.admin_view(self.customordertable),
                   name='customordertable'),
             path('createorder/', self.admin_site.admin_view(self.createorder),
                 name='createorder'),
+            # path('create-order/', self.admin_site.admin_view(self.create_order_view), name='create_order'),
+            path('create-order-api/', self.admin_site.admin_view(self.create_order_api), name='create_order_api'),
         ]
         return custom_urls + urls
 
@@ -998,7 +1043,13 @@ class OrderAdmin(ShopPermissionMixin, AppPermissionMixin, ModelAdmin, ImportExpo
 
     @csrf_exempt
     @require_POST
-    def create_order_api(request):
+    def create_order_view(self, request):
+        """Render the order creation form"""
+        return render(request, 'Admin/order_form.html')
+    
+    @method_decorator(csrf_exempt)
+    @method_decorator(require_POST)
+    def create_order_api(self, request):
         """API endpoint to create a new order"""
         try:
             data = json.loads(request.body)
@@ -1008,7 +1059,7 @@ class OrderAdmin(ShopPermissionMixin, AppPermissionMixin, ModelAdmin, ImportExpo
             order_data = data.get('order', {})
             items_data = data.get('items', [])
             
-            # Create the order
+            # Create the order using your existing function
             order = create_laundry_order(
                 customer_name=customer_data.get('name'),
                 customer_phone=customer_data.get('phone'),
@@ -1035,45 +1086,47 @@ class OrderAdmin(ShopPermissionMixin, AppPermissionMixin, ModelAdmin, ImportExpo
                 'success': False,
                 'message': f'Error creating order: {str(e)}'
             }, status=400)
-# In your admin.py, update the dashboard_view method
     def createorder(self,request):
-        return render(request,'order_form.html')
+        return render(request,'Admin/order_form.html')
     def generaldashboard(self, request):
         if not request.user.is_authenticated:
             return redirect('admin:login')
-        
+
         # Get user's shops
         user_shops = self.get_user_shops(request)
-        
-        # Base queryset
+
+        # Base queryset - exclude delivered orders from counts
         if request.user.is_superuser:
             # Superuser sees all orders
             orders = Order.objects.all()
+            # For counts, exclude delivered orders
+            count_orders = Order.objects.exclude(order_status='Delivered')
         elif user_shops:
             # Staff sees only their shop's orders
             orders = Order.objects.filter(shop__in=user_shops)
+            # For counts, exclude delivered orders
+            count_orders = Order.objects.filter(shop__in=user_shops).exclude(order_status='Delivered')
         else:
             # Users with no shop assignments see nothing
             orders = Order.objects.none()
-        
-        # Calculate stats
-        total_orders = orders.count()
-        pending_orders = orders.filter(order_status='Pending').count()
-       
-        completed_orders = orders.filter(order_status='Completed').count()
-    
-        
-        # Get recent orders
+            count_orders = Order.objects.none()
+
+        # Calculate stats using count_orders (which excludes delivered orders)
+        total_orders = count_orders.count()
+        pending_orders = count_orders.filter(order_status='Pending').count()
+        completed_orders = count_orders.filter(order_status='Completed').count()
+
+        # Get recent orders (including delivered)
         recent_orders = orders.select_related('customer').order_by('-created_at')[:10]
-        
-        # For superusers, get shop performance data
+
+        # For superusers, get shop performance data (excluding delivered orders)
         shop_performance = None
         if request.user.is_superuser:
             shop_performance = {}
             shops = Order.objects.values_list('shop', flat=True).distinct()
             for shop in shops:
                 if shop:  # Ensure shop is not empty
-                    shop_orders = Order.objects.filter(shop=shop)
+                    shop_orders = Order.objects.filter(shop=shop).exclude(order_status='Delivered')
                     shop_performance[shop] = {
                         'total_orders': shop_orders.count(),
                         'completed_orders': shop_orders.filter(order_status='Completed').count(),
@@ -1081,18 +1134,14 @@ class OrderAdmin(ShopPermissionMixin, AppPermissionMixin, ModelAdmin, ImportExpo
                             total=Sum('total_price')
                         )['total'] or 0
                     }
-        
+
         context = {
             'user_shops': user_shops,
             'total_orders': total_orders,
             'pending_orders': pending_orders,
-        
             'completed_orders': completed_orders,
-            
             'recent_orders': recent_orders,
             'shop_performance': shop_performance,
             **self.admin_site.each_context(request),
         }
         return render(request, 'Admin/dashboard.html', context)
-    
-        

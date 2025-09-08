@@ -10,11 +10,11 @@ import hashlib
 import json
 import logging
 from collections import Counter
-from functools import wraps
+from functools import lru_cache
 
 # Django core imports
 from django.db.models import (
-    Avg, Count, DecimalField, Max, Q, Sum
+    Avg, Count, DecimalField, Q, Sum, Case, When, Value, IntegerField
 )
 from django.db.models.functions import Coalesce, ExtractMonth, ExtractYear
 from django.utils.timezone import now
@@ -27,6 +27,7 @@ logger = logging.getLogger(__name__)
 
 # --- Constants ---
 MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
+ACTIVE_ORDER_STATUSES = ['pending', 'processing', 'Completed', 'Delivered']  # Statuses that count as active orders
 
 
 class DashboardAnalytics:
@@ -34,7 +35,7 @@ class DashboardAnalytics:
     Handles all analytics and dashboard-related functionality for the laundry management system.
     
     This class provides methods for generating dashboard data, statistics, and visualizations
-    while respecting shop-based permissions.
+    while respecting shop-based permissions and excluding orders with certain statuses.
     """
     
     def __init__(self, admin_instance):
@@ -77,9 +78,64 @@ class DashboardAnalytics:
             },
         }
     
+    def _get_base_queryset(self, request, selected_year, selected_month=None):
+        """
+        Get the base queryset with proper filtering for active orders and user permissions.
+        
+        Args:
+            request: The current request object.
+            selected_year: The year to filter data by.
+            selected_month: The month to filter data by (optional).
+            
+        Returns:
+            QuerySet: Filtered queryset of active orders.
+        """
+        # Base queryset with year filter and active status filter
+        base_queryset = Order.objects.filter(
+            delivery_date__year=selected_year,
+            order_status__in=ACTIVE_ORDER_STATUSES  # Only include active orders
+        )
+        
+        if selected_month:
+            base_queryset = base_queryset.filter(delivery_date__month=selected_month)
+
+        # Apply shop filtering if user is not superuser
+        user_shops = self.get_user_shops(request)
+        if user_shops is not None:  # Not superuser
+            if user_shops:  # Has specific shops
+                base_queryset = base_queryset.filter(shop__in=user_shops)
+            else:  # No shop access
+                base_queryset = Order.objects.none()  # Return empty queryset
+
+        return base_queryset
+    
+    @lru_cache(maxsize=32)
+    def _get_common_items_data(self, order_ids):
+        """
+        Get common items data with caching for better performance.
+        
+        Args:
+            order_ids: List of order IDs to filter by.
+            
+        Returns:
+            list: Common items with their counts.
+        """
+        order_item_data = OrderItem.objects.filter(order_id__in=order_ids)
+        
+        all_items = []
+        for item in order_item_data.only('itemname'):
+            if item.itemname:
+                item_list = [i.strip() for i in item.itemname.split(',') if i.strip()]
+                all_items.extend(item_list)
+
+        # Count item occurrences
+        item_counter = Counter(all_items)
+        return [{'itemname': item, 'count': count} for item, count in item_counter.most_common(5)]
+    
     def get_dashboard_data(self, request, selected_year, selected_month=None):
         """
         Fetch comprehensive dashboard data with optimized queries and shop-based filtering.
+        Only includes orders with active statuses (not cancelled or other inactive statuses).
         
         Args:
             request: The current request object.
@@ -90,21 +146,12 @@ class DashboardAnalytics:
             dict: Comprehensive dashboard data including statistics and analytics.
         """
         try:
-            # Get user's accessible shops
-            user_shops = self.get_user_shops(request)
-
-            # Base queryset with year filter
-            base_queryset = Order.objects.filter(delivery_date__year=selected_year)
-            if selected_month:
-                base_queryset = base_queryset.filter(delivery_date__month=selected_month)
-
-            # Apply shop filtering if user is not superuser
-            if user_shops is not None:  # Not superuser
-                if user_shops:  # Has specific shops
-                    base_queryset = base_queryset.filter(shop__in=user_shops)
-                else:  # No shop access
-                    # Return empty data for users with no shop access
-                    return self._get_empty_dashboard_data()
+            # Get base queryset with proper filtering
+            base_queryset = self._get_base_queryset(request, selected_year, selected_month)
+            
+            # Return empty data if no orders match the criteria
+            if not base_queryset.exists():
+                return self._get_empty_dashboard_data()
 
             # Single aggregation query for order statistics
             order_stats = base_queryset.aggregate(
@@ -136,7 +183,9 @@ class DashboardAnalytics:
                 total_revenue=Sum('total_price')
             ).order_by('-total_revenue'))
 
-            common_customers = list(base_queryset.values('customer__name').annotate(
+            common_customers = list(base_queryset.values(
+                'customer__name', 'customer__phone'
+            ).annotate(
                 order_count=Count('id'),
                 total_spent=Sum('total_price')
             ).order_by('-order_count')[:5])
@@ -145,25 +194,22 @@ class DashboardAnalytics:
                 count=Count('id')
             ).order_by('-count'))
 
-            # OrderItem related data
-            order_item_data = OrderItem.objects.filter(order__in=base_queryset)
-
-            top_services = list(order_item_data.values('servicetype').annotate(
+            # OrderItem related data - optimized
+            order_ids = list(base_queryset.values_list('id', flat=True))
+            
+            # Get top services
+            top_services = list(OrderItem.objects.filter(
+                order_id__in=order_ids
+            ).values('servicetype').annotate(
                 count=Count('id')
             ).order_by('-count')[:5])
 
-            # For common items, we need to handle the comma-separated values
-            all_items = []
-            for item in order_item_data:
-                if item.itemname:
-                    item_list = [i.strip() for i in item.itemname.split(',') if i.strip()]
-                    all_items.extend(item_list)
+            # Get common items using cached method
+            common_items = self._get_common_items_data(tuple(order_ids))
 
-            # Count item occurrences
-            item_counter = Counter(all_items)
-            common_items = [{'itemname': item, 'count': count} for item, count in item_counter.most_common(5)]
-
-            service_types = list(order_item_data.values('servicetype').annotate(
+            service_types = list(OrderItem.objects.filter(
+                order_id__in=order_ids
+            ).values('servicetype').annotate(
                 count=Count('id')
             ).order_by('-count'))
 
@@ -172,7 +218,8 @@ class DashboardAnalytics:
             monthly_order_volume = []
 
             if not selected_month:
-                # Get shops to display based on user permissions
+                # Get user shops for chart data
+                user_shops = self.get_user_shops(request)
                 if user_shops is None:  # Superuser - show all shops
                     shops = [choice[0] for choice in Order._meta.get_field('shop').choices]
                 else:  # Regular user - show only their shops
@@ -260,8 +307,10 @@ class DashboardAnalytics:
         Returns:
             dict: Context data ready for template rendering.
         """
-        # Get available years for the filter dropdown
-        years = Order.objects.annotate(
+        # Get available years for the filter dropdown (only active orders)
+        years = Order.objects.filter(
+            order_status__in=ACTIVE_ORDER_STATUSES
+        ).annotate(
             year=ExtractYear('delivery_date')
         ).values_list('year', flat=True).distinct().order_by('year')
 
@@ -344,3 +393,35 @@ class DashboardAnalytics:
         }
 
         return context
+
+
+# Utility function to check if an order should be counted in analytics
+def should_count_order(order_status):
+    """
+    Check if an order with the given status should be counted in analytics.
+    
+    Args:
+        order_status: The status of the order.
+        
+    Returns:
+        bool: True if the order should be counted, False otherwise.
+    """
+    return order_status in ACTIVE_ORDER_STATUSES
+
+
+# Signal handler to update analytics when order status changes
+from django.db.models.signals import post_save
+from django.dispatch import receiver
+
+@receiver(post_save, sender=Order)
+def clear_analytics_cache_on_order_change(sender, instance, **kwargs):
+    """
+    Clear analytics cache when an order is saved (status changed).
+    This ensures the dashboard shows up-to-date information.
+    """
+    try:
+        # Clear the common items cache
+        dashboard_analytics = DashboardAnalytics(None)
+        dashboard_analytics._get_common_items_data.cache_clear()
+    except Exception as e:
+        logger.error(f"Error clearing analytics cache: {e}")
