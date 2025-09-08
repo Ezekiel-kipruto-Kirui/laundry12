@@ -89,7 +89,7 @@ MPESA_INITIATOR_SECURITY_CREDENTIAL = env('MPESA_INITIATOR_SECURITY_CREDENTIAL')
 
 
 ROOT_URLCONF = 'LaundryConfig.urls'
-
+LOGIN_REDIRECT_URL = "admin:index" 
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
