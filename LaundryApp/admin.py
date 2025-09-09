@@ -768,6 +768,7 @@ class OrderAdmin(OrderAdminBase):
             'today': timezone.now().date(),
         }
         return render(request, 'Admin/orders_table.html', context)
+
     @method_decorator(csrf_exempt, name='dispatch')
     @method_decorator(require_POST, name='dispatch')
     def create_order_api(self, request):
@@ -800,14 +801,14 @@ class OrderAdmin(OrderAdminBase):
                 customer.name = name
                 customer.save()
             
-            # Create order
+            # Create order with proper defaults
             order = Order.objects.create(
                 customer=customer,
                 shop=order_data.get('shop'),
                 delivery_date=order_data.get('delivery_date'),
                 payment_type=order_data.get('payment_type', 'pending_payment'),
                 payment_status=order_data.get('payment_status', 'pending'),
-                order_status=order_data.get('order_status', 'pending'),
+                order_status=order_data.get('order_status', 'pending'),  # Ensure default
                 address=order_data.get('address', ''),
                 addressdetails=order_data.get('addressdetails', ''),
                 created_by=request.user if request.user.is_authenticated else None
@@ -843,7 +844,7 @@ class OrderAdmin(OrderAdminBase):
                 'success': False,
                 'message': f'Error creating order: {str(e)}'
             }, status=400)
-    
+
     def createorder(self, request):
         """View to handle order creation with Django forms"""
         # Get user's shop based on group membership
@@ -857,6 +858,10 @@ class OrderAdmin(OrderAdminBase):
             # For users with only one shop, override the shop value
             if user_shops and len(user_shops) == 1:
                 post_data['shop'] = user_shops[0]
+            
+            # Ensure order_status is set to 'pending' if not provided
+            if 'order_status' not in post_data or not post_data['order_status']:
+                post_data['order_status'] = 'pending'
             
             # Check if customer already exists FIRST
             phone = post_data.get('phone', '')
@@ -906,7 +911,7 @@ class OrderAdmin(OrderAdminBase):
                     order.customer = customer
                     order.created_by = request.user
                     
-                    # Set default order status to 'pending' if not provided
+                    # Ensure order status is set (double safety)
                     if not order.order_status:
                         order.order_status = 'pending'
                     
@@ -988,7 +993,6 @@ class OrderAdmin(OrderAdminBase):
             except Customer.DoesNotExist:
                 return JsonResponse({'exists': False})
         return JsonResponse({'exists': False})
-
     def generaldashboard(self, request):
         if not request.user.is_authenticated:
             return redirect('admin:login')

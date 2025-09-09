@@ -34,7 +34,7 @@
                 }
             }
         }
-</script>
+    </script>
     <style>
         /* Custom styles for enhanced form elements */
         .form-input,
@@ -146,43 +146,48 @@
                 <div class="px-8 pt-8 pb-4">
                     <div class="flex justify-between items-center relative mb-10">
                         <!-- Progress line -->
-                        <div class="absolute top-6 left-16 right-16 h-1 bg-gradient-to-r from-accent-500 to-purple-600 z-0">
+                        <div
+                            class="absolute top-6 left-16 right-16 h-1 bg-gradient-to-r from-accent-500 to-purple-600 z-0">
                         </div>
-<!-- Steps -->
-<div class="step relative z-10 flex flex-col items-center" data-step="1">
-    <div
-        class="w-12 h-12 rounded-full bg-accent-500 border-2 border-accent-500 flex items-center justify-center shadow-lg mb-3 step-icon-active">
-        <i class="fas fa-user text-white"></i>
-    </div>
+
+                        <!-- Steps -->
+                        <div class="step relative z-10 flex flex-col items-center" data-step="1">
+                            <div
+                                class="w-12 h-12 rounded-full bg-accent-500 border-2 border-accent-500 flex items-center justify-center shadow-lg mb-3 step-icon-active">
+                                <i class="fas fa-user text-white"></i>
+                            </div>
                             <span class="text-sm font-medium step-active">Customer</span>
+                        </div>
+
+                        <div class="step relative z-10 flex flex-col items-center" data-step="2">
+                            <div
+                                class="w-12 h-12 rounded-full bg-gray-100 border-2 border-gray-300 flex items-center justify-center shadow-lg mb-3">
+                                <i class="fas fa-clipboard-list text-gray-400"></i>
                             </div>
-<div class="step relative z-10 flex flex-col items-center" data-step="2">
-    <div
-        class="w-12 h-12 rounded-full bg-gray-100 border-2 border-gray-300 flex items-center justify-center shadow-lg mb-3">
-        <i class="fas fa-clipboard-list text-gray-400"></i>
-    </div>
                             <span class="text-sm font-medium text-gray-500">Order Details</span>
+                        </div>
+
+                        <div class="step relative z-10 flex flex-col items-center" data-step="3">
+                            <div
+                                class="w-12 h-12 rounded-full bg-gray-100 border-2 border-gray-300 flex items-center justify-center shadow-lg mb-3">
+                                <i class="fas fa-tshirt text-gray-400"></i>
                             </div>
-<div class="step relative z-10 flex flex-col items-center" data-step="3">
-    <div
-        class="w-12 h-12 rounded-full bg-gray-100 border-2 border-gray-300 flex items-center justify-center shadow-lg mb-3">
-        <i class="fas fa-tshirt text-gray-400"></i>
-    </div>
                             <span class="text-sm font-medium text-gray-500">Items</span>
+                        </div>
+
+                        <div class="step relative z-10 flex flex-col items-center" data-step="4">
+                            <div
+                                class="w-12 h-12 rounded-full bg-gray-100 border-2 border-gray-300 flex items-center justify-center shadow-lg mb-3">
+                                <i class="fas fa-credit-card text-gray-400"></i>
                             </div>
-<div class="step relative z-10 flex flex-col items-center" data-step="4">
-    <div
-        class="w-12 h-12 rounded-full bg-gray-100 border-2 border-gray-300 flex items-center justify-center shadow-lg mb-3">
-        <i class="fas fa-credit-card text-gray-400"></i>
-    </div>
-    <span class="text-sm font-medium text-gray-500">Payment</span>
-</div>
-</div>
-</div>
+                            <span class="text-sm font-medium text-gray-500">Payment</span>
+                        </div>
+                    </div>
+                </div>
 
                 <form id="order-form" class="p-8 space-y-8" method="post" enctype="multipart/form-data">
                     {% csrf_token %}
-                
+
                     <!-- Display form errors at the top -->
                     {% if customer_form.errors or order_form.errors or item_formset.errors %}
                     <div class="bg-red-50 border border-red-200 rounded-lg p-4 mb-6 shadow-sm">
@@ -215,17 +220,18 @@
                             <h2 class="text-xl font-semibold text-accent-600 mb-4 flex items-center">
                                 <i class="fas fa-user-circle mr-3"></i>Customer Information
                             </h2>
-<div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-    <!-- Name Field -->
-    <div class="relative">
-        {{ customer_form.name }}
-        <label for="id_name" class="form-label absolute left-4 top-3 pointer-events-none">
-            Customer Name *
-        </label>
-        {% if customer_form.name.errors %}
-        <div class="text-red-500 text-sm mt-2">{{ customer_form.name.errors }}</div>
-        {% endif %}
-    </div>
+
+                            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                                <!-- Name Field -->
+                                <div class="relative">
+                                    {{ customer_form.name }}
+                                    <label for="id_name" class="form-label absolute left-4 top-3 pointer-events-none">
+                                        Customer Name *
+                                    </label>
+                                    {% if customer_form.name.errors %}
+                                    <div class="text-red-500 text-sm mt-2">{{ customer_form.name.errors }}</div>
+                                    {% endif %}
+                                </div>
 
                                 <!-- Phone Field -->
                                 <div class="relative">
@@ -265,8 +271,7 @@
                                     {% endif %}
                                     {% if user_has_single_shop %}
                                     <p class="text-sm text-gray-500 mt-2">
-                                        Your orders are automatically assigned to <span class="font-semibold">{{ user_shop }}</span> based on your user
-                                        group.
+                                        Your orders are automatically assigned to <span class="font-semibold">{{ user_shop }}</span> based on your user group.
                                     </p>
                                     {% endif %}
                                 </div>
@@ -274,20 +279,22 @@
                                 <!-- Delivery Date Field -->
                                 <div class="relative">
                                     {{ order_form.delivery_date }}
-                                    <label for="id_delivery_date" class="form-label absolute left-4 top-3 pointer-events-none">
+                                    <label for="id_delivery_date"
+                                        class="form-label absolute left-4 top-3 pointer-events-none">
                                         Delivery Date *
                                     </label>
                                     {% if order_form.delivery_date.errors %}
                                     <div class="text-red-500 text-sm mt-2">{{ order_form.delivery_date.errors }}</div>
                                     {% endif %}
                                 </div>
-                                </div>
+                            </div>
 
                             <div class="grid grid-cols-1 gap-6 mt-6">
                                 <!-- Address Field -->
                                 <div class="relative">
                                     {{ order_form.address }}
-                                    <label for="id_address" class="form-label absolute left-4 top-3 pointer-events-none">
+                                    <label for="id_address"
+                                        class="form-label absolute left-4 top-3 pointer-events-none">
                                         Delivery Address
                                     </label>
                                     {% if order_form.address.errors %}
@@ -298,16 +305,17 @@
                                 <!-- Address Details Field -->
                                 <div class="relative">
                                     {{ order_form.addressdetails }}
-                                    <label for="id_addressdetails" class="form-label absolute left-4 top-3 pointer-events-none">
+                                    <label for="id_addressdetails"
+                                        class="form-label absolute left-4 top-3 pointer-events-none">
                                         Address Details
                                     </label>
                                     {% if order_form.addressdetails.errors %}
                                     <div class="text-red-500 text-sm mt-2">{{ order_form.addressdetails.errors }}</div>
                                     {% endif %}
                                 </div>
-                                </div>
-                                </div>
-                                </div>
+                            </div>
+                        </div>
+                    </div>
 
                     <!-- Step 3: Order Items -->
                     <div class="form-step hidden" data-step="3">
@@ -320,20 +328,21 @@
                                     class="bg-accent-500 hover:bg-accent-600 text-white px-4 py-2 rounded-lg font-semibold flex items-center transition-colors shadow-md hover:shadow-lg">
                                     <i class="fas fa-plus mr-2"></i> Add Item
                                 </button>
-                                </div>
+                            </div>
 
                             <div id="order-items-container" class="space-y-6">
                                 {{ item_formset.management_form }}
-                                
+
                                 {% for form in item_formset %}
                                 <div class="bg-white p-6 rounded-xl border border-gray-200 shadow-sm hover:shadow-md transition-shadow item-form"
                                     id="item-{{ forloop.counter0 }}">
                                     <div class="flex justify-between items-start mb-4">
                                         <span class="font-semibold text-gray-700">Item #{{ forloop.counter }}</span>
                                         {% if forloop.counter0 > 0 or item_formset.total_form_count > 1 %}
-                                        <button type="button" class="remove-item text-red-500 hover:text-red-700 transition-colors">
+                                        <button type="button"
+                                            class="remove-item text-red-500 hover:text-red-700 transition-colors">
                                             <i class="fas fa-times-circle text-xl"></i>
-                                            </button>
+                                        </button>
                                         {% endif %}
                                     </div>
 
@@ -359,7 +368,7 @@
                                             <div class="text-red-500 text-sm mt-2">{{ form.itemtype.errors }}</div>
                                             {% endif %}
                                         </div>
-                                        </div>
+                                    </div>
 
                                     <!-- Item Names -->
                                     <div class="relative mt-6">
@@ -406,7 +415,7 @@
                                             <div class="text-red-500 text-sm mt-2">{{ form.itemcondition.errors }}</div>
                                             {% endif %}
                                         </div>
-                                        </div>
+                                    </div>
 
                                     <!-- Additional Info -->
                                     <div class="relative mt-6">
@@ -418,22 +427,24 @@
                                         <div class="text-red-500 text-sm mt-2">{{ form.additional_info.errors }}</div>
                                         {% endif %}
                                     </div>
-{% if form.DELETE %}
-{{ form.DELETE }}
-{% endif %}
-{{ form.id }}
+
+                                    {% if form.DELETE %}
+                                    {{ form.DELETE }}
+                                    {% endif %}
+                                    {{ form.id }}
                                 </div>
                                 {% endfor %}
                             </div>
 
                             <!-- Total Display -->
-                            <div class="bg-gradient-to-r from-accent-500 to-purple-700 text-white p-6 rounded-xl mt-6 shadow-lg">
+                            <div
+                                class="bg-gradient-to-r from-accent-500 to-purple-700 text-white p-6 rounded-xl mt-6 shadow-lg">
                                 <div class="flex justify-between items-center">
                                     <span class="text-lg font-semibold">Order Total:</span>
                                     <span id="order-total" class="text-3xl font-bold">KSh 0.00</span>
-                                    </div>
-                                    </div>
-                                    </div>
+                                </div>
+                            </div>
+                        </div>
                     </div>
 
                     <!-- Step 4: Payment Information -->
@@ -447,7 +458,8 @@
                                 <!-- Payment Method -->
                                 <div class="relative">
                                     {{ order_form.payment_type }}
-                                    <label for="id_payment_type" class="form-label absolute left-4 top-3 pointer-events-none">
+                                    <label for="id_payment_type"
+                                        class="form-label absolute left-4 top-3 pointer-events-none">
                                         Payment Method
                                     </label>
                                     {% if order_form.payment_type.errors %}
@@ -458,16 +470,17 @@
                                 <!-- Payment Status -->
                                 <div class="relative">
                                     {{ order_form.payment_status }}
-                                    <label for="id_payment_status" class="form-label absolute left-4 top-3 pointer-events-none">
+                                    <label for="id_payment_status"
+                                        class="form-label absolute left-4 top-3 pointer-events-none">
                                         Payment Status
                                     </label>
                                     {% if order_form.payment_status.errors %}
                                     <div class="text-red-500 text-sm mt-2">{{ order_form.payment_status.errors }}</div>
                                     {% endif %}
                                 </div>
-                                </div>
-                                </div>
-                                </div>
+                            </div>
+                        </div>
+                    </div>
 
                     <!-- Form Actions -->
                     <div class="flex justify-between items-center pt-6 border-t border-gray-200 mt-8">
@@ -475,16 +488,18 @@
                             class="bg-white text-gray-700 border border-gray-300 px-6 py-3 rounded-lg font-semibold hover:bg-gray-50 transition-colors shadow-sm hidden">
                             <i class="fas fa-arrow-left mr-2"></i> Previous
                         </button>
-<button type="button" id="next-btn"
-    class="ml-auto bg-accent-500 hover:bg-accent-600 text-white px-6 py-3 rounded-lg font-semibold transition-colors shadow-md hover:shadow-lg">
-    Next <i class="fas fa-arrow-right ml-2"></i>
-</button>
-<button type="submit" id="submit-btn"
-    class="bg-accent-500 hover:bg-accent-600 text-white px-6 py-3 rounded-lg font-semibold flex items-center transition-colors shadow-md hover:shadow-lg hidden">
-    <i class="fas fa-check-circle mr-2"></i> Create Order
-</button>
-</div>
-</form>
+
+                        <button type="button" id="next-btn"
+                            class="ml-auto bg-accent-500 hover:bg-accent-600 text-white px-6 py-3 rounded-lg font-semibold transition-colors shadow-md hover:shadow-lg">
+                            Next <i class="fas fa-arrow-right ml-2"></i>
+                        </button>
+
+                        <button type="submit" id="submit-btn"
+                            class="bg-accent-500 hover:bg-accent-600 text-white px-6 py-3 rounded-lg font-semibold flex items-center transition-colors shadow-md hover:shadow-lg hidden">
+                            <i class="fas fa-check-circle mr-2"></i> Create Order
+                        </button>
+                    </div>
+                </form>
             </div>
         </div>
     </div>
@@ -520,7 +535,8 @@
         });
     </script>
 
-<script>
+
+   <script>
     document.addEventListener('DOMContentLoaded', function () {
         // Handle shop field for users with single shop assignment
         '{% if user_has_single_shop %}'
@@ -552,7 +568,10 @@
         }
 
         // Set default order status to 'pending'
-
+        const orderStatusSelect = document.getElementById('id_order_status');
+        if (orderStatusSelect) {
+            orderStatusSelect.value = 'pending';
+        }
 
         // Add base styles to form fields safely
         function initializeFormFields() {
@@ -999,7 +1018,7 @@
         // Initial calculation
         calculateTotal();
     });
-    </script>
+</script>
 </body>
 
 </html>
