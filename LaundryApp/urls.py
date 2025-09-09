@@ -1,6 +1,9 @@
 from django.contrib import admin
 from django.urls import path,include
 from . import views
+
+# Create an instance of the admin class to access its methods
+
 # from LaundryApp.admin import dashboard_view  # Import your new view
 
 urlpatterns = [
@@ -11,5 +14,8 @@ urlpatterns = [
     path('Mpesa',views.index, name='index'),
     path('daraja/stk_push',views.stk_push_callback, name='stk_push_callback'),
     path('mpesa/callback/', views.stk_push_callback, name='mpesa_callback'),
+    
+   
+
     
 ]

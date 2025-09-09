@@ -46,7 +46,7 @@ def save_user_profile(sender, instance, **kwargs):
 
 class Customer(models.Model):
     name = models.CharField(max_length=200)
-    phone = PhoneNumberField(region="KE", unique=True)
+    phone = PhoneNumberField(region="KE")
     created_by = models.ForeignKey(
         User, 
         on_delete=models.SET_NULL, 

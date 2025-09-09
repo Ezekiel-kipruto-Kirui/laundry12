@@ -90,6 +90,7 @@ MPESA_INITIATOR_SECURITY_CREDENTIAL = env('MPESA_INITIATOR_SECURITY_CREDENTIAL')
 
 ROOT_URLCONF = 'LaundryConfig.urls'
 LOGIN_REDIRECT_URL = "admin:index" 
+
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
@@ -257,23 +258,6 @@ UNFOLD = {
     "show_search": True,
     "navigation": [
         {
-            "title": "Dashboard",
-            "items": [
-                {
-                    "title": "Dashboard",
-                    "icon": "analytics",
-                    "link": reverse_lazy("admin:index"),
-                   
-                },
-                {
-                    "title": "Report",
-                    "icon": "analytics",
-                    "link": reverse_lazy("admin:laundryapp_dashboard"),
-                    "permission": lambda request: request.user.is_superuser
-                },
-            ],
-        },
-        {
             "title": "Operations",
             "items": [
                 {
@@ -293,6 +277,24 @@ UNFOLD = {
                 },
             ],
         },
+        {
+            "title": "Dashboard",
+            "items": [
+                {
+                    "title": "Dashboard",
+                    "icon": "analytics",
+                    "link": reverse_lazy("admin:index"),
+                   
+                },
+                {
+                    "title": "Report",
+                    "icon": "analytics",
+                    "link": reverse_lazy("admin:laundryapp_dashboard"),
+                    "permission": lambda request: request.user.is_superuser
+                },
+            ],
+        },
+        
         {
             "title": "Administration",
             "items": [

@@ -1,90 +1,4 @@
-# LaundryApp/forms.py
-from django import forms
-from .models import Customer, Order, OrderItem
 
-class CustomerForm(forms.ModelForm):
-    class Meta:
-        model = Customer
-        fields = ['name', 'phone']
-        widgets = {
-            'name': forms.TextInput(attrs={
-                'class': 'form-input',
-                'placeholder': 'Enter customer name'
-            }),
-            'phone': forms.TextInput(attrs={
-                'class': 'form-input',
-                'placeholder': 'Enter phone number'
-            })
-        }
-
-class OrderItemForm(forms.ModelForm):
-    class Meta:
-        model = OrderItem
-        fields = ['servicetype', 'itemtype', 'itemname', 'quantity', 'itemcondition', 'unit_price', 'additional_info']
-        widgets = {
-            'servicetype': forms.Select(attrs={'class': 'form-select'}),
-            'itemtype': forms.Select(attrs={'class': 'form-select'}),
-            'itemname': forms.TextInput(attrs={
-                'class': 'form-input',
-                'placeholder': 'Enter item name(s), separate multiple with commas'
-            }),
-            'quantity': forms.NumberInput(attrs={
-                'class': 'form-input',
-                'min': 1,
-                'placeholder': 'Quantity'
-            }),
-            'itemcondition': forms.Select(attrs={'class': 'form-select'}),
-            'unit_price': forms.NumberInput(attrs={
-                'class': 'form-input',
-                'step': '0.01',
-                'min': '0',
-                'placeholder': 'Unit price'
-            }),
-            'additional_info': forms.Textarea(attrs={
-                'class': 'form-textarea',
-                'rows': 3,
-                'placeholder': 'Additional information (optional)'
-            }),
-        }
-
-class OrderForm(forms.ModelForm):
-    class Meta:
-        model = Order
-        fields = ['shop', 'payment_type', 'payment_status', 'delivery_date', 'order_status', 'address', 'addressdetails']
-        widgets = {
-            'shop': forms.Select(attrs={'class': 'form-select'}),
-            'payment_type': forms.Select(attrs={
-                'class': 'form-select',
-                'id': 'id_payment_type'
-            }),
-            'payment_status': forms.Select(attrs={
-                'class': 'form-select',
-                'id': 'id_payment_status'
-            }),
-            'delivery_date': forms.DateInput(attrs={
-                'class': 'form-input',
-                'type': 'date'
-            }),
-            'order_status': forms.Select(attrs={'class': 'form-select'}),
-            'address': forms.TextInput(attrs={
-                'class': 'form-input',
-                'placeholder': 'Delivery address'
-            }),
-            'addressdetails': forms.Textarea(attrs={
-                'class': 'form-textarea',
-                'rows': 3,
-                'placeholder': 'Additional address details (optional)'
-            }),
-        }
-
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        # Make payment fields optional
-        self.fields['payment_type'].required = False
-        self.fields['payment_status'].required = False
-
-
-# laundry/LaundryApp/forms.py
 from django import forms
 from django.contrib.auth.forms import AuthenticationForm, UserCreationForm, UserChangeForm, PasswordChangeForm
 from django.contrib.auth.models import User, Group
@@ -160,8 +74,20 @@ class CustomerForm(forms.ModelForm):
             'name': forms.TextInput(attrs={'class': 'form-control'}),
             'phone': forms.TextInput(attrs={'class': 'form-control'}),
         }
-
-
+    
+    def clean_phone(self):
+        phone = self.cleaned_data.get('phone')
+        # Skip uniqueness validation - the view will handle existing customers
+        return phone
+    
+    def clean_phone(self):
+        phone = self.cleaned_data.get('phone')
+        # Check if customer with this phone already exists
+        if Customer.objects.filter(phone=phone).exists():
+            # If we're in the context of order creation, this is acceptable
+            # The view will handle using the existing customer
+            return phone
+        return phone
 class OrderForm(forms.ModelForm):
     """Form for order creation and editing"""
     class Meta:
@@ -176,7 +102,15 @@ class OrderForm(forms.ModelForm):
             'address': forms.TextInput(attrs={'class': 'form-control'}),
             'addressdetails': forms.Textarea(attrs={'class': 'form-control', 'rows': 3}),
         }
-
+    
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # Set default order status to 'pending'
+        self.fields['order_status'].initial = 'pending'
+        # Make payment fields optional
+        self.fields['payment_type'].required = False
+        self.fields['payment_status'].required = False
+# laundry/LaundryApp/forms.py
 
 class OrderItemForm(forms.ModelForm):
     """Form for order item creation and editing"""
