@@ -92,7 +92,7 @@ class OrderForm(forms.ModelForm):
     """Form for order creation and editing"""
     class Meta:
         model = Order
-        fields = ['shop', 'delivery_date', 'payment_type', 'payment_status', 'order_status', 'address', 'addressdetails']
+        fields = ['shop', 'delivery_date', 'payment_type', 'payment_status', 'order_status', 'address','amount_paid', 'balance', 'addressdetails']
         widgets = {
             'shop': forms.Select(attrs={'class': 'form-control'}),
             'delivery_date': forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}),
@@ -101,6 +101,8 @@ class OrderForm(forms.ModelForm):
             'order_status': forms.Select(attrs={'class': 'form-control'}),
             'address': forms.TextInput(attrs={'class': 'form-control'}),
             'addressdetails': forms.Textarea(attrs={'class': 'form-control', 'rows': 3}),
+            'amount_paid': forms.NumberInput(attrs={'class': 'form-control'}),
+            'balance': forms.NumberInput(attrs={'class': 'form-control'}),
         }
     
     def __init__(self, *args, **kwargs):
@@ -110,6 +112,8 @@ class OrderForm(forms.ModelForm):
         # Make payment fields optional
         self.fields['payment_type'].required = False
         self.fields['payment_status'].required = False
+        self.fields['amount_paid'].required = False
+        self.fields['balance'].required = False
 # laundry/LaundryApp/forms.py
 
 class OrderItemForm(forms.ModelForm):

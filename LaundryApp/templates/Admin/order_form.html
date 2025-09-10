@@ -462,11 +462,17 @@
                                         class="form-label absolute left-4 top-3 pointer-events-none">
                                         Payment Method
                                     </label>
+                                    
                                     {% if order_form.payment_type.errors %}
                                     <div class="text-red-500 text-sm mt-2">{{ order_form.payment_type.errors }}</div>
                                     {% endif %}
                                 </div>
-
+                                <div class="relative amount_paid"> 
+                                    {{ order_form.amount_paid }}
+                                    <label for="amount_paid_id" class="form-label absolute left-4 top-3 pointer-events-none">
+                                        Amount Paid
+                                    </label>
+                                </div>
                                 <!-- Payment Status -->
                                 <div class="relative">
                                     {{ order_form.payment_status }}
@@ -868,6 +874,7 @@
                 // Add event listeners for price calculation
                 const quantityInputNew = newItem.querySelector('input[name$="quantity"]');
                 const priceInputNew = newItem.querySelector('input[name$="unit_price"]');
+                
 
                 if (quantityInputNew) quantityInputNew.addEventListener('input', calculateTotal);
                 if (priceInputNew) priceInputNew.addEventListener('input', calculateTotal);
@@ -916,9 +923,13 @@
                     const unitPrice = priceInput ? parseFloat(priceInput.value) || 0 : 0;
                     total += quantity * unitPrice;
                 }
+
             });
 
             orderTotalElement.textContent = `KSh ${total.toFixed(2)}`;
+            
+            
+
         }
 
         // Add event listeners for price calculation

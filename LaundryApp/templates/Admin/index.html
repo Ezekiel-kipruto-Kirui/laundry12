@@ -1,6 +1,13 @@
-{% extends "admin/base_site.html" %}
+{% extends "unfold/layouts/base.html" %}
+{% load static %}
 
 {% block content %}
-   
-{# Or include your own custom dashboard widgets here #}
+<div class="dashboard">
+<a href="{% url 'toggle_sidebar' %}">Toggle Sidebar</a>
+
+    <div class="cards">
+        <a href="{% url 'admin:YourApp_order_changelist' %}">📦 Orders</a>
+        <a href="{% url 'admin:YourApp_customer_changelist' %}">👤 Customers</a>
+    </div>
+</div>
 {% endblock %}

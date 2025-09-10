@@ -3,13 +3,15 @@ import json
 from functools import wraps
 from datetime import datetime
 
+
+
 # Django imports
 from django import forms
 from django.contrib import admin, messages
 from django.contrib.admin import register
 from django.contrib.auth.admin import UserAdmin as BaseUserAdmin
 from django.contrib.auth.models import Group, User
-from django.http import Http404, HttpResponseRedirect, JsonResponse
+from django.http import Http404, HttpResponseRedirect, JsonResponse,HttpResponse
 from django.shortcuts import render, redirect
 from django.urls import path, reverse
 from django.utils.html import format_html
@@ -28,6 +30,7 @@ from django.utils.decorators import method_decorator
 from django.forms import formset_factory, inlineformset_factory
 
 
+
 # Third-party imports
 from import_export.admin import ImportExportModelAdmin
 from unfold.admin import ModelAdmin
@@ -40,10 +43,13 @@ from unfold.widgets import (
     UnfoldAdminTextInputWidget,
 )
 
+from import_export.formats import base_formats
+
 # Local imports
 from .models import Customer, Order, OrderItem, Payment
 from .analytics import DashboardAnalytics
 from .forms import CustomerForm, OrderForm, OrderItemForm
+from .resource import OrderResource
 
 # Setup logger
 logger = logging.getLogger(__name__)
@@ -56,8 +62,6 @@ APP_LABEL = 'LaundryApp'
 # Unregister default User and Group
 admin.site.unregister(User)
 admin.site.unregister(Group)
-
-
 # --- Utility Functions ---
 def permission_required(perm_code):
     """Decorator to check permissions for admin actions."""
@@ -697,11 +701,11 @@ class OrderAdmin(OrderAdminBase):
         orders = Order.objects.select_related('customer').prefetch_related(
             Prefetch('items', queryset=OrderItem.objects.only(
                 'servicetype', 'itemname', 'quantity', 'itemtype', 
-                'itemcondition', 'total_item_price'
+                'itemcondition', 'total_item_price',
             ))
         ).only(
-            'uniquecode', 'order_status', 'payment_status', 'payment_type',
-            'shop', 'delivery_date', 'total_price', 'created_at', 
+            'uniquecode', 'order_status', 'payment_status','payment_type',
+            'shop', 'delivery_date', 'amount_paid', 'balance', 'total_price', 'created_at', 
             'customer__name', 'customer__phone', 'address', 'addressdetails'
         ).exclude(order_status='delivered')  # Exclude delivered orders
 
@@ -718,7 +722,6 @@ class OrderAdmin(OrderAdminBase):
         if status_filter:
             orders = orders.filter(order_status=status_filter)
             
-
         # Apply payment status filters
         payment_filter = request.GET.get('payment', '')
         if payment_filter:
@@ -736,11 +739,35 @@ class OrderAdmin(OrderAdminBase):
                 Q(address__icontains=search_query)
             ).distinct()
 
+        # Check if export was requested
+        export_format = request.GET.get('export', '')
+        if export_format:
+            dataset = OrderResource().export(queryset=orders)
+            
+            if export_format == 'csv':
+                response = HttpResponse(dataset.csv, content_type='text/csv')
+                response['Content-Disposition'] = 'attachment; filename="orders_export_{}.csv"'.format(
+                    timezone.now().strftime('%Y-%m-%d_%H-%M-%S')
+                )
+                return response
+                
+            elif export_format == 'xlsx':
+                # Proper way to handle Excel export
+                xlsx_data = dataset.export('xlsx')
+                response = HttpResponse(
+                    xlsx_data, 
+                    content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+                )
+                response['Content-Disposition'] = 'attachment; filename="orders_export_{}.xlsx"'.format(
+                    timezone.now().strftime('%Y-%m-%d_%H-%M-%S')
+                )
+                return response
+
         # Order by creation date
         orders = orders.order_by('-created_at')
 
         # Pagination
-        paginator = Paginator(orders, 25)  # Show 25 orders per page
+        paginator = Paginator(orders, 15)  # Show 25 orders per page
         page_number = request.GET.get('page')
         try:
             page_obj = paginator.page(page_number)
@@ -768,7 +795,6 @@ class OrderAdmin(OrderAdminBase):
             'today': timezone.now().date(),
         }
         return render(request, 'Admin/orders_table.html', context)
-
     @method_decorator(csrf_exempt, name='dispatch')
     @method_decorator(require_POST, name='dispatch')
     def create_order_api(self, request):
@@ -1018,7 +1044,7 @@ class OrderAdmin(OrderAdminBase):
 
         # Calculate stats using count_orders (which excludes delivered orders)
         total_orders = count_orders.count()
-        pending_orders = count_orders.filter(order_status='Pending').count()
+        pending_orders = count_orders.filter(order_status='pending').count()
         completed_orders = count_orders.filter(order_status='Completed').count()
 
         # Get recent orders (including delivered)

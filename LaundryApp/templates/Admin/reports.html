@@ -496,8 +496,10 @@
             <div class="icon-wrapper">
                 <i class="fas fa-wallet text-lg"></i>
             </div>
-            
-            <div class="value">ksh{{ shop_a_revenue|floatformat:2|default:"0.00" }}</div>
+            <div class="flex flex-col">
+                <div class="value">ksh{{ shop_a_revenue|floatformat:2|default:"0.00" }}</div>
+                <p class="font-light m-0">Shop A Revenue</p>
+            </div>
            
         </div>
 
@@ -543,8 +545,11 @@
             <div class="icon-wrapper">
                 <i class="fas fa-wallet text-lg"></i>
             </div>
-           
-            <div class="value">ksh{{ shop_b_revenue|floatformat:2|default:"0.00" }}</div>
+            <div class="flex flex-col ">
+                <div class="value">ksh{{ shop_b_revenue|floatformat:2|default:"0.00" }}</div>
+                <p class="font-light m-0">Shop B Revenue</p>
+            </div>
+            
             
         </div>
 
@@ -862,7 +867,7 @@
                                 COLOR_PALETTE.info
                             ],
                             borderWidth: 0,
-                            cutout: '82%',
+                            cutout: '70%',
                             spacing: 0,
                             hoverOffset: 4,
                             borderRadius: 0

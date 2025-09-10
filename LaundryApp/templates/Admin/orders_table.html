@@ -26,62 +26,91 @@
         }
     </script>
     <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+
         body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background-color: #f8fafc;
+            font-family: 'Inter', sans-serif;
+            background-color: #fff;
         }
 
         .compact-table {
             border-collapse: separate;
             border-spacing: 0;
             width: 100%;
+            table-layout: fixed;
         }
 
         .compact-table th {
-            background-color: #f1f5f9;
-            padding: 10px 12px;
+            background-color: #f8fafc;
+            padding: 12px 8px;
             font-weight: 600;
             text-transform: uppercase;
-            font-size: 0.75rem;
+            font-size: 0.7rem;
             color: #64748b;
             border-bottom: 2px solid #e2e8f0;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            text-align: center;
+            position: sticky;
+            top: 0;
+            z-index: 10;
         }
 
         .compact-table td {
-            padding: 8px 12px;
-            border-bottom: 1px solid #e2e8f0;
-            vertical-align: top;
-            font-size: 0.875rem;
+            padding: 10px 8px;
+            border-bottom: 1px solid #f1f5f9;
+            vertical-align: middle;
+            font-size: 0.8rem;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            height: 50px;
+            text-align: center;
+        }
+
+        .compact-table tr {
+            transition: all 0.2s ease;
         }
 
         .compact-table tr:hover td {
-            background-color: #f1f5f9;
+            background-color: #f8fafc;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
         }
 
         .status-badge {
             display: inline-flex;
             align-items: center;
-            padding: 4px 8px;
-            border-radius: 9999px;
-            font-size: 0.75rem;
+            justify-content: center;
+            padding: 5px 10px;
+            border-radius: 20px;
+            font-size: 0.7rem;
             font-weight: 600;
             line-height: 1;
+            white-space: nowrap;
         }
 
         .item-pill {
             display: inline-block;
             background-color: #f1f5f9;
             border-radius: 4px;
-            padding: 3px 8px;
-            margin: 2px;
-            font-size: 0.75rem;
+            padding: 4px 8px;
+            margin: 2px 0;
+            font-size: 0.7rem;
             color: #475569;
+            white-space: nowrap;
+            max-width: 100px;
+            overflow: hidden;
+            text-overflow: ellipsis;
         }
 
         .action-btn {
             padding: 6px;
             border-radius: 6px;
             transition: all 0.2s;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
         }
 
         .action-btn:hover {
@@ -105,12 +134,25 @@
 
         .stat-card {
             transition: all 0.3s ease;
-            border-left: 4px solid;
+            border-left: 20px solid;
+            overflow: hidden;
+            position: relative;
+            border-radius: 12px;
         }
 
         .stat-card:hover {
             transform: translateY(-3px);
             box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+        }
+
+        .stat-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: linear-gradient(90deg, rgba(255, 255, 255, 0.2) 0%, rgba(255, 255, 255, 0.1) 100%);
         }
 
         .filter-pill {
@@ -123,45 +165,191 @@
 
         .table-container {
             overflow-x: auto;
+            border-radius: 12px;
+            box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.05);
+            background: white;
+        }
+
+        /* Column width adjustments */
+        .col-order-code {
+            width: 100px;
+        }
+
+        .col-customer {
+            width: 120px;
+        }
+
+        .col-address {
+            width: 150px;
+        }
+
+        .col-service-type {
+            width: 100px;
+        }
+
+        .col-item-type {
+            width: 100px;
+        }
+
+        .col-items {
+            width: 120px;
+        }
+
+        .col-qty {
+            width: 80px;
+        }
+
+        .col-condition {
+            width: 100px;
+        }
+
+        .col-amount {
+            width: 100px;
+        }
+
+        .col-balance {
+            width: 100px;
+        }
+
+        .col-order-status {
+            width: 120px;
+        }
+
+        .col-payment-status {
+            width: 120px;
+        }
+
+        .col-actions {
+            width: 100px;
+        }
+
+        .text-tiny {
+            font-size: 0.7rem;
+        }
+
+        .amount-cell {
+            font-weight: 600;
+            color: #0c4a6e;
+        }
+
+        .home-link {
+            display: inline-flex;
+            align-items: center;
+            padding: 8px 16px;
+            background: white;
             border-radius: 8px;
-            box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1);
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+            transition: all 0.2s ease;
+        }
+
+        .home-link:hover {
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+            transform: translateY(-1px);
+        }
+
+        .export-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 10px 16px;
+            background: linear-gradient(to right, #10b981, #059669);
+            color: white;
+            border-radius: 8px;
+            font-weight: 500;
+            transition: all 0.2s ease;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        }
+
+        .export-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            background: linear-gradient(to right, #059669, #047857);
+        }
+
+        .new-order-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 10px 16px;
+            background: linear-gradient(to right, #3b82f6, #2563eb);
+            color: white;
+            border-radius: 8px;
+            font-weight: 500;
+            transition: all 0.2s ease;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        }
+
+        .new-order-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            background: linear-gradient(to right, #2563eb, #1d4ed8);
+        }
+
+        .dropdown-menu {
+            display: none;
+            position: absolute;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            padding: 8px 0;
+            z-index: 20;
+            min-width: 160px;
+        }
+
+        .dropdown:hover .dropdown-menu {
+            display: block;
+        }
+
+        .dropdown-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 16px;
+            color: #374151;
+            text-decoration: none;
+            transition: all 0.2s;
+        }
+
+        .dropdown-item:hover {
+            background-color: #f3f4f6;
         }
     </style>
 </head>
 
 <body class="min-h-screen bg-gray-50">
-    <div class="max-w-full mx-auto p-4">
+    <div class="max-w-full mx-auto p-4 lg:p-6">
         <!-- Header -->
         <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
             <div>
-                <div class="flex items-center gap-2 mb-2">
-                    <a href="{% url 'admin:index' %}" class="text-blue-600 hover:text-blue-800">
-                        <i class="fas fa-home"></i>
+                <div class="flex items-center gap-3 mb-3">
+                    <a href="{% url 'admin:index' %}" class="home-link text-gray-700 hover:text-blue-600">
+                        <i class="fas fa-home mr-2"></i>
+                        <span class="text-sm font-medium">Dashboard Home</span>
                     </a>
-                    <h1 class="text-2xl font-bold text-gray-900">Order Management</h1>
                 </div>
-                <p class="text-sm text-gray-600">
-                    {% if not user.is_superuser %}
-                    {% if user.groups.all.0.name == 'Shop A Staff' %}
-                    Viewing orders for Shop A
-                    {% elif user.groups.all.0.name == 'Shop B Staff' %}
-                    Viewing orders for Shop B
-                    {% else %}
-                    Viewing orders
-                    {% endif %}
-                    {% else %}
-                    Viewing all orders (Superuser)
-                    {% endif %}
-                </p>
+                
             </div>
-            <div class="flex flex-wrap gap-2">
-                <button
-                    class="flex items-center gap-2 px-4 py-2 bg-white border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors shadow-sm">
-                    <i class="fas fa-download text-blue-500"></i>
-                    <span>Export</span>
-                </button>
-                <a href="{% url 'admin:LaundryApp_order_add' %}"
-                    class="flex items-center gap-2 px-4 py-2 bg-blue-600 border border-blue-600 rounded-lg text-white hover:bg-blue-700 transition-colors shadow-sm">
+            <div class="flex flex-wrap gap-3">
+                <!-- Export Button -->
+                <div class="dropdown relative">
+                    <button class="export-btn">
+                        <i class="fas fa-download"></i>
+                        <span>Export</span>
+                        <i class="fas fa-chevron-down text-xs"></i>
+                    </button>
+                    <div class="dropdown-menu mt-1 right-0">
+                        {% with request.GET.urlencode as query_params %}
+                        <a class="dropdown-item" href="?export=csv{% if query_params %}&{{ query_params }}{% endif %}">
+                            <i class="fas fa-file-csv text-green-600"></i> CSV Format
+                        </a>
+                        <a class="dropdown-item" href="?export=xlsx{% if query_params %}&{{ query_params }}{% endif %}">
+                            <i class="fas fa-file-excel text-green-600"></i> Excel Format
+                        </a>
+                        {% endwith %}
+                    </div>
+                    </div>
+                    
+                    <a href="{% url 'admin:createorder' %}" class="new-order-btn">
                     <i class="fas fa-plus-circle"></i>
                     <span>New Order</span>
                 </a>
@@ -169,55 +357,58 @@
         </div>
 
         <!-- Stats Overview -->
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-            <div class="stat-card bg-white p-4 rounded-lg shadow border border-gray-100 border-l-blue-500">
-                <div class="flex justify-between items-start">
-                    <div>
-                        <p class="text-sm text-gray-500">Total Orders</p>
-                        <h3 class="text-2xl font-bold text-gray-800 mt-1">{{ total_orders }}</h3>
-                    </div>
-                    <div class="p-3 bg-blue-100 rounded-full">
-                        <i class="fas fa-clipboard-check text-blue-600"></i>
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-5 mb-6">
+            <div
+                class="stat-card bg-gradient-to-br from-white to-blue-50 p-5 rounded-xl shadow-sm border border-blue-100 border-l-blue-500">
+                <div class="flex justify-between items-center">
+                    <div class="flex flex-row items-center justify-center justify-around text-center w-full">
+                        <div class="p-3 bg-blue-100 rounded-xl mb-3">
+                            <i class="fas fa-clipboard-check text-blue-600 text-xl"></i>
+                        </div>
+                        <p class="text-sm text-gray-500 font-medium">Total Orders</p>
+                        <h3 class="text-3xl font-bold text-gray-800 mt-1">{{ total_orders }}</h3>
+                        <p class="text-xs text-gray-500 mt-2">All active orders</p>
                     </div>
                 </div>
-                <p class="text-xs text-gray-600 mt-2">All active orders</p>
             </div>
 
-            <div class="stat-card bg-white p-4 rounded-lg shadow border border-gray-100 border-l-yellow-500">
-                <div class="flex justify-between items-start">
-                    <div>
-                        <p class="text-sm text-gray-500">Pending Orders</p>
-                        <h3 class="text-2xl font-bold text-gray-800 mt-1">{{ pending_orders }}</h3>
-                    </div>
-                    <div class="p-3 bg-yellow-100 rounded-full">
-                        <i class="fas fa-clock text-yellow-600"></i>
+            <div
+                class="stat-card bg-gradient-to-br from-white to-amber-50 p-5 rounded-xl shadow-sm border border-amber-100 border-l-amber-500">
+                <div class="flex justify-between items-center">
+                    <div class="flex flex-row items-center justify-center justify-around text-center w-full">
+                        <div class="p-3 bg-amber-100 rounded-xl mb-3">
+                            <i class="fas fa-clock text-amber-600 text-xl"></i>
+                        </div>
+                        <p class="text-sm text-gray-500 font-medium">Pending Orders</p>
+                        <h3 class="text-3xl font-bold text-gray-800 mt-1">{{ pending_orders }}</h3>
+                        <p class="text-xs text-gray-500 mt-2">Require attention</p>
                     </div>
                 </div>
-                <p class="text-xs text-gray-600 mt-2">Require attention</p>
             </div>
 
-            <div class="stat-card bg-white p-4 rounded-lg shadow border border-gray-100 border-l-green-500">
-                <div class="flex justify-between items-start">
-                    <div>
-                        <p class="text-sm text-gray-500">Completed</p>
-                        <h3 class="text-2xl font-bold text-gray-800 mt-1">{{ completed_orders }}</h3>
-                    </div>
-                    <div class="p-3 bg-green-100 rounded-full">
-                        <i class="fas fa-check-circle text-green-600"></i>
+            <div
+                class="stat-card bg-gradient-to-br from-white to-green-50 p-5 rounded-xl shadow-sm border border-green-100 border-l-green-500">
+                <div class="flex justify-between items-center">
+                    <div class="flex flex-row items-center justify-center justify-around text-center w-full">
+                        <div class="p-3 bg-green-100 rounded-xl mb-3">
+                            <i class="fas fa-check-circle text-green-600 text-xl"></i>
+                        </div>
+                        <p class="text-sm text-gray-500 font-medium">Completed</p>
+                        <h3 class="text-3xl font-bold text-gray-800 mt-1">{{ completed_orders }}</h3>
+                        <p class="text-xs text-gray-500 mt-2">Successfully processed</p>
                     </div>
                 </div>
-                <p class="text-xs text-gray-600 mt-2">Successfully processed</p>
             </div>
         </div>
 
         <!-- Filters -->
-        <div class="bg-white p-4 rounded-lg shadow border border-gray-100 mb-6">
+        <div class="bg-white p-5 rounded-xl shadow-sm border border-gray-100 mb-6">
             <form method="get"
                 class="flex flex-col md:flex-row justify-between w-full items-start md:items-center gap-4">
-                <div class="flex flex-wrap gap-2">
+                <div class="flex flex-wrap gap-3">
                     <!-- All Orders Filter -->
                     <a href="?{% if request.GET.search %}search={{ request.GET.search }}{% endif %}"
-                        class="filter-pill px-3 py-1.5 {% if not request.GET.status and not request.GET.payment %}bg-blue-100 text-blue-700{% else %}bg-gray-100 text-gray-700{% endif %} rounded-full text-sm font-medium">
+                        class="filter-pill px-4 py-2 {% if not request.GET.status and not request.GET.payment %}bg-blue-100 text-blue-700 shadow-sm{% else %}bg-gray-100 text-gray-700{% endif %} rounded-lg text-sm font-medium flex items-center">
                         All Orders
                     </a>
 
@@ -226,7 +417,7 @@
                         <span class="text-sm text-gray-500 font-medium">Status:</span>
                         {% for status_value, status_label in order_status_choices %}
                         <a href="?{% if request.GET.search %}search={{ request.GET.search }}&{% endif %}status={{ status_value }}{% if request.GET.payment %}&payment={{ request.GET.payment }}{% endif %}"
-                            class="filter-pill px-3 py-1.5 {% if request.GET.status == status_value %}bg-{% if status_value == 'pending' %}yellow{% elif status_value == 'processing' %}blue{% elif status_value == 'Completed' %}green{% else %}gray{% endif %}-100 text-{% if status_value == 'pending' %}yellow{% elif status_value == 'processing' %}blue{% elif status_value == 'Completed' %}green{% else %}gray{% endif %}-700{% else %}bg-gray-100 text-gray-700{% endif %} rounded-full text-sm font-medium">
+                            class="filter-pill px-3 py-1.5 {% if request.GET.status == status_value %}bg-{% if status_value == 'pending' %}yellow{% elif status_value == 'processing' %}blue{% elif status_value == 'Completed' %}green{% else %}gray{% endif %}-100 text-{% if status_value == 'pending' %}yellow{% elif status_value == 'processing' %}blue{% elif status_value == 'Completed' %}green{% else %}gray{% endif %}-700 shadow-sm{% else %}bg-gray-100 text-gray-700{% endif %} rounded-full text-sm font-medium">
                             {{ status_label }}
                         </a>
                         {% endfor %}
@@ -237,7 +428,7 @@
                         <span class="text-sm text-gray-500 font-medium">Payment:</span>
                         {% for payment_value, payment_label in payment_status_choices %}
                         <a href="?{% if request.GET.search %}search={{ request.GET.search }}&{% endif %}payment={{ payment_value }}{% if request.GET.status %}&status={{ request.GET.status }}{% endif %}"
-                            class="filter-pill px-3 py-1.5 {% if request.GET.payment == payment_value %}bg-{% if payment_value == 'pending' %}red{% elif payment_value == 'partial' %}yellow{% elif payment_value == 'completed' %}green{% else %}gray{% endif %}-100 text-{% if payment_value == 'pending' %}red{% elif payment_value == 'partial' %}yellow{% elif payment_value == 'completed' %}green{% else %}gray{% endif %}-700{% else %}bg-gray-100 text-gray-700{% endif %} rounded-full text-sm font-medium">
+                            class="filter-pill px-3 py-1.5 {% if request.GET.payment == payment_value %}bg-{% if payment_value == 'pending' %}red{% elif payment_value == 'partial' %}yellow{% elif payment_value == 'completed' %}green{% else %}gray{% endif %}-100 text-{% if payment_value == 'pending' %}red{% elif payment_value == 'partial' %}yellow{% elif payment_value == 'completed' %}green{% else %}gray{% endif %}-700 shadow-sm{% else %}bg-gray-100 text-gray-700{% endif %} rounded-full text-sm font-medium">
                             {{ payment_label }}
                         </a>
                         {% endfor %}
@@ -245,96 +436,97 @@
                 </div>
                 <div class="relative w-full md:w-auto">
                     <input type="text" name="search" placeholder="Search orders..." value="{{ request.GET.search }}"
-                        class="pl-10 pr-4 py-2 border border-gray-300 rounded-lg w-full md:w-64 focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                        class="pl-10 pr-4 py-2.5 border border-gray-200 rounded-lg w-full md:w-64 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 shadow-sm">
                     <i class="fas fa-search absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"></i>
                 </div>
             </form>
         </div>
 
         <!-- Orders Table -->
-        <div class="bg-white rounded-lg overflow-hidden">
+        <div class=" rounded-xl overflow-hidden shadow-lg">
             <div class="table-container">
                 <table class="compact-table">
                     <thead>
-                        <tr>
-                            <th>Order Code</th>
-                            <th>Customer</th>
-                            <th>Address</th>
-                            <th>Service Type</th>
-                            <th>Items Type</th>
-                            <th>Items</th>
-                            <th>Qty</th>
-                            <th>Condition</th>
-                            <th>Total</th>
-                            <th>Status</th>
-                            <th>Payment</th>
-                            <th class="text-right">Actions</th>
+                        <tr class="font-medium ">
+                            <th class="col-order-code">Order Code</th>
+                            <th class="col-customer">Customer</th>
+                            <th class="col-address">Address</th>
+                            <th class="col-service-type">Service</th>
+                            <th class="col-item-type">Item Type</th>
+                            <th class="col-items">Items</th>
+                            <th class="col-qty">Qty</th>
+                            <th class="col-condition">Condition</th>
+                            <th class="col-amount">Amount Paid</th>
+                            <th class="col-balance">Balance</th>
+                            <th class="col-amount">Total Billed</th>
+                            <th class="col-order-status">Order Status</th>
+                            <th class="col-payment-status">Payment Status</th>
+                            <th class="col-actions">Actions</th>
                         </tr>
                     </thead>
                     <tbody>
                         {% for order in orders %}
                         <tr>
                             <td>
-                                <div class="font-medium text-gray-900">{{ order.uniquecode }}</div>
-                                <div class="text-xs text-gray-500">{{ order.shop }}</div>
+                                <div class="font-medium text-gray-900 text-tiny">{{ order.uniquecode }}</div>
                             </td>
                             <td>
-                                <div class="font-medium">{{ order.customer.name }}</div>
-                                <div class="text-xs text-gray-500">{{ order.customer.phone }}</div>
+                                <div class="text-tiny">{{ order.customer.name|truncatechars:15 }}</div>
                             </td>
                             <td>
-                                <div class="text-sm">{{ order.address|truncatewords:3 }}</div>
-                                {% if order.addressdetails %}
-                                <div class="text-xs text-gray-500 mt-1" title="{{ order.addressdetails }}">
-                                    {{ order.addressdetails|truncatewords:2 }}
-                                </div>
-                                {% endif %}
+                                <div class="text-tiny">{{ order.address|truncatewords:2 }}</div>
                             </td>
                             <td>
-                                {% for item in order.items.all|slice:":2" %}
+                                {% for item in order.items.all|slice:":1" %}
                                 <span class="item-pill">{{ item.servicetype }}</span>
                                 {% endfor %}
-                                {% if order.items.count > 2 %}
-                                <span class="item-pill">+{{ order.items.count|add:"-2" }}</span>
+                                {% if order.items.count > 1 %}
+                                <span class="item-pill">+{{ order.items.count|add:"-1" }}</span>
                                 {% endif %}
                             </td>
                             <td>
-                                {% for item in order.items.all|slice:":2" %}
+                                {% for item in order.items.all|slice:":1" %}
                                 <span class="item-pill">{{ item.itemtype }}</span>
                                 {% endfor %}
-                                {% if order.items.count > 2 %}
-                                <span class="item-pill">+{{ order.items.count|add:"-2" }}</span>
+                                {% if order.items.count > 1 %}
+                                <span class="item-pill">+{{ order.items.count|add:"-1" }}</span>
                                 {% endif %}
                             </td>
                             <td>
-                                {% for item in order.items.all|slice:":2" %}
-                                <span class="item-pill">{{ item.itemname|truncatewords:2 }}</span>
+                                {% for item in order.items.all|slice:":1" %}
+                                <span class="item-pill">{{ item.itemname|truncatechars:10 }}</span>
                                 {% endfor %}
-                                {% if order.items.count > 2 %}
-                                <span class="item-pill">+{{ order.items.count|add:"-2" }}</span>
+                                {% if order.items.count > 1 %}
+                                <span class="item-pill">+{{ order.items.count|add:"-1" }}</span>
                                 {% endif %}
                             </td>
                             <td>
-                                {% for item in order.items.all|slice:":2" %}
+                                {% for item in order.items.all|slice:":1" %}
                                 <span class="item-pill">{{ item.quantity }}</span>
                                 {% endfor %}
-                                {% if order.items.count > 2 %}
+                                {% if order.items.count > 1 %}
                                 <span class="item-pill">...</span>
                                 {% endif %}
                             </td>
                             <td>
-                                {% for item in order.items.all|slice:":2" %}
+                                {% for item in order.items.all|slice:":1" %}
                                 <span
                                     class="item-pill {% if item.itemcondition == 'new' %}bg-green-100 text-green-800{% elif item.itemcondition == 'Old' %}bg-yellow-100 text-yellow-800{% elif item.itemcondition == 'Torn' %}bg-red-100 text-red-800{% endif %}">
-                                    {{ item.itemcondition }}
+                                    {{ item.itemcondition|slice:":3" }}
                                 </span>
                                 {% endfor %}
-                                {% if order.items.count > 2 %}
+                                {% if order.items.count > 1 %}
                                 <span class="item-pill">...</span>
                                 {% endif %}
                             </td>
-                            <td>
-                                <div class="font-medium text-blue-700">KSh {{ order.total_price }}</div>
+                            <td class="amount-cell">
+                                <div class="text-tiny">KSh{{ order.amount_paid }}</div>
+                            </td>
+                            <td class="amount-cell">
+                                <div class="text-tiny">KSh{{ order.balance }}</div>
+                            </td>
+                            <td class="amount-cell">
+                                <div class="text-tiny">KSh{{ order.total_price }}</div>
                             </td>
                             <td>
                                 {% if order.order_status == 'Completed' %}
@@ -355,28 +547,31 @@
                                 </span>
                                 {% else %}
                                 <span class="status-badge bg-gray-100 text-gray-800">
-                                    <i class="fas fa-question-circle mr-1"></i> {{ order.order_status|title }}
+                                    <i class="fas fa-question-circle mr-1"></i> {{
+                                    order.order_status|title|truncatechars:10 }}
                                 </span>
                                 {% endif %}
                             </td>
                             <td>
-                                <div class="text-xs">{{ order.payment_type|title }}</div>
-                                {% if order.payment_status == 'completed' %}
-                                <span class="status-badge bg-green-100 text-green-800">
-                                    <i class="fas fa-check mr-1"></i> Paid
-                                </span>
-                                {% elif order.payment_status == 'partial' %}
-                                <span class="status-badge bg-yellow-100 text-yellow-800">
-                                    <i class="fas fa-exclamation-triangle mr-1"></i> Partial
-                                </span>
-                                {% else %}
-                                <span class="status-badge bg-red-100 text-red-800">
-                                    <i class="fas fa-clock mr-1"></i> Pending
-                                </span>
-                                {% endif %}
+                                <div class="flex items-center">
+                                   
+                                    {% if order.payment_status == 'completed' %}
+                                    <span class="status-badge bg-green-100 text-green-800">
+                                        <i class="fas fa-check mr-1"></i> Paid
+                                    </span>
+                                    {% elif order.payment_status == 'partial' %}
+                                    <span class="status-badge bg-yellow-100 text-yellow-800">
+                                        <i class="fas fa-exclamation-triangle mr-1"></i> Partial
+                                    </span>
+                                    {% else %}
+                                    <span class="status-badge bg-red-100 text-red-800">
+                                        <i class="fas fa-clock mr-1"></i> Pending
+                                    </span>
+                                    {% endif %}
+                                </div>
                             </td>
                             <td>
-                                <div class="flex justify-end gap-1">
+                                <div class="flex justify-center gap-1">
                                     <a href="{% url 'admin:LaundryApp_order_change' order.id %}"
                                         class="action-btn view-btn text-gray-500" title="View">
                                         <i class="fas fa-eye"></i>
@@ -394,7 +589,7 @@
                         </tr>
                         {% empty %}
                         <tr>
-                            <td colspan="12" class="px-6 py-12 text-center">
+                            <td colspan="13" class="px-6 py-12 text-center">
                                 <div class="inline-flex items-center justify-center rounded-full bg-gray-100 p-4 mb-3">
                                     <i class="fas fa-inbox text-2xl text-gray-400"></i>
                                 </div>
@@ -421,7 +616,7 @@
             <!-- Pagination -->
             {% if orders.has_other_pages %}
             <div class="px-6 py-4 border-t border-gray-200">
-                <div class="flex items-center justify-between">
+                <div class="flex flex-col sm:flex-row items-center justify-between gap-4">
                     <div class="text-sm text-gray-700">
                         Showing {{ orders.start_index }} to {{ orders.end_index }} of {{ orders.paginator.count }}
                         entries
@@ -429,7 +624,7 @@
                     <div class="flex space-x-2">
                         {% if orders.has_previous %}
                         <a href="?page={{ orders.previous_page_number }}{% if request.GET.status %}&status={{ request.GET.status }}{% endif %}{% if request.GET.payment %}&payment={{ request.GET.payment }}{% endif %}{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}"
-                            class="px-3 py-1 border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50">
+                            class="px-3 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors">
                             Previous
                         </a>
                         {% endif %}
@@ -437,12 +632,12 @@
                         {% for i in orders.paginator.page_range %}
                         {% if orders.number == i %}
                         <span
-                            class="px-3 py-1 border border-blue-500 bg-blue-100 text-blue-700 rounded-md text-sm font-medium">
+                            class="px-3 py-2 border border-blue-500 bg-blue-100 text-blue-700 rounded-lg text-sm font-medium">
                             {{ i }}
                         </span>
                         {% else %}
                         <a href="?page={{ i }}{% if request.GET.status %}&status={{ request.GET.status }}{% endif %}{% if request.GET.payment %}&payment={{ request.GET.payment }}{% endif %}{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}"
-                            class="px-3 py-1 border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50">
+                            class="px-3 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors">
                             {{ i }}
                         </a>
                         {% endif %}
@@ -450,7 +645,7 @@
 
                         {% if orders.has_next %}
                         <a href="?page={{ orders.next_page_number }}{% if request.GET.status %}&status={{ request.GET.status }}{% endif %}{% if request.GET.payment %}&payment={{ request.GET.payment }}{% endif %}{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}"
-                            class="px-3 py-1 border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50">
+                            class="px-3 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors">
                             Next
                         </a>
                         {% endif %}

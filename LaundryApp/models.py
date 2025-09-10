@@ -88,7 +88,7 @@ class Order(models.Model):
     payment_type = models.CharField(max_length=50, choices=PAYMENT_TYPE_CHOICES, default='pending_payment', blank=True)
 
     PAYMENT_STATUS_CHOICES = (
-        ('pending', 'Pending'),
+        ('pending', 'pending'),
         ('completed', 'Completed'),
         ('partial', 'Partial'),
         ('failed', 'Failed'),
@@ -117,8 +117,11 @@ class Order(models.Model):
     address = models.CharField(max_length=255, default='', blank=True)
     addressdetails = models.TextField(default='', blank=True)
     
+    amount_paid = models.DecimalField(max_digits=12, decimal_places=2, default=0)
     total_price = models.DecimalField(max_digits=12, decimal_places=2, default=0, editable=False)
+    balance = models.DecimalField(max_digits=12, decimal_places=2, default=0)
     created_at = models.DateTimeField(auto_now_add=True)
+
     
     # Store the previous status in the database instead of instance variable
     previous_order_status = models.CharField(max_length=50, blank=True, null=True)
@@ -144,6 +147,7 @@ class Order(models.Model):
                     self.previous_order_status = old_instance.order_status
                 except Order.DoesNotExist:
                     pass
+            
             
             super().save(*args, **kwargs)
 
@@ -206,6 +210,7 @@ class OrderItem(models.Model):
         
         # Calculate total price for this item
         self.total_item_price = (self.unit_price or 0) * (self.quantity or 0)
+        
         super().save(*args, **kwargs)
         
         # Update parent order's total price
