@@ -700,7 +700,6 @@ def user_delete(request, pk):
     }
     
     return render(request, 'Admin/user_confirm_delete.html', context)
-
 @login_required
 @user_passes_test(is_superuser)
 def user_profile(request, pk):
@@ -708,20 +707,23 @@ def user_profile(request, pk):
     user = get_object_or_404(User, pk=pk)
     profile = getattr(user, 'profile', None)
     
-    # Get user's order statistics if they created any orders
+    # Get orders created by this user
     user_orders = Order.objects.filter(created_by=user)
     total_orders = user_orders.count()
     total_revenue = user_orders.aggregate(total=Sum('total_price'))['total'] or 0
+    
+    # Get customers created by this user
+    customers_created = Customer.objects.filter(created_by=user).count()
     
     context = {
         'user': user,
         'profile': profile,
         'total_orders': total_orders,
         'total_revenue': total_revenue,
+        'customers_created': customers_created,
     }
     
     return render(request, 'Admin/user_profile.html', context)
-
 @login_required
 def customer_management(request):
     """Customer management page with search and filtering"""

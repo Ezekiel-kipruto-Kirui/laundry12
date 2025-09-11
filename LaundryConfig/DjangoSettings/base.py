@@ -75,7 +75,7 @@ TAILWIND_APP_NAME = 'theme'
 TAILWIND_CONFIG_FILE = 'tailwind.config.js'
 TAILWIND_CSS_INPUT_FILE = 'src/input.css'
 TAILWIND_CSS_OUTPUT_FILE = 'css/output.css'
-NPM_BIN_PATH = r"c:\Program Files\nodejs\npm.cmd"
+NPM_BIN_PATH = env('NPM_BIN_PATH')
 CRISPY_ALLOWED_TEMPLATE_PACKS = "tailwind"
 CRISPY_TEMPLATE_PACK = "tailwind"
 
