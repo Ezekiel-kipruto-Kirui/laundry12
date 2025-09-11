@@ -31,6 +31,7 @@ DEBUG = env.bool('DJANGO_DEBUG', default=False)  # Set to False for production
 ALLOWED_HOSTS = ['laundry12-4.onrender.com', '*']
 
 
+NPM_BIN_PATH = r'c:\Program Files\nodejs\npm.cmd'
 # Application definition
 
 INSTALLED_APPS = [
@@ -75,7 +76,7 @@ TAILWIND_APP_NAME = 'theme'
 TAILWIND_CONFIG_FILE = 'tailwind.config.js'
 TAILWIND_CSS_INPUT_FILE = 'src/input.css'
 TAILWIND_CSS_OUTPUT_FILE = 'css/output.css'
-NPM_BIN_PATH = env("NPM_BIN_PATH",default='')
+
 CRISPY_ALLOWED_TEMPLATE_PACKS = "tailwind"
 CRISPY_TEMPLATE_PACK = "tailwind"
 
