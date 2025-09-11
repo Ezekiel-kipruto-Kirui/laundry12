@@ -54,7 +54,8 @@ INSTALLED_APPS = [
     'crispy_forms',
     'import_export',
     'django_daraja',
-    'theme'
+    'theme',
+    'compressor',
 ]
 
 MIDDLEWARE = [
@@ -68,14 +69,17 @@ MIDDLEWARE = [
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
+ACCOUNT_ACTIVATION_DAYS = 7  # One-week activation window
+REGISTRATION_OPEN = True
 TAILWIND_APP_NAME = 'theme'
 TAILWIND_CONFIG_FILE = 'tailwind.config.js'
 TAILWIND_CSS_INPUT_FILE = 'src/input.css'
 TAILWIND_CSS_OUTPUT_FILE = 'css/output.css'
+NPM_BIN_PATH = r"c:\Program Files\nodejs\npm.cmd"
 CRISPY_ALLOWED_TEMPLATE_PACKS = "tailwind"
 CRISPY_TEMPLATE_PACK = "tailwind"
 
-
+EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
 DEFAULT_AUTO_FIELD = env('DEFAULT_AUTO_FIELD')
 
 MPESA_ENVIRONMENT = env('MPESA_ENVIRONMENT')
@@ -90,7 +94,7 @@ MPESA_INITIATOR_SECURITY_CREDENTIAL = env('MPESA_INITIATOR_SECURITY_CREDENTIAL')
 
 
 ROOT_URLCONF = 'LaundryConfig.urls'
-LOGIN_REDIRECT_URL = "admin:index" 
+LOGIN_REDIRECT_URL = "dashboard" 
 
 TEMPLATES = [
     {
@@ -258,35 +262,11 @@ UNFOLD = {
    "SIDEBAR": {
     "show_search": True,
     "navigation": [
-        {
-            "title": "Operations",
-            "items": [
-                {
-                    "title": "Add Order",  # NEW: Add this item for the order form
-                    "icon": "add_shopping_cart",  # or "add_circle", "create", "note_add"
-                    "link": reverse_lazy("admin:createorder"),
-                },
-                {
-                    "title": "View Orders",
-                    "icon": "receipt",
-                    "link": reverse_lazy("admin:customordertable"),
-                },
-                {
-                    "title": "Customers",
-                    "icon": "people",
-                    "link": reverse_lazy("admin:LaundryApp_customer_changelist"),
-                },
-            ],
-        },
+        
         {
             "title": "Dashboard",
             "items": [
-                {
-                    "title": "Dashboard",
-                    "icon": "analytics",
-                    "link": reverse_lazy("admin:index"),
-                   
-                },
+    
                 {
                     "title": "Report",
                     "icon": "analytics",
@@ -296,25 +276,7 @@ UNFOLD = {
             ],
         },
         
-        {
-            "title": "Administration",
-            "items": [
-              
-                {
-                    "title": "Groups",
-                    "icon": "groups",
-                    "link": reverse_lazy("admin:auth_group_changelist"),
-                    "permission": lambda request: request.user.is_superuser
-                },
-                 
-                {
-                    "title": "Users",
-                    "icon": "people",
-                    "link": reverse_lazy("admin:auth_user_changelist"),
-                    "permission": lambda request: request.user.is_superuser
-                },
-            ],
-        },
+       
     ],
 },
 }

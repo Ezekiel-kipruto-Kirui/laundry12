@@ -30,6 +30,11 @@
                             700: '#c2185b',
                             900: '#881337'
                         }
+                    },
+                    boxShadow: {
+                        'soft': '0 4px 12px 0 rgba(0, 0, 0, 0.05)',
+                        'medium': '0 6px 20px 0 rgba(0, 0, 0, 0.08)',
+                        'strong': '0 10px 30px 0 rgba(0, 0, 0, 0.12)'
                     }
                 }
             }
@@ -40,11 +45,12 @@
         .form-input,
         .form-select,
         .form-textarea {
-            border: 1px solid #d1d5db;
-            box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+            border: 1px solid #e5e7eb;
+            box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.03);
             transition: all 0.2s ease;
             color: #374151;
             font-weight: 500;
+            background-color: #fafafa;
         }
 
         .form-input:focus,
@@ -53,6 +59,7 @@
             border-color: #e91e63;
             box-shadow: 0 0 0 3px rgba(233, 30, 99, 0.1);
             outline: none;
+            background-color: #fff;
         }
 
         .form-input::placeholder,
@@ -62,7 +69,7 @@
         }
 
         .form-label {
-            color: #4b5563;
+            color: #6b7280;
             font-weight: 500;
             transition: all 0.2s ease;
         }
@@ -91,35 +98,88 @@
             box-shadow: 0 4px 6px -1px rgba(233, 30, 99, 0.3);
             border-color: transparent !important;
         }
+
+        /* Mobile-first responsive adjustments */
+        @media (max-width: 768px) {
+            .step-text {
+                display: none;
+            }
+
+            .progress-line {
+                left: 20px;
+                right: 20px;
+            }
+
+            .form-step {
+                padding-left: 0.5rem;
+                padding-right: 0.5rem;
+            }
+        }
+
+        /* Animation for step transitions */
+        .form-step {
+            transition: opacity 0.3s ease, transform 0.3s ease;
+        }
+
+        /* Improved focus states for accessibility */
+        button:focus,
+        input:focus,
+        select:focus,
+        textarea:focus {
+            outline: 2px solid #e91e63;
+            outline-offset: 2px;
+        }
+
+        /* Custom scrollbar for webkit browsers */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: #f1f1f1;
+            border-radius: 4px;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: #d1d5db;
+            border-radius: 4px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: #9ca3af;
+        }
     </style>
 </head>
 
-< class="font-inter bg-gray-50 min-h-screen">
+<body class="font-inter bg-gray-50 min-h-screen">
     <!-- Toast Notification -->
-    <div id="toast" class="fixed top-6 right-6 z-50 transition-all duration-300 transform -translate-y-8 opacity-0">
-        <div id="toast-message" class="px-6 py-4 rounded-lg shadow-lg text-white font-medium"></div>
+    <div id="toast"
+        class="fixed top-4 right-4 left-4 md:left-auto md:right-6 z-50 transition-all duration-300 transform -translate-y-8 opacity-0">
+        <div id="toast-message" class="px-6 py-4 rounded-lg shadow-lg text-white font-medium text-center md:text-left">
+        </div>
     </div>
 
     <!-- Navigation Bar -->
-    <nav class="fixed top-0 left-0 right-0 z-40 bg-white shadow-md py-3 px-6">
+    <nav class="fixed top-0 left-0 right-0 z-40 bg-white shadow-md py-3 px-4 md:px-6">
         <div class="max-w-6xl mx-auto flex justify-between items-center">
-            <div class="flex items-center space-x-3">
+            <div class="flex items-center space-x-2 md:space-x-3">
                 <div class="bg-gradient-to-r from-blue-500 to-purple-600 p-2 rounded-lg shadow-md">
                     <i class="fas fa-shirt text-white text-lg"></i>
                 </div>
-                <a href="{% url 'admin:index' %}"
-                    class="bg-gray-100 rounded-full px-4 py-2 text-gray-700 hover:bg-gray-200 transition-colors shadow-sm">
-                    <i class="fas fa-arrow-left mr-2"></i>
-                    Dashboard
+                <a href="{% url 'index' %}"
+                    class="bg-gray-100 rounded-full px-3 py-1.5 md:px-4 md:py-2 text-gray-700 hover:bg-gray-200 transition-colors shadow-sm text-sm md:text-base">
+                    <i class="fas fa-arrow-left mr-1 md:mr-2"></i>
+                    <span class="hidden md:inline">Dashboard</span>
                 </a>
-                <a href="{% url 'admin:customordertable' %}"
-                    class="bg-gray-100 rounded-full px-4 py-2 text-gray-700 hover:bg-gray-200 transition-colors shadow-sm">
-                    View Orders
+                <a href="{% url 'customordertable' %}"
+                    class="bg-gray-100 rounded-full px-3 py-1.5 md:px-4 md:py-2 text-gray-700 hover:bg-gray-200 transition-colors shadow-sm text-sm md:text-base">
+                    <span class="hidden md:inline">View Orders</span>
+                    <span class="md:hidden">Orders</span>
                 </a>
-                <span class="text-lg font-semibold text-gray-900">LaundryManager</span>
+                <span class="text-lg font-semibold text-gray-900 hidden md:block">LaundryManager</span>
             </div>
 
-            <div class="flex items-center space-x-4">
+            <div class="flex items-center space-x-2 md:space-x-4">
                 <a href="#" class="text-gray-700 hover:text-blue-500 transition-colors p-2">
                     <i class="fas fa-bell"></i>
                 </a>
@@ -133,59 +193,61 @@
     <div class="pt-20 pb-10 px-4">
         <div class="max-w-5xl mx-auto">
             <!-- Header -->
-            <div class="bg-gradient-to-r from-accent-500 to-purple-700 text-white rounded-t-2xl p-8 mb-8 shadow-lg">
+            <div
+                class="bg-gradient-to-r from-accent-500 to-purple-700 text-white rounded-2xl p-6 md:p-8 mb-6 md:mb-8 shadow-lg">
                 <div class="flex items-center justify-center">
-                    <i class="fas fa-plus-circle text-2xl mr-4"></i>
-                    <h1 class="text-2xl font-semibold opacity-95">Add a new order for your customer</h1>
+                    <i class="fas fa-plus-circle text-xl md:text-2xl mr-3 md:mr-4"></i>
+                    <h1 class="text-xl md:text-2xl font-semibold opacity-95">Add a new order for your customer</h1>
                 </div>
             </div>
 
             <!-- Main Form Card -->
             <div class="bg-white rounded-2xl shadow-xl border border-gray-100 overflow-hidden">
                 <!-- Step Indicator -->
-                <div class="px-8 pt-8 pb-4">
-                    <div class="flex justify-between items-center relative mb-10">
+                <div class="px-4 md:px-8 pt-6 md:pt-8 pb-4">
+                    <div class="flex justify-between items-center relative mb-8 md:mb-10">
                         <!-- Progress line -->
                         <div
-                            class="absolute top-6 left-16 right-16 h-1 bg-gradient-to-r from-accent-500 to-purple-600 z-0">
+                            class="absolute top-6 left-10 right-10 md:left-16 md:right-16 h-1 bg-gradient-to-r from-accent-500 to-purple-600 z-0 progress-line">
                         </div>
 
                         <!-- Steps -->
                         <div class="step relative z-10 flex flex-col items-center" data-step="1">
                             <div
-                                class="w-12 h-12 rounded-full bg-accent-500 border-2 border-accent-500 flex items-center justify-center shadow-lg mb-3 step-icon-active">
-                                <i class="fas fa-user text-white"></i>
+                                class="w-10 h-10 md:w-12 md:h-12 rounded-full bg-accent-500 border-2 border-accent-500 flex items-center justify-center shadow-lg mb-2 md:mb-3 step-icon-active">
+                                <i class="fas fa-user text-white text-sm md:text-base"></i>
                             </div>
-                            <span class="text-sm font-medium step-active">Customer</span>
+                            <span class="text-xs md:text-sm font-medium step-active step-text">Customer</span>
                         </div>
 
                         <div class="step relative z-10 flex flex-col items-center" data-step="2">
                             <div
-                                class="w-12 h-12 rounded-full bg-gray-100 border-2 border-gray-300 flex items-center justify-center shadow-lg mb-3">
-                                <i class="fas fa-clipboard-list text-gray-400"></i>
+                                class="w-10 h-10 md:w-12 md:h-12 rounded-full bg-gray-100 border-2 border-gray-300 flex items-center justify-center shadow-lg mb-2 md:mb-3">
+                                <i class="fas fa-clipboard-list text-gray-400 text-sm md:text-base"></i>
                             </div>
-                            <span class="text-sm font-medium text-gray-500">Order Details</span>
+                            <span class="text-xs md:text-sm font-medium text-gray-500 step-text">Order Details</span>
                         </div>
 
                         <div class="step relative z-10 flex flex-col items-center" data-step="3">
                             <div
-                                class="w-12 h-12 rounded-full bg-gray-100 border-2 border-gray-300 flex items-center justify-center shadow-lg mb-3">
-                                <i class="fas fa-tshirt text-gray-400"></i>
+                                class="w-10 h-10 md:w-12 md:h-12 rounded-full bg-gray-100 border-2 border-gray-300 flex items-center justify-center shadow-lg mb-2 md:mb-3">
+                                <i class="fas fa-tshirt text-gray-400 text-sm md:text-base"></i>
                             </div>
-                            <span class="text-sm font-medium text-gray-500">Items</span>
+                            <span class="text-xs md:text-sm font-medium text-gray-500 step-text">Items</span>
                         </div>
 
                         <div class="step relative z-10 flex flex-col items-center" data-step="4">
                             <div
-                                class="w-12 h-12 rounded-full bg-gray-100 border-2 border-gray-300 flex items-center justify-center shadow-lg mb-3">
-                                <i class="fas fa-credit-card text-gray-400"></i>
+                                class="w-10 h-10 md:w-12 md:h-12 rounded-full bg-gray-100 border-2 border-gray-300 flex items-center justify-center shadow-lg mb-2 md:mb-3">
+                                <i class="fas fa-credit-card text-gray-400 text-sm md:text-base"></i>
                             </div>
-                            <span class="text-sm font-medium text-gray-500">Payment</span>
+                            <span class="text-xs md:text-sm font-medium text-gray-500 step-text">Payment</span>
                         </div>
                     </div>
                 </div>
 
-                <form id="order-form" class="p-8 space-y-8" method="post" enctype="multipart/form-data">
+                <form id="order-form" class="p-4 md:p-8 space-y-6 md:space-y-8" method="post"
+                    enctype="multipart/form-data">
                     {% csrf_token %}
 
                     <!-- Display form errors at the top -->
@@ -216,12 +278,12 @@
 
                     <!-- Step 1: Customer Information -->
                     <div class="form-step" data-step="1">
-                        <div class="bg-white rounded-xl p-6 shadow-sm border border-gray-200 mb-6">
-                            <h2 class="text-xl font-semibold text-accent-600 mb-4 flex items-center">
-                                <i class="fas fa-user-circle mr-3"></i>Customer Information
+                        <div class="bg-white rounded-xl p-4 md:p-6 shadow-sm border border-gray-200 mb-6">
+                            <h2 class="text-lg md:text-xl font-semibold text-accent-600 mb-4 flex items-center">
+                                <i class="fas fa-user-circle mr-2 md:mr-3"></i>Customer Information
                             </h2>
 
-                            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                            <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6">
                                 <!-- Name Field -->
                                 <div class="relative">
                                     {{ customer_form.name }}
@@ -246,20 +308,20 @@
                             </div>
 
                             <button type="button" id="check-customer-btn"
-                                class="flex items-center text-blue-600 hover:text-blue-700 transition-colors mt-6 font-medium">
-                                <i class="fas fa-search mr-2"></i> Check if customer exists
+                                class="flex items-center text-blue-600 hover:text-blue-700 transition-colors mt-4 md:mt-6 font-medium text-sm md:text-base">
+                                <i class="fas fa-search mr-1 md:mr-2"></i> Check if customer exists
                             </button>
                         </div>
                     </div>
 
                     <!-- Step 2: Order Details -->
                     <div class="form-step hidden" data-step="2">
-                        <div class="bg-white rounded-xl p-6 shadow-sm border border-gray-200 mb-6">
-                            <h2 class="text-xl font-semibold text-accent-600 mb-6 flex items-center">
-                                <i class="fas fa-clipboard-list mr-3"></i>Order Details
+                        <div class="bg-white rounded-xl p-4 md:p-6 shadow-sm border border-gray-200 mb-6">
+                            <h2 class="text-lg md:text-xl font-semibold text-accent-600 mb-4 md:mb-6 flex items-center">
+                                <i class="fas fa-clipboard-list mr-2 md:mr-3"></i>Order Details
                             </h2>
 
-                            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
                                 <!-- Shop Field -->
                                 <div class="relative">
                                     {{ order_form.shop }}
@@ -271,7 +333,8 @@
                                     {% endif %}
                                     {% if user_has_single_shop %}
                                     <p class="text-sm text-gray-500 mt-2">
-                                        Your orders are automatically assigned to <span class="font-semibold">{{ user_shop }}</span> based on your user group.
+                                        Your orders are automatically assigned to <span class="font-semibold">{{
+                                            user_shop }}</span> based on your user group.
                                     </p>
                                     {% endif %}
                                 </div>
@@ -289,7 +352,7 @@
                                 </div>
                             </div>
 
-                            <div class="grid grid-cols-1 gap-6 mt-6">
+                            <div class="grid grid-cols-1 gap-4 md:gap-6 mt-4 md:mt-6">
                                 <!-- Address Field -->
                                 <div class="relative">
                                     {{ order_form.address }}
@@ -319,34 +382,34 @@
 
                     <!-- Step 3: Order Items -->
                     <div class="form-step hidden" data-step="3">
-                        <div class="bg-white rounded-xl p-6 shadow-sm border border-gray-200 mb-6">
-                            <div class="flex justify-between items-center mb-6">
-                                <h2 class="text-xl font-semibold text-accent-600 flex items-center">
-                                    <i class="fas fa-tshirt mr-3"></i>Order Items
+                        <div class="bg-white rounded-xl p-4 md:p-6 shadow-sm border border-gray-200 mb-6">
+                            <div class="flex justify-between items-center mb-4 md:mb-6">
+                                <h2 class="text-lg md:text-xl font-semibold text-accent-600 flex items-center">
+                                    <i class="fas fa-tshirt mr-2 md:mr-3"></i>Order Items
                                 </h2>
                                 <button type="button" id="add-item-btn"
-                                    class="bg-accent-500 hover:bg-accent-600 text-white px-4 py-2 rounded-lg font-semibold flex items-center transition-colors shadow-md hover:shadow-lg">
-                                    <i class="fas fa-plus mr-2"></i> Add Item
+                                    class="bg-accent-500 hover:bg-accent-600 text-white px-3 py-2 md:px-4 md:py-2 rounded-lg font-semibold flex items-center transition-colors shadow-md hover:shadow-lg text-sm md:text-base">
+                                    <i class="fas fa-plus mr-1 md:mr-2"></i> Add Item
                                 </button>
                             </div>
 
-                            <div id="order-items-container" class="space-y-6">
+                            <div id="order-items-container" class="space-y-4 md:space-y-6">
                                 {{ item_formset.management_form }}
 
                                 {% for form in item_formset %}
-                                <div class="bg-white p-6 rounded-xl border border-gray-200 shadow-sm hover:shadow-md transition-shadow item-form"
+                                <div class="bg-white p-4 md:p-6 rounded-xl border border-gray-200 shadow-sm hover:shadow-md transition-shadow item-form"
                                     id="item-{{ forloop.counter0 }}">
-                                    <div class="flex justify-between items-start mb-4">
+                                    <div class="flex justify-between items-start mb-3 md:mb-4">
                                         <span class="font-semibold text-gray-700">Item #{{ forloop.counter }}</span>
                                         {% if forloop.counter0 > 0 or item_formset.total_form_count > 1 %}
                                         <button type="button"
                                             class="remove-item text-red-500 hover:text-red-700 transition-colors">
-                                            <i class="fas fa-times-circle text-xl"></i>
+                                            <i class="fas fa-times-circle text-lg md:text-xl"></i>
                                         </button>
                                         {% endif %}
                                     </div>
 
-                                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
                                         <!-- Service Type -->
                                         <div class="relative">
                                             {{ form.servicetype }}
@@ -371,7 +434,7 @@
                                     </div>
 
                                     <!-- Item Names -->
-                                    <div class="relative mt-6">
+                                    <div class="relative mt-4 md:mt-6">
                                         {{ form.itemname }}
                                         <label class="form-label absolute left-4 top-3 pointer-events-none">
                                             Item Names *
@@ -382,7 +445,7 @@
                                         {% endif %}
                                     </div>
 
-                                    <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mt-6">
+                                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6 mt-4 md:mt-6">
                                         <!-- Quantity -->
                                         <div class="relative">
                                             {{ form.quantity }}
@@ -418,7 +481,7 @@
                                     </div>
 
                                     <!-- Additional Info -->
-                                    <div class="relative mt-6">
+                                    <div class="relative mt-4 md:mt-6">
                                         {{ form.additional_info }}
                                         <label class="form-label absolute left-4 top-3 pointer-events-none">
                                             Additional Information
@@ -438,10 +501,10 @@
 
                             <!-- Total Display -->
                             <div
-                                class="bg-gradient-to-r from-accent-500 to-purple-700 text-white p-6 rounded-xl mt-6 shadow-lg">
+                                class="bg-gradient-to-r from-accent-500 to-purple-700 text-white p-4 md:p-6 rounded-xl mt-4 md:mt-6 shadow-lg">
                                 <div class="flex justify-between items-center">
-                                    <span class="text-lg font-semibold">Order Total:</span>
-                                    <span id="order-total" class="text-3xl font-bold">KSh 0.00</span>
+                                    <span class="text-base md:text-lg font-semibold">Order Total:</span>
+                                    <span id="order-total" class="text-2xl md:text-3xl font-bold">KSh 0.00</span>
                                 </div>
                             </div>
                         </div>
@@ -449,12 +512,12 @@
 
                     <!-- Step 4: Payment Information -->
                     <div class="form-step hidden" data-step="4">
-                        <div class="bg-white rounded-xl p-6 shadow-sm border border-gray-200 mb-6">
-                            <h2 class="text-xl font-semibold text-accent-600 mb-6 flex items-center">
-                                <i class="fas fa-credit-card mr-3"></i>Payment Information
+                        <div class="bg-white rounded-xl p-4 md:p-6 shadow-sm border border-gray-200 mb-6">
+                            <h2 class="text-lg md:text-xl font-semibold text-accent-600 mb-4 md:mb-6 flex items-center">
+                                <i class="fas fa-credit-card mr-2 md:mr-3"></i>Payment Information
                             </h2>
 
-                            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
                                 <!-- Payment Method -->
                                 <div class="relative">
                                     {{ order_form.payment_type }}
@@ -462,14 +525,15 @@
                                         class="form-label absolute left-4 top-3 pointer-events-none">
                                         Payment Method
                                     </label>
-                                    
+
                                     {% if order_form.payment_type.errors %}
                                     <div class="text-red-500 text-sm mt-2">{{ order_form.payment_type.errors }}</div>
                                     {% endif %}
                                 </div>
-                                <div class="relative amount_paid"> 
+                                <div class="relative amount_paid">
                                     {{ order_form.amount_paid }}
-                                    <label for="amount_paid_id" class="form-label absolute left-4 top-3 pointer-events-none">
+                                    <label for="amount_paid_id"
+                                        class="form-label absolute left-4 top-3 pointer-events-none">
                                         Amount Paid
                                     </label>
                                 </div>
@@ -489,20 +553,20 @@
                     </div>
 
                     <!-- Form Actions -->
-                    <div class="flex justify-between items-center pt-6 border-t border-gray-200 mt-8">
+                    <div class="flex justify-between items-center pt-4 md:pt-6 border-t border-gray-200 mt-6 md:mt-8">
                         <button type="button" id="prev-btn"
-                            class="bg-white text-gray-700 border border-gray-300 px-6 py-3 rounded-lg font-semibold hover:bg-gray-50 transition-colors shadow-sm hidden">
-                            <i class="fas fa-arrow-left mr-2"></i> Previous
+                            class="bg-white text-gray-700 border border-gray-300 px-4 py-2 md:px-6 md:py-3 rounded-lg font-semibold hover:bg-gray-50 transition-colors shadow-sm hidden text-sm md:text-base">
+                            <i class="fas fa-arrow-left mr-1 md:mr-2"></i> Previous
                         </button>
 
                         <button type="button" id="next-btn"
-                            class="ml-auto bg-accent-500 hover:bg-accent-600 text-white px-6 py-3 rounded-lg font-semibold transition-colors shadow-md hover:shadow-lg">
-                            Next <i class="fas fa-arrow-right ml-2"></i>
+                            class="ml-auto bg-accent-500 hover:bg-accent-600 text-white px-4 py-2 md:px-6 md:py-3 rounded-lg font-semibold transition-colors shadow-md hover:shadow-lg text-sm md:text-base">
+                            Next <i class="fas fa-arrow-right ml-1 md:ml-2"></i>
                         </button>
 
                         <button type="submit" id="submit-btn"
-                            class="bg-accent-500 hover:bg-accent-600 text-white px-6 py-3 rounded-lg font-semibold flex items-center transition-colors shadow-md hover:shadow-lg hidden">
-                            <i class="fas fa-check-circle mr-2"></i> Create Order
+                            class="bg-accent-500 hover:bg-accent-600 text-white px-4 py-2 md:px-6 md:py-3 rounded-lg font-semibold flex items-center transition-colors shadow-md hover:shadow-lg hidden text-sm md:text-base">
+                            <i class="fas fa-check-circle mr-1 md:mr-2"></i> Create Order
                         </button>
                     </div>
                 </form>
@@ -540,7 +604,6 @@
             });
         });
     </script>
-
 
    <script>
     document.addEventListener('DOMContentLoaded', function () {
@@ -770,7 +833,7 @@
                 button.disabled = true;
 
                 // Check customer via AJAX - use the correct URL
-                fetch(`/admin/check-customer/?phone=${encodeURIComponent(phone)}`, {
+                fetch(`/check-customer/?phone=${encodeURIComponent(phone)}`, {
                     method: 'GET',
                     headers: {
                         'X-Requested-With': 'XMLHttpRequest',

@@ -138,3 +138,35 @@ class CustomPasswordChangeForm(PasswordChangeForm):
         super().__init__(*args, **kwargs)
         for field_name, field in self.fields.items():
             field.widget.attrs.update({'class': 'form-control'})
+class UserCreateForm(UserCreationForm):
+    email = forms.EmailField(required=True)
+    first_name = forms.CharField(max_length=30, required=True)
+    last_name = forms.CharField(max_length=30, required=True)
+    
+    SHOP_CHOICES = (
+        ('', 'Select Shop'),
+        ('Shop A', 'Shop A'),
+        ('Shop B', 'Shop B'),
+    )
+    
+    shop = forms.ChoiceField(choices=SHOP_CHOICES, required=False)
+    
+    class Meta:
+        model = User
+        fields = ['username', 'email', 'first_name', 'last_name', 'password1', 'password2', 'is_staff', 'is_active']
+    
+    def save(self, commit=True):
+        user = super().save(commit=False)
+        user.email = self.cleaned_data['email']
+        user.first_name = self.cleaned_data['first_name']
+        user.last_name = self.cleaned_data['last_name']
+        
+        if commit:
+            user.save()
+            # Create or update user profile
+            profile, created = UserProfile.objects.get_or_create(user=user)
+            profile.shop = self.cleaned_data['shop']
+            profile.save()
+        
+        return user
+

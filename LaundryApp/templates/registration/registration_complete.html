@@ -1,0 +1,17 @@
+{% extends "base.html" %}
+
+{% block title %}Registration Complete - Laundry Management System{% endblock %}
+
+{% block content %}
+<div class="auth-container text-center">
+    <h2 class="mb-4">Registration Complete</h2>
+
+    <div class="alert alert-success">
+        <p>Thank you for registering!</p>
+        <p>An activation email has been sent to your email address. Please check your email and click on the activation
+            link to complete your registration.</p>
+    </div>
+
+    <a href="{% url 'home' %}" class="btn btn-primary">Return to Home</a>
+</div>
+{% endblock %}

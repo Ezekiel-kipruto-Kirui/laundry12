@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+
+{% block title %}Login - Laundry Management System{% endblock %}
+
+{% block content %}
+<div class="auth-container">
+    <h2 class="text-center mb-4">Login</h2>
+
+    {% if form.errors %}
+    <div class="alert alert-danger">
+        Your username and password didn't match. Please try again.
+    </div>
+    {% endif %}
+
+    <form method="post" action="{% url 'login' %}">
+        {% csrf_token %}
+
+        <div class="mb-3">
+            <label for="id_username" class="form-label">Username</label>
+            <input type="text" name="username" class="form-control" id="id_username" required>
+        </div>
+
+        <div class="mb-3">
+            <label for="id_password" class="form-label">Password</label>
+            <input type="password" name="password" class="form-control" id="id_password" required>
+        </div>
+
+        <button type="submit" class="btn btn-primary w-100">Login</button>
+
+        <input type="hidden" name="next" value="{{ next }}">
+    </form>
+
+    <div class="text-center mt-3">
+        <p>Don't have an account? <a href="{% url 'django_registration_register' %}">Register here</a></p>
+        <p><a href="#">Forgot your password?</a></p>
+    </div>
+</div>
+{% endblock %}

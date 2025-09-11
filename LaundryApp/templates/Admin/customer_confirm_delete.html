@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+
+{% block title %}Delete Customer - Laundry Management System{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="row justify-content-center">
+        <div class="col-md-6">
+            <div class="card shadow">
+                <div class="card-header bg-danger text-white">
+                    <h4 class="mb-0">Confirm Delete</h4>
+                </div>
+                <div class="card-body">
+                    <p>Are you sure you want to delete the customer <strong>{{ customer.name }}</strong>?</p>
+
+                    {% if customer.orders.exists %}
+                    <div class="alert alert-warning">
+                        <strong>Warning:</strong> This customer has {{ customer.orders.count }} order(s).
+                        You cannot delete customers with existing orders.
+                    </div>
+                    {% endif %}
+
+                    <form method="post">
+                        {% csrf_token %}
+                        <div class="d-grid gap-2">
+                            {% if not customer.orders.exists %}
+                            <button type="submit" class="btn btn-danger">Yes, Delete</button>
+                            {% endif %}
+                            <a href="{% url 'customer_management' %}" class="btn btn-secondary">Cancel</a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

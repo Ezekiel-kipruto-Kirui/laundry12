@@ -7,6 +7,14 @@ __pycache__/
 venv/
 env/
 .env
+# Node.js
+node_modules/
+npm-debug.log*
+yarn-error.log*
+
+# Build files
+theme/static/css/dist/
+
 
 # Django stuff
 staticfiles/
@@ -15,3 +23,4 @@ media/
 # OS files
 .DS_Store
 Thumbs.db
+

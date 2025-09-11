@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="en">
 
@@ -322,7 +323,7 @@
         <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
             <div>
                 <div class="flex items-center gap-3 mb-3">
-                    <a href="{% url 'admin:index' %}" class="home-link text-gray-700 hover:text-blue-600">
+                    <a href="{% url 'index' %}" class="home-link text-gray-700 hover:text-blue-600">
                         <i class="fas fa-home mr-2"></i>
                         <span class="text-sm font-medium">Dashboard Home</span>
                     </a>
@@ -349,7 +350,7 @@
                     </div>
                     </div>
                     
-                    <a href="{% url 'admin:createorder' %}" class="new-order-btn">
+                    <a href="{% url 'createorder' %}" class="new-order-btn">
                     <i class="fas fa-plus-circle"></i>
                     <span>New Order</span>
                 </a>
@@ -572,15 +573,15 @@
                             </td>
                             <td>
                                 <div class="flex justify-center gap-1">
-                                    <a href="{% url 'admin:LaundryApp_order_change' order.id %}"
+                                    <a href="#"
                                         class="action-btn view-btn text-gray-500" title="View">
                                         <i class="fas fa-eye"></i>
                                     </a>
-                                    <a href="{% url 'admin:LaundryApp_order_change' order.id %}"
+                                    <a href="#"
                                         class="action-btn edit-btn text-gray-500" title="Edit">
                                         <i class="fas fa-edit"></i>
                                     </a>
-                                    <a href="{% url 'admin:LaundryApp_order_delete' order.id %}"
+                                    <a href="#"
                                         class="action-btn delete-btn text-gray-500" title="Delete">
                                         <i class="fas fa-trash-alt"></i>
                                     </a>
@@ -601,7 +602,7 @@
                                     There are no orders in the system yet. When you have orders, they'll appear here.
                                     {% endif %}
                                 </p>
-                                <a href="{% url 'admin:createorder' %}"
+                                <a href="{% url 'createorder' %}"
                                     class="mt-4 inline-flex items-center gap-2 px-4 py-2 bg-blue-600 border border-blue-600 rounded-lg text-white hover:bg-blue-700 transition-colors shadow-sm">
                                     <i class="fas fa-plus text-sm"></i>
                                     <span>Create New Order</span>

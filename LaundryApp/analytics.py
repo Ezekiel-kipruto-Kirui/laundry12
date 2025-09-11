@@ -14,7 +14,7 @@ from functools import lru_cache
 
 # Django core imports
 from django.db.models import (
-    Avg, Count, DecimalField, Q, Sum, Case, When, Value, IntegerField
+    Avg, Count, DecimalField, Q, Sum
 )
 from django.db.models.functions import Coalesce, ExtractMonth, ExtractYear
 from django.utils.timezone import now

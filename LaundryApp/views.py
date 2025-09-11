@@ -1,839 +1,229 @@
-from django.shortcuts import render,redirect
-from django.http import HttpResponse
+from django.shortcuts import render, redirect
+from django.http import HttpResponse, JsonResponse
 from django_daraja.mpesa.core import MpesaClient
 import json
-
-from django.http import JsonResponse
-# laundry/LaundryApp/views.py
-from django.shortcuts import render, get_object_or_404, redirect
-from django.contrib.auth.decorators import login_required, user_passes_test
-
-from django.core.paginator import Paginator
-from .models import Order, OrderItem, Customer
-
-
-# views.py
-
-from django.db.models import Prefetch, Q, Sum
-from .models import Order, OrderItem
-
-
-
-
-
-# laundry/LaundryApp/views.py
-import json
 import logging
-from django.shortcuts import render, redirect, get_object_or_404
-from django.contrib.auth import login, authenticate, update_session_auth_hash
-from django.contrib.auth.decorators import login_required, user_passes_test
-from django.contrib.auth.forms import PasswordChangeForm
+from functools import wraps
+from datetime import datetime
+
+# Django imports
+from django import forms
 from django.contrib import messages
-from django.http import JsonResponse, HttpResponse
-from django.views.decorators.csrf import csrf_exempt
-from django.views.decorators.http import require_POST, require_GET
-from django.db.models import Q, Sum, Count, Prefetch
-from django.core.paginator import Paginator
-from django.utils import timezone
-from django.conf import settings
+from django.contrib.auth.decorators import login_required, user_passes_test
+from django.http import Http404
+from django.shortcuts import render, redirect
 from django.urls import reverse
-from datetime import datetime, timedelta
-import csv
+from django.utils import timezone
+from django.views.decorators.csrf import csrf_exempt
+from django.views.decorators.http import require_POST, require_http_methods
+from django.db.models import Q, Prefetch, Sum, Count
+from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
+from django.contrib.auth import login
+from django.contrib.auth import login as auth_login, logout as auth_logout
+from django.contrib.auth.forms import AuthenticationForm
+from django.contrib.auth.decorators import login_required, user_passes_test
+from django.shortcuts import render, get_object_or_404, redirect
+from django.contrib.auth.models import User
 
-from .models import User, UserProfile, Customer, Order, OrderItem, Payment
-from .forms import (
-    UserRegistrationForm, UserEditForm, ProfileEditForm, 
-    CustomerForm, OrderForm, OrderItemForm
-)
+# Local imports
+from .models import Customer, Order, OrderItem, Payment,UserProfile
+from .forms import CustomerForm, OrderForm, OrderItemForm,UserEditForm, UserCreateForm
+from .resource import OrderResource
+from .analytics import DashboardAnalytics
 
+# Setup logger
 logger = logging.getLogger(__name__)
 
-# Utility functions
-def is_admin(user):
-    """Check if user is admin/superuser"""
-    return user.is_superuser or user.is_staff
+# Constants
+SHOP_A = 'Shop A'
+SHOP_B = 'Shop B'
 
-def is_shop_user(user):
-    """Check if user belongs to a shop group"""
-    return user.groups.filter(name__in=['Shop A', 'Shop B']).exists() or is_admin(user)
 
-# Admin dashboard and user management views
-@login_required
-@user_passes_test(is_admin)
-def admin_dashboard(request):
-    """Admin dashboard view with statistics and overview"""
-    # Calculate statistics
-    total_users = User.objects.count()
-    total_customers = Customer.objects.count()
-    total_orders = Order.objects.count()
-    
-    # Recent orders
-    recent_orders = Order.objects.select_related('customer').prefetch_related('items') \
-        .order_by('-created_at')[:10]
-    
-    # Shop performance
-    shop_performance = {}
-    shops = Order.objects.values_list('shop', flat=True).distinct()
-    for shop in shops:
-        if shop:  # Ensure shop is not empty
-            shop_orders = Order.objects.filter(shop=shop)
-            shop_performance[shop] = {
-                'total_orders': shop_orders.count(),
-                'completed_orders': shop_orders.filter(order_status='Completed').count(),
-                'pending_orders': shop_orders.filter(order_status='Pending').count(),
-                'total_revenue': shop_orders.aggregate(
-                    total=Sum('total_price')
-                )['total'] or 0
-            }
-    
-    context = {
-        'total_users': total_users,
-        'total_customers': total_customers,
-        'total_orders': total_orders,
-        'recent_orders': recent_orders,
-        'shop_performance': shop_performance,
-    }
-    
-    return render(request, 'admin/dashboard.html', context)
+def __init__(self, *args, **kwargs):
+    super().__init__(*args, **kwargs)
+    self.analytics = DashboardAnalytics(self)
 
-@login_required
-@user_passes_test(is_admin)
-def user_management(request):
-    """User management view for admin"""
-    users = User.objects.all().select_related('profile').prefetch_related('groups')
-    
-    # Filter by search query
-    search_query = request.GET.get('search', '')
-    if search_query:
-        users = users.filter(
-            Q(username__icontains=search_query) |
-            Q(first_name__icontains=search_query) |
-            Q(last_name__icontains=search_query) |
-            Q(email__icontains=search_query)
-        )
-    
-    # Filter by role
-    role_filter = request.GET.get('role', '')
-    if role_filter == 'admin':
-        users = users.filter(is_superuser=True)
-    elif role_filter == 'staff':
-        users = users.filter(is_staff=True)
-    elif role_filter == 'shop_a':
-        users = users.filter(groups__name='Shop A')
-    elif role_filter == 'shop_b':
-        users = users.filter(groups__name='Shop B')
-    
-    paginator = Paginator(users, 20)
-    page_number = request.GET.get('page')
-    page_obj = paginator.get_page(page_number)
-    
-    context = {
-        'users': page_obj,
-        'search_query': search_query,
-        'role_filter': role_filter,
-    }
-    
-    return render(request, 'admin/user_management.html', context)
+def get_queryset(request):
+    return super().get_queryset(request).annotate(
+        items_count=Count('items')
+    )
 
-@login_required
-@user_passes_test(is_admin)
-def create_user(request):
-    """Create a new user with shop assignment"""
-    if request.method == 'POST':
-        user_form = UserRegistrationForm(request.POST)
-        profile_form = ProfileEditForm(request.POST)
-        
-        if user_form.is_valid() and profile_form.is_valid():
-            user = user_form.save(commit=False)
-            user.set_password(user_form.cleaned_data['password'])
-            user.save()
-            
-            # Create or update profile
-            profile, created = UserProfile.objects.get_or_create(user=user)
-            profile.shop = profile_form.cleaned_data['shop']
-            profile.save()
-            
-            # Assign groups based on shop
-            from django.contrib.auth.models import Group
-            if profile.shop == 'Shop A':
-                group = Group.objects.get(name='Shop A')
-                user.groups.add(group)
-            elif profile.shop == 'Shop B':
-                group = Group.objects.get(name='Shop B')
-                user.groups.add(group)
-            
-            messages.success(request, f'User {user.username} created successfully!')
-            return redirect('user_management')
-    else:
-        user_form = UserRegistrationForm()
-        profile_form = ProfileEditForm()
-    
-    context = {
-        'user_form': user_form,
-        'profile_form': profile_form,
-    }
-    
-    return render(request, 'admin/create_user.html', context)
+def filter_by_shops(queryset, shops):
+    return queryset.filter(shop__in=shops)
 
-@login_required
-@user_passes_test(is_admin)
-def edit_user(request, user_id):
-    """Edit an existing user"""
-    user = get_object_or_404(User, id=user_id)
-    profile, created = UserProfile.objects.get_or_create(user=user)
-    
-    if request.method == 'POST':
-        user_form = UserEditForm(request.POST, instance=user)
-        profile_form = ProfileEditForm(request.POST, instance=profile)
-        
-        if user_form.is_valid() and profile_form.is_valid():
-            user = user_form.save()
-            
-            # Update profile
-            profile.shop = profile_form.cleaned_data['shop']
-            profile.save()
-            
-            # Update groups based on shop
-            user.groups.clear()
-            from django.contrib.auth.models import Group
-            if profile.shop == 'Shop A':
-                group = Group.objects.get(name='Shop A')
-                user.groups.add(group)
-            elif profile.shop == 'Shop B':
-                group = Group.objects.get(name='Shop B')
-                user.groups.add(group)
-            
-            messages.success(request, f'User {user.username} updated successfully!')
-            return redirect('user_management')
-    else:
-        user_form = UserEditForm(instance=user)
-        profile_form = ProfileEditForm(instance=profile)
-    
-    context = {
-        'user_form': user_form,
-        'profile_form': profile_form,
-        'user': user,
-    }
-    
-    return render(request, 'admin/edit_user.html', context)
+def object_belongs_to_user_shops(self, obj, user_shops):
+    return obj.shop in user_shops
 
-@login_required
-@user_passes_test(is_admin)
-def delete_user(request, user_id):
-    """Delete a user"""
-    user = get_object_or_404(User, id=user_id)
     
-    if request.method == 'POST':
-        username = user.username
-        user.delete()
-        messages.success(request, f'User {username} deleted successfully!')
-        return redirect('user_management')
-    
-    return render(request, 'admin/confirm_delete.html', {
-        'object': user,
-        'object_type': 'user',
-    })
-
-# Order management views
-@login_required
-@user_passes_test(is_shop_user)
-def order_management(request):
-    """Order management view with filtering and search"""
-    # Get user's shop
-    user_shop = None
-    if hasattr(request.user, 'profile'):
-        user_shop = request.user.profile.shop
-    
-    # Base queryset
+def get_user_shops(request):
+    """Get the shops associated with the current user based on group membership"""
     if request.user.is_superuser:
-        orders = Order.objects.all()
-    elif user_shop and user_shop != 'None':
-        orders = Order.objects.filter(shop=user_shop)
-    else:
-        orders = Order.objects.none()
+        return None  # Superusers can access all shops
+
+    user_groups = request.user.groups.values_list('name', flat=True)
+    shops = []
+
+    if SHOP_A in user_groups:
+        shops.append(SHOP_A)
+    if SHOP_B in user_groups:
+        shops.append(SHOP_B)
+
+    return shops if shops else []
+
+def is_superuser(user):
+    return user.is_superuser
+
+# Views
+@login_required
+def dashboard_view(request):
+    if not request.user.is_superuser:
+        logger.warning(f"Non-superuser {request.user.username} attempted to access dashboard")
+        raise Http404("You do not have permission to access this dashboard.")
+
+    current_year = timezone.now().year
+    try:
+        selected_year = int(request.GET.get('year', current_year))
+        if selected_year < 2020 or selected_year > current_year + 1:
+            selected_year = current_year
+    except (ValueError, TypeError):
+        selected_year = current_year
+
+    selected_month = None
+    selected_month_str = request.GET.get('month')
+    if selected_month_str and len(selected_month_str) == 7 and selected_month_str[4] == '-':
+        try:
+            selected_month = int(selected_month_str.split('-')[1])
+            if selected_month < 1 or selected_month > 12:
+                selected_month = None
+        except (ValueError, IndexError):
+            selected_month = None
+
+    # Initialize DashboardAnalytics with a mock admin instance
+    class MockAdmin:
+        def get_user_shops(self, request):
+            return get_user_shops(request)
     
-    # Apply filters
+    mock_admin = MockAdmin()
+    analytics = DashboardAnalytics(mock_admin)
+    
+    # Get dashboard data using the analytics class
+    data = analytics.get_dashboard_data(request, selected_year, selected_month)
+    
+    # Prepare context using the analytics class
+    context = analytics.prepare_dashboard_context(request, data, selected_year, selected_month)
+    
+    # Add any additional context you need
+    context.update({
+        'selected_year': selected_year,
+        'selected_month': selected_month,
+    })
+    
+    return render(request, 'Admin/reports.html', context)
+
+@login_required
+def customordertable(request):
+    # Start with base queryset - exclude delivered orders from the main query
+    orders = Order.objects.select_related('customer').prefetch_related(
+        Prefetch('items', queryset=OrderItem.objects.only(
+            'servicetype', 'itemname', 'quantity', 'itemtype', 
+            'itemcondition', 'total_item_price',
+        ))
+    ).only(
+        'uniquecode', 'order_status', 'payment_status','payment_type',
+        'shop', 'delivery_date', 'amount_paid', 'balance', 'total_price', 'created_at', 
+        'customer__name', 'customer__phone', 'address', 'addressdetails'
+    ).exclude(order_status='delivered')  # Exclude delivered orders
+
+    # Apply shop filtering based on user group
+    user_shops = get_user_shops(request)
+    if user_shops is not None:  # Not superuser
+        if user_shops:  # User has shop assignments
+            orders = orders.filter(shop__in=user_shops)
+        else:  # User has no shop assignments
+            orders = orders.none()
+
+    # Apply status filters
     status_filter = request.GET.get('status', '')
     if status_filter:
         orders = orders.filter(order_status=status_filter)
-    
+        
+    # Apply payment status filters
     payment_filter = request.GET.get('payment', '')
     if payment_filter:
         orders = orders.filter(payment_status=payment_filter)
-    
-    shop_filter = request.GET.get('shop', '')
-    if shop_filter and request.user.is_superuser:
-        orders = orders.filter(shop=shop_filter)
-    
-    date_from = request.GET.get('date_from', '')
-    date_to = request.GET.get('date_to', '')
-    if date_from:
-        orders = orders.filter(delivery_date__gte=date_from)
-    if date_to:
-        orders = orders.filter(delivery_date__lte=date_to)
-    
-    # Search
+
+    # Apply search filter
     search_query = request.GET.get('search', '')
     if search_query:
         orders = orders.filter(
             Q(uniquecode__icontains=search_query) |
             Q(customer__name__icontains=search_query) |
-            Q(customer__phone__icontains=search_query)
-        )
-    
+            Q(customer__phone__icontains=search_query) |
+            Q(items__servicetype__icontains=search_query) |
+            Q(items__itemname__icontains=search_query) |
+            Q(address__icontains=search_query)
+        ).distinct()
+
+    # Check if export was requested
+    export_format = request.GET.get('export', '')
+    if export_format:
+        dataset = OrderResource().export(queryset=orders)
+        
+        if export_format == 'csv':
+            response = HttpResponse(dataset.csv, content_type='text/csv')
+            response['Content-Disposition'] = 'attachment; filename="orders_export_{}.csv"'.format(
+                timezone.now().strftime('%Y-%m-%d_%H-%M-%S')
+            )
+            return response
+            
+        elif export_format == 'xlsx':
+            # Proper way to handle Excel export
+            xlsx_data = dataset.export('xlsx')
+            response = HttpResponse(
+                xlsx_data, 
+                content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+            )
+            response['Content-Disposition'] = 'attachment; filename="orders_export_{}.xlsx"'.format(
+                timezone.now().strftime('%Y-%m-%d_%H-%M-%S')
+            )
+            return response
+
     # Order by creation date
-    orders = orders.select_related('customer').prefetch_related('items').order_by('-created_at')
-    
+    orders = orders.order_by('-created_at')
+
     # Pagination
-    paginator = Paginator(orders, 25)
+    paginator = Paginator(orders, 15)  # Show 25 orders per page
     page_number = request.GET.get('page')
-    page_obj = paginator.get_page(page_number)
-    
+    try:
+        page_obj = paginator.page(page_number)
+    except PageNotAnInteger:
+        page_obj = paginator.page(1)
+    except EmptyPage:
+        page_obj = paginator.page(paginator.num_pages)
+
+    # Get counts for stats cards - exclude delivered orders from all counts
+    total_orders = orders.count()
+    pending_orders = orders.filter(order_status='pending').count()
+    completed_orders = orders.filter(order_status='Completed').count()
+
+    # Get status choices for filters
+    order_status_choices = Order.ORDER_STATUS_CHOICES
+    payment_status_choices = Order.PAYMENT_STATUS_CHOICES
+
     context = {
         'orders': page_obj,
-        'status_filter': status_filter,
-        'payment_filter': payment_filter,
-        'shop_filter': shop_filter,
-        'date_from': date_from,
-        'date_to': date_to,
-        'search_query': search_query,
-        'user_shop': user_shop,
+        'total_orders': total_orders,
+        'pending_orders': pending_orders,
+        'completed_orders': completed_orders,
+        'order_status_choices': order_status_choices,
+        'payment_status_choices': payment_status_choices,
+        'today': timezone.now().date(),
     }
-    
-    return render(request, 'admin/order_management.html', context)
+    return render(request, 'Admin/orders_table.html', context)
 
-@login_required
-@user_passes_test(is_shop_user)
-def create_order(request):
-    """Create a new order with multi-step form"""
-    # Initialize forms
-    customer_form = CustomerForm(request.POST or None)
-    order_form = OrderForm(request.POST or None)
-    order_item_form = OrderItemForm(request.POST or None)
-    
-    # Set shop based on user's profile
-    if hasattr(request.user, 'profile') and request.user.profile.shop != 'None':
-        order_form.fields['shop'].initial = request.user.profile.shop
-    
-    # Handle AJAX requests
-    if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
-        return handle_ajax_requests(request, customer_form, order_form, order_item_form)
-    
-    # Handle regular form submission
-    if request.method == 'POST':
-        return handle_order_submission(request, customer_form, order_form, order_item_form)
-    
-    # GET request - render empty forms
-    context = build_order_context(request, customer_form, order_form, order_item_form)
-    return render(request, 'admin/create_order.html', context)
-
-def handle_ajax_requests(request, customer_form, order_form, order_item_form):
-    """Handle all AJAX requests for the order form"""
-    # Customer existence check
-    if 'check_customer' in request.POST:
-        return check_customer_existence(request)
-    
-    # Step submission
-    if 'step_submit' in request.POST:
-        return handle_step_submission(request, customer_form, order_form, order_item_form)
-    
-    return JsonResponse({'success': False, 'message': 'Invalid AJAX request'})
-
-def check_customer_existence(request):
-    """Check if customer exists by phone number"""
-    phone = request.POST.get('phone', '')
-    customer = Customer.objects.filter(phone=phone).first()
-    
-    if customer:
-        return JsonResponse({
-            'exists': True,
-            'name': customer.name,
-            'customer': {
-                'id': customer.id,
-                'name': customer.name,
-                'phone': str(customer.phone)
-            }
-        })
-    return JsonResponse({'exists': False})
-
-def handle_step_submission(request, customer_form, order_form, order_item_form):
-    """Handle multi-step form submission"""
-    current_step = int(request.POST.get('current_step', 1))
-    
-    # Validate current step
-    is_valid, errors = validate_step(current_step, customer_form, order_form, order_item_form, request.POST)
-    
-    if not is_valid:
-        return JsonResponse({
-            'success': False,
-            'message': 'Please correct the errors',
-            'errors': errors
-        })
-    
-    # Process valid step
-    try:
-        return process_valid_step(current_step, request, customer_form, order_form, order_item_form)
-    except Exception as e:
-        return JsonResponse({
-            'success': False,
-            'message': f'Error saving data: {str(e)}'
-        })
-
-def validate_step(current_step, customer_form, order_form, order_item_form, post_data):
-    """Validate the current step of the form"""
-    forms_valid = True
-    errors = {}
-    
-    if current_step == 1:
-        customer_form = CustomerForm(post_data)
-        if not customer_form.is_valid():
-            forms_valid = False
-            errors.update(customer_form.errors.get_json_data())
-    elif current_step == 2:
-        order_form = OrderForm(post_data)
-        if not order_form.is_valid():
-            forms_valid = False
-            errors.update(order_form.errors.get_json_data())
-    elif current_step == 3:
-        order_item_form = OrderItemForm(post_data)
-        if not order_item_form.is_valid():
-            forms_valid = False
-            errors.update(order_item_form.errors.get_json_data())
-    # Step 4 (payment) is optional, no validation needed
-    
-    return forms_valid, errors
-
-def process_valid_step(current_step, request, customer_form, order_form, order_item_form):
-    """Process a valid form step"""
-    if current_step == 1:
-        return process_customer_step(request, customer_form)
-    elif current_step == 2:
-        return process_order_step(request, order_form)
-    elif current_step == 3:
-        return process_order_item_step(request, order_item_form)
-    elif current_step == 4:
-        return process_payment_step(request)
-    
-    return JsonResponse({'success': False, 'message': 'Invalid step'})
-
-def process_customer_step(request, customer_form):
-    """Process customer information step"""
-    phone = request.POST.get('phone', '')
-    name = request.POST.get('name', '')
-    
-    # Check if customer already exists
-    existing_customer = Customer.objects.filter(phone=phone).first()
-    
-    if existing_customer:
-        request.session['customer_id'] = existing_customer.id
-        return JsonResponse({
-            'success': True,
-            'customer_id': existing_customer.id,
-            'existing_customer': True,
-            'customer_name': existing_customer.name,
-            'message': f'Using existing customer: {existing_customer.name}'
-        })
-    else:
-        # Create new customer
-        customer = customer_form.save()
-        request.session['customer_id'] = customer.id
-        return JsonResponse({
-            'success': True,
-            'customer_id': customer.id,
-            'message': 'New customer created successfully'
-        })
-
-def process_order_step(request, order_form):
-    """Process order information step"""
-    if 'customer_id' not in request.session:
-        return JsonResponse({
-            'success': False,
-            'message': 'Customer information is missing. Please start from step 1.'
-        })
-    
-    order = order_form.save(commit=False)
-    order.customer_id = request.session['customer_id']
-    order.total_price = 0  # Initialize total price
-    order.save()
-    request.session['order_id'] = order.id
-    
-    return JsonResponse({
-        'success': True,
-        'order_id': order.id
-    })
-
-def process_order_item_step(request, order_item_form):
-    """Process order item step"""
-    if 'order_id' not in request.session:
-        return JsonResponse({
-            'success': False,
-            'message': 'Order information is missing. Please start from step 2.'
-        })
-    
-    order_item = order_item_form.save(commit=False)
-    order_item.order_id = request.session['order_id']
-    order_item.save()
-    
-    # Update order total price
-    order = Order.objects.get(id=request.session['order_id'])
-    order.total_price = (order_item.unit_price or 0) * (order_item.quantity or 0)
-    order.save()
-    
-    return JsonResponse({'success': True})
-
-def process_payment_step(request):
-    """Process payment information step"""
-    if 'order_id' not in request.session:
-        return JsonResponse({
-            'success': False,
-            'message': 'Order information is missing. Please start from step 2.'
-        })
-    
-    # Payment is optional, so only save if data is provided
-    payment_method = request.POST.get('payment_method', '')
-    
-    if payment_method:
-        order = Order.objects.get(id=request.session['order_id'])
-        payment = Payment(
-            order=order,
-            price=order.total_price
-        )
-        payment.save()
-    
-    # Clear session data
-    clear_session_data(request)
-    
-    return JsonResponse({
-        'success': True,
-        'redirect_url': reverse('order_success')
-    })
-
-def clear_session_data(request):
-    """Clear session data used for order creation"""
-    session_keys = ['customer_id', 'order_id']
-    for key in session_keys:
-        if key in request.session:
-            del request.session[key]
-
-def handle_order_submission(request, customer_form, order_form, order_item_form):
-    """Handle regular form submission (non-AJAX)"""
-    if not (customer_form.is_valid() and order_form.is_valid() and 
-            order_item_form.is_valid()):
-        messages.error(request, 'Please correct the errors below.')
-        context = build_order_context(request, customer_form, order_form, order_item_form)
-        return render(request, 'admin/create_order.html', context)
-    
-    try:
-        # Enhanced customer handling
-        phone = request.POST.get('phone', '')
-        existing_customer = Customer.objects.filter(phone=phone).first()
-        
-        if existing_customer:
-            customer = existing_customer
-            messages.info(request, f'Using existing customer: {existing_customer.name}')
-        else:
-            customer = customer_form.save()
-            messages.success(request, 'New customer created successfully')
-        
-        # Save order with customer reference
-        order = order_form.save(commit=False)
-        order.customer = customer
-        order.total_price = 0
-        order.save()
-        
-        # Save order item with order reference
-        order_item = order_item_form.save(commit=False)
-        order_item.order = order
-        order_item.save()
-        
-        # Calculate total price
-        order.total_price = (order_item.unit_price or 0) * (order_item.quantity or 0)
-        order.save()
-        
-        # Save payment with order reference (if payment data provided)
-        payment_method = request.POST.get('payment_method', '')
-        if payment_method:
-            payment = Payment(
-                order=order,
-                price=order.total_price
-            )
-            payment.save()
-        
-        messages.success(request, f'Order {order.uniquecode} created successfully!')
-        return redirect('order_success')
-    
-    except Exception as e:
-        messages.error(request, f'Error saving order: {str(e)}')
-        context = build_order_context(request, customer_form, order_form, order_item_form)
-        return render(request, 'admin/create_order.html', context)
-
-def build_order_context(request, customer_form, order_form, order_item_form):
-    """Build template context for order creation"""
-    return {
-        'customer_form': customer_form,
-        'order_form': order_form,
-        'order_item_form': order_item_form,
-        'title': 'New Laundry Order',
-    }
-
-@login_required
-@user_passes_test(is_shop_user)
-def order_success(request):
-    """Order success page"""
-    return render(request, 'admin/order_success.html')
-
-@login_required
-@user_passes_test(is_shop_user)
-def order_detail(request, order_id):
-    """View order details"""
-    order = get_object_or_404(Order, id=order_id)
-    
-    # Check if user has permission to view this order
-    if not request.user.is_superuser and hasattr(request.user, 'profile'):
-        user_shop = request.user.profile.shop
-        if user_shop != 'None' and order.shop != user_shop:
-            messages.error(request, 'You do not have permission to view this order.')
-            return redirect('order_management')
-    
-    context = {
-        'order': order,
-    }
-    
-    return render(request, 'admin/order_detail.html', context)
-
-@login_required
-@user_passes_test(is_shop_user)
-def edit_order(request, order_id):
-    """Edit an existing order"""
-    order = get_object_or_404(Order, id=order_id)
-    
-    # Check if user has permission to edit this order
-    if not request.user.is_superuser and hasattr(request.user, 'profile'):
-        user_shop = request.user.profile.shop
-        if user_shop != 'None' and order.shop != user_shop:
-            messages.error(request, 'You do not have permission to edit this order.')
-            return redirect('order_management')
-    
-    if request.method == 'POST':
-        order_form = OrderForm(request.POST, instance=order)
-        
-        if order_form.is_valid():
-            order_form.save()
-            messages.success(request, f'Order {order.uniquecode} updated successfully!')
-            return redirect('order_detail', order_id=order.id)
-    else:
-        order_form = OrderForm(instance=order)
-    
-    context = {
-        'order_form': order_form,
-        'order': order,
-    }
-    
-    return render(request, 'admin/edit_order.html', context)
-
-@login_required
-@user_passes_test(is_shop_user)
-def update_order_status(request, order_id):
-    """Update order status via AJAX"""
-    if request.method == 'POST' and request.headers.get('X-Requested-With') == 'XMLHttpRequest':
-        order = get_object_or_404(Order, id=order_id)
-        
-        # Check if user has permission to update this order
-        if not request.user.is_superuser and hasattr(request.user, 'profile'):
-            user_shop = request.user.profile.shop
-            if user_shop != 'None' and order.shop != user_shop:
-                return JsonResponse({
-                    'success': False,
-                    'message': 'You do not have permission to update this order.'
-                })
-        
-        new_status = request.POST.get('status', '')
-        
-        if new_status in dict(Order.ORDER_STATUS_CHOICES):
-            order.order_status = new_status
-            order.save()
-            
-            return JsonResponse({
-                'success': True,
-                'message': f'Order status updated to {new_status}'
-            })
-        
-        return JsonResponse({
-            'success': False,
-            'message': 'Invalid status'
-        })
-    
-    return JsonResponse({
-        'success': False,
-        'message': 'Invalid request'
-    })
-
-@login_required
-@user_passes_test(is_shop_user)
-def export_orders(request):
-    """Export orders to CSV"""
-    # Get user's shop
-    user_shop = None
-    if hasattr(request.user, 'profile'):
-        user_shop = request.user.profile.shop
-    
-    # Base queryset
-    if request.user.is_superuser:
-        orders = Order.objects.all()
-    elif user_shop and user_shop != 'None':
-        orders = Order.objects.filter(shop=user_shop)
-    else:
-        orders = Order.objects.none()
-    
-    # Apply filters from request
-    status_filter = request.GET.get('status', '')
-    if status_filter:
-        orders = orders.filter(order_status=status_filter)
-    
-    payment_filter = request.GET.get('payment', '')
-    if payment_filter:
-        orders = orders.filter(payment_status=payment_filter)
-    
-    date_from = request.GET.get('date_from', '')
-    date_to = request.GET.get('date_to', '')
-    if date_from:
-        orders = orders.filter(delivery_date__gte=date_from)
-    if date_to:
-        orders = orders.filter(delivery_date__lte=date_to)
-    
-    # Create CSV response
-    response = HttpResponse(content_type='text/csv')
-    response['Content-Disposition'] = 'attachment; filename="orders_export.csv"'
-    
-    writer = csv.writer(response)
-    writer.writerow([
-        'Order Code', 'Customer Name', 'Customer Phone', 'Shop', 
-        'Order Status', 'Payment Status', 'Delivery Date', 'Total Price'
-    ])
-    
-    for order in orders:
-        writer.writerow([
-            order.uniquecode,
-            order.customer.name,
-            order.customer.phone,
-            order.shop,
-            order.order_status,
-            order.payment_status,
-            order.delivery_date.strftime('%Y-%m-%d'),
-            order.total_price
-        ])
-    
-    return response
-
-# Customer management views
-@login_required
-@user_passes_test(is_shop_user)
-def customer_management(request):
-    """Customer management view"""
-    customers = Customer.objects.annotate(
-        order_count=Count('orders'),
-        last_order_date=Max('orders__delivery_date'),
-        total_spent=Sum('orders__total_price')
-    )
-    
-    # Filter by search query
-    search_query = request.GET.get('search', '')
-    if search_query:
-        customers = customers.filter(
-            Q(name__icontains=search_query) |
-            Q(phone__icontains=search_query)
-        )
-    
-    # Filter by shop if user is not superuser
-    if not request.user.is_superuser and hasattr(request.user, 'profile'):
-        user_shop = request.user.profile.shop
-        if user_shop != 'None':
-            customers = customers.filter(orders__shop=user_shop).distinct()
-    
-    paginator = Paginator(customers, 20)
-    page_number = request.GET.get('page')
-    page_obj = paginator.get_page(page_number)
-    
-    context = {
-        'customers': page_obj,
-        'search_query': search_query,
-    }
-    
-    return render(request, 'admin/customer_management.html', context)
-
-@login_required
-@user_passes_test(is_shop_user)
-def customer_detail(request, customer_id):
-    """View customer details and order history"""
-    customer = get_object_or_404(Customer, id=customer_id)
-    
-    # Get customer orders
-    orders = customer.orders.all().select_related('customer').prefetch_related('items')
-    
-    # Filter by shop if user is not superuser
-    if not request.user.is_superuser and hasattr(request.user, 'profile'):
-        user_shop = request.user.profile.shop
-        if user_shop != 'None':
-            orders = orders.filter(shop=user_shop)
-    
-    context = {
-        'customer': customer,
-        'orders': orders,
-    }
-    
-    return render(request, 'admin/customer_detail.html', context)
-
-# Profile views
-@login_required
-def profile(request):
-    """User profile view"""
-    user = request.user
-    profile, created = UserProfile.objects.get_or_create(user=user)
-    
-    if request.method == 'POST':
-        user_form = UserEditForm(request.POST, instance=user)
-        profile_form = ProfileEditForm(request.POST, instance=profile)
-        
-        if user_form.is_valid() and profile_form.is_valid():
-            user_form.save()
-            profile_form.save()
-            messages.success(request, 'Profile updated successfully!')
-            return redirect('profile')
-    else:
-        user_form = UserEditForm(instance=user)
-        profile_form = ProfileEditForm(instance=profile)
-    
-    context = {
-        'user_form': user_form,
-        'profile_form': profile_form,
-    }
-    
-    return render(request, 'admin/profile.html', context)
-
-@login_required
-def change_password(request):
-    """Change password view"""
-    if request.method == 'POST':
-        form = PasswordChangeForm(request.user, request.POST)
-        if form.is_valid():
-            user = form.save()
-            update_session_auth_hash(request, user)
-            messages.success(request, 'Your password was successfully updated!')
-            return redirect('profile')
-        else:
-            messages.error(request, 'Please correct the error below.')
-    else:
-        form = PasswordChangeForm(request.user)
-    
-    return render(request, 'admin/change_password.html', {
-        'form': form
-    })
-
-# API endpoints
 @csrf_exempt
 @require_POST
 @login_required
-@user_passes_test(is_shop_user)
 def create_order_api(request):
     """API endpoint to create a new order"""
     try:
@@ -844,21 +234,55 @@ def create_order_api(request):
         order_data = data.get('order', {})
         items_data = data.get('items', [])
         
-        # Create the order
-        from .utils import create_laundry_order
-        order = create_laundry_order(
-            customer_name=customer_data.get('name'),
-            customer_phone=customer_data.get('phone'),
+        # Get or create customer
+        phone = customer_data.get('phone', '')
+        name = customer_data.get('name', '')
+        
+        if not phone:
+            return JsonResponse({
+                'success': False,
+                'message': 'Phone number is required'
+            }, status=400)
+        
+        customer, created = Customer.objects.get_or_create(
+            phone=phone,
+            defaults={'name': name}
+        )
+        
+        # Update customer name if it's different
+        if not created and customer.name != name:
+            customer.name = name
+            customer.save()
+        
+        # Create order with proper defaults
+        order = Order.objects.create(
+            customer=customer,
             shop=order_data.get('shop'),
             delivery_date=order_data.get('delivery_date'),
-            order_items=items_data,
             payment_type=order_data.get('payment_type', 'pending_payment'),
             payment_status=order_data.get('payment_status', 'pending'),
-            order_status=order_data.get('order_status', 'pending'),
+            order_status=order_data.get('order_status', 'pending'),  # Ensure default
             address=order_data.get('address', ''),
             addressdetails=order_data.get('addressdetails', ''),
-            created_by=request.user
+            created_by=request.user if request.user.is_authenticated else None
         )
+        
+        # Create order items
+        for item_data in items_data:
+            OrderItem.objects.create(
+                order=order,
+                servicetype=item_data.get('servicetype', 'Washing'),
+                itemtype=item_data.get('itemtype', 'Clothing'),
+                itemname=item_data.get('itemname', ''),
+                quantity=item_data.get('quantity', 1),
+                itemcondition=item_data.get('itemcondition', 'new'),
+                unit_price=item_data.get('unit_price', 0),
+                additional_info=item_data.get('additional_info', '')
+            )
+        
+        # Calculate total price
+        order.calculate_total_price()
+        order.save()
         
         return JsonResponse({
             'success': True,
@@ -868,86 +292,245 @@ def create_order_api(request):
         })
         
     except Exception as e:
+        logger.error(f"API Order creation error: {str(e)}")
         return JsonResponse({
             'success': False,
             'message': f'Error creating order: {str(e)}'
         }, status=400)
 
-@require_GET
 @login_required
-@user_passes_test(is_shop_user)
-def order_stats_api(request):
-    """API endpoint to get order statistics"""
-    # Get user's shop
-    user_shop = None
-    if hasattr(request.user, 'profile'):
-        user_shop = request.user.profile.shop
+def createorder(request):
+    """View to handle order creation with Django forms"""
+    # Get user's shop based on group membership
+    user_shops = get_user_shops(request)
+    default_shop = user_shops[0] if user_shops else ''
     
-    # Base queryset
-    if request.user.is_superuser:
-        orders = Order.objects.all()
-    elif user_shop and user_shop != 'None':
-        orders = Order.objects.filter(shop=user_shop)
+    if request.method == 'POST':
+        # Create a mutable copy of the POST data
+        post_data = request.POST.copy()
+        
+        # For users with only one shop, override the shop value
+        if user_shops and len(user_shops) == 1:
+            post_data['shop'] = user_shops[0]
+        
+        # Ensure order_status is set to 'pending' if not provided
+        if 'order_status' not in post_data or not post_data['order_status']:
+            post_data['order_status'] = 'pending'
+        
+        # Check if customer already exists FIRST
+        phone = post_data.get('phone', '')
+        customer = None
+        customer_exists = False
+        
+        if phone:
+            try:
+                customer = Customer.objects.get(phone=phone)
+                customer_exists = True
+                # If customer exists, we'll bypass the customer form validation completely
+            except Customer.DoesNotExist:
+                customer_exists = False
+        
+        # Only validate customer form if customer doesn't exist
+        if customer_exists:
+            # Customer exists - create a minimal valid form
+            customer_form = CustomerForm({'name': post_data.get('name', ''), 'phone': phone})
+            customer_form_is_valid = True  # Bypass validation for existing customers
+        else:
+            # Customer doesn't exist - validate the form normally
+            customer_form = CustomerForm(post_data)
+            customer_form_is_valid = customer_form.is_valid()
+        
+        # Validate order form and item formset
+        order_form = OrderForm(post_data)
+        OrderItemFormSet = forms.formset_factory(OrderItemForm, extra=0)
+        item_formset = OrderItemFormSet(post_data, prefix='items')
+        
+        order_form_is_valid = order_form.is_valid()
+        item_formset_is_valid = item_formset.is_valid()
+        
+        if all([customer_form_is_valid, order_form_is_valid, item_formset_is_valid]):
+            try:
+                # If customer exists, use the existing customer
+                if customer_exists:
+                    # Update customer name if it's different
+                    if customer.name != post_data.get('name', ''):
+                        customer.name = post_data.get('name', '')
+                        customer.save()
+                else:
+                    # Save new customer
+                    customer = customer_form.save()
+                
+                # Save order with customer reference
+                order = order_form.save(commit=False)
+                order.customer = customer
+                order.created_by = request.user
+                
+                # Ensure order status is set (double safety)
+                if not order.order_status:
+                    order.order_status = 'pending'
+                
+                order.save()
+                
+                # Save order items
+                for form in item_formset:
+                    if form.cleaned_data and not form.cleaned_data.get('DELETE', False):
+                        order_item = form.save(commit=False)
+                        order_item.order = order
+                        order_item.save()
+                
+                # Recalculate total price
+                order.calculate_total_price()
+                order.save()
+                
+                messages.success(request, f'Order created successfully! Order code: {order.uniquecode}')
+                return redirect('customordertable')  # Update this to your URL name
+                
+            except Exception as e:
+                messages.error(request, f'Error creating order: {str(e)}')
+                # Log the error for debugging
+                logger.error(f"Order creation error: {str(e)}")
+        else:
+            # Collect all form errors
+            error_messages = []
+            if not customer_form_is_valid:
+                for field, errors in customer_form.errors.items():
+                    for error in errors:
+                        error_messages.append(f"Customer {field}: {error}")
+            
+            if not order_form_is_valid:
+                for field, errors in order_form.errors.items():
+                    for error in errors:
+                        error_messages.append(f"Order {field}: {error}")
+            
+            if not item_formset_is_valid:
+                for i, form in enumerate(item_formset):
+                    if not form.is_valid():
+                        for field, errors in form.errors.items():
+                            for error in errors:
+                                error_messages.append(f"Item {i+1} {field}: {error}")
+            
+            messages.error(request, 'Please correct the following errors: ' + '; '.join(error_messages))
     else:
+        # GET request - initialize empty forms
+        customer_form = CustomerForm()
+        order_form = OrderForm()
+        if user_shops and len(user_shops) == 1:
+            order_form.fields['shop'].initial = user_shops[0]
+        
+        # Set default order status to 'pending'
+        order_form.fields['order_status'].initial = 'pending'
+        
+        OrderItemFormSet = forms.formset_factory(OrderItemForm, extra=1)
+        item_formset = OrderItemFormSet(prefix='items')
+    
+    context = {
+        'customer_form': customer_form,
+        'order_form': order_form,
+        'item_formset': item_formset,
+        'user_has_single_shop': user_shops and len(user_shops) == 1,
+        'user_shop': default_shop,
+    }
+    
+    return render(request, 'Admin/order_form.html', context)
+
+@login_required
+def check_customer(request):
+    """Check if a customer exists by phone number"""
+    phone = request.GET.get('phone', '')
+    if phone:
+        try:
+            customer = Customer.objects.get(phone=phone)
+            return JsonResponse({
+                'exists': True,
+                'name': customer.name,
+                'phone': customer.phone
+            })
+        except Customer.DoesNotExist:
+            return JsonResponse({'exists': False})
+    return JsonResponse({'exists': False})
+
+@login_required
+def generaldashboard(request):
+    if not request.user.is_authenticated:
+        return redirect('login')  # Update to your login URL name
+
+    # Get user's shops
+    user_shops = get_user_shops(request)
+
+    # Base queryset - exclude delivered orders from counts
+    if request.user.is_superuser:
+        # Superuser sees all orders
+        orders = Order.objects.all()
+        # For counts, exclude delivered orders
+        count_orders = Order.objects.exclude(order_status='Delivered')
+    elif user_shops:
+        # Staff sees only their shop's orders
+        orders = Order.objects.filter(shop__in=user_shops)
+        # For counts, exclude delivered orders
+        count_orders = Order.objects.filter(shop__in=user_shops).exclude(order_status='Delivered')
+    else:
+        # Users with no shop assignments see nothing
         orders = Order.objects.none()
-    
-    # Calculate stats
-    total_orders = orders.count()
-    pending_orders = orders.filter(order_status='pending').count()
-    completed_orders = orders.filter(order_status='Completed').count()
-    total_revenue = orders.aggregate(total=Sum('total_price'))['total'] or 0
-    
-    # Recent orders
-    recent_orders = orders.select_related('customer').order_by('-created_at')[:5]
-    recent_orders_data = [
-        {
-            'code': order.uniquecode,
-            'customer': order.customer.name,
-            'status': order.order_status,
-            'total': float(order.total_price)
-        }
-        for order in recent_orders
-    ]
-    
-    return JsonResponse({
+        count_orders = Order.objects.none()
+
+    # Calculate stats using count_orders (which excludes delivered orders)
+    total_orders = count_orders.count()
+    pending_orders = count_orders.filter(order_status='pending').count()
+    completed_orders = count_orders.filter(order_status='Completed').count()
+
+    # Get recent orders (including delivered)
+    recent_orders = orders.select_related('customer').order_by('-created_at')[:10]
+
+    # For superusers, get shop performance data (excluding delivered orders)
+    shop_performance = None
+    if request.user.is_superuser:
+        shop_performance = {}
+        shops = Order.objects.values_list('shop', flat=True).distinct()
+        for shop in shops:
+            if shop:  # Ensure shop is not empty
+                shop_orders = Order.objects.filter(shop=shop).exclude(order_status='Delivered')
+                shop_performance[shop] = {
+                    'total_orders': shop_orders.count(),
+                    'completed_orders': shop_orders.filter(order_status='Completed').count(),
+                    'total_revenue': shop_orders.aggregate(
+                        total=Sum('total_price')
+                    )['total'] or 0
+                }
+
+    context = {
+        'user_shops': user_shops,
         'total_orders': total_orders,
         'pending_orders': pending_orders,
         'completed_orders': completed_orders,
-        'total_revenue': float(total_revenue),
-        'recent_orders': recent_orders_data
-    })
+        'recent_orders': recent_orders,
+        'shop_performance': shop_performance,
+    }
+    return render(request, 'Admin/dashboard.html', context)
 
-
-
-
-
-def get_user_shop(user):
-    """
-    Determine which shop a user has access to.
-    You can customize this based on your user model structure.
-    """
-    if user.is_superuser:
-        return None  # Admin can see all shops
+def dashboard(request):
+    # Initialize DashboardAnalytics with a mock admin instance
+    class MockAdmin:
+        def get_user_shops(self, request):
+            return get_user_shops(request)
     
-    # Example: Check user groups or profile for shop assignment
-    # Replace this with your actual user permission logic
-    if user.groups.filter(name='Shop A Staff').exists():
-        return 'Shop A'
-    elif user.groups.filter(name='Shop B Staff').exists():
-        return 'Shop B'
+    mock_admin = MockAdmin()
+    analytics = DashboardAnalytics(mock_admin)
     
-    # Fallback: check username or other fields
-    username = user.username.lower()
-    if 'shopa' in username:
-        return 'Shop A'
-    elif 'shopb' in username:
-        return 'Shop B'
+    # Get current year and month
+    current_year = timezone.now().year
+    current_month = timezone.now().month
     
-    return None  # No specific shop access
+    # Get dashboard data
+    data = analytics.get_dashboard_data(request, current_year, current_month)
+    
+    # Prepare context
+    context = analytics.prepare_dashboard_context(request, data, current_year, current_month)
+    
+    return render(request, 'dashboard.html', context)
 
 def home(request):
-    
     return render(request, 'home.html')
+
 def index(request):
     cl = MpesaClient()
     phone_number = '0701396967'
@@ -958,6 +541,353 @@ def index(request):
     response = cl.stk_push(phone_number, amount, account_reference, transaction_desc, callback_url)
     return HttpResponse('Index')
 
+@csrf_exempt
 def stk_push_callback(request):
     """Handle M-Pesa STK Push callback"""
+    if request.method == 'POST':
+        # Process the callback data here
+        data = json.loads(request.body)
+        logger.info(f"STK Push callback received: {data}")
+        return JsonResponse({'ResultCode': 0, 'ResultDesc': 'Success'})
     return JsonResponse({'ResultCode': 1, 'ResultDesc': 'Invalid request method'})
+
+def logout_view(request):
+    """Log out the current user and redirect to login page"""
+    auth_logout(request)
+    messages.info(request, "You have been successfully logged out.")
+    return redirect('login')  # Replace 'login' with your login URL name
+@login_required
+@user_passes_test(is_superuser)
+def user_management(request):
+    """User management page for superusers"""
+    users = User.objects.select_related('profile').all().order_by('-date_joined')
+    
+    # Get filter parameters
+    search_query = request.GET.get('search', '')
+    shop_filter = request.GET.get('shop', '')
+    status_filter = request.GET.get('status', '')
+    
+    # Apply filters
+    if search_query:
+        users = users.filter(
+            Q(username__icontains=search_query) |
+            Q(email__icontains=search_query) |
+            Q(first_name__icontains=search_query) |
+            Q(last_name__icontains=search_query)
+        )
+    
+    if shop_filter:
+        users = users.filter(profile__shop=shop_filter)
+    
+    if status_filter == 'active':
+        users = users.filter(is_active=True)
+    elif status_filter == 'inactive':
+        users = users.filter(is_active=False)
+    elif status_filter == 'staff':
+        users = users.filter(is_staff=True)
+    
+    # Prepare filter options with selected status
+    shop_options = [
+        {'value': '', 'label': 'All Shops', 'selected': shop_filter == ''},
+        {'value': 'Shop A', 'label': 'Shop A', 'selected': shop_filter == 'Shop A'},
+        {'value': 'Shop B', 'label': 'Shop B', 'selected': shop_filter == 'Shop B'}
+    ]
+    
+    status_options = [
+        {'value': '', 'label': 'All Status', 'selected': status_filter == ''},
+        {'value': 'active', 'label': 'Active', 'selected': status_filter == 'active'},
+        {'value': 'inactive', 'label': 'Inactive', 'selected': status_filter == 'inactive'},
+        {'value': 'staff', 'label': 'Staff', 'selected': status_filter == 'staff'}
+    ]
+    
+    # Pagination
+    paginator = Paginator(users, 20)
+    page_number = request.GET.get('page')
+    try:
+        page_obj = paginator.page(page_number)
+    except PageNotAnInteger:
+        page_obj = paginator.page(1)
+    except EmptyPage:
+        page_obj = paginator.page(paginator.num_pages)
+    
+    # Build pagination URL base
+    pagination_params = []
+    if search_query:
+        pagination_params.append(f'search={search_query}')
+    if shop_filter:
+        pagination_params.append(f'shop={shop_filter}')
+    if status_filter:
+        pagination_params.append(f'status={status_filter}')
+    
+    pagination_url_suffix = '&'.join(pagination_params)
+    if pagination_url_suffix:
+        pagination_url_suffix = '&' + pagination_url_suffix
+    
+    context = {
+        'users': page_obj,
+        'search_query': search_query,
+        'shop_options': shop_options,
+        'status_options': status_options,
+        'total_users': users.count(),
+        'active_users': users.filter(is_active=True).count(),
+        'staff_users': users.filter(is_staff=True).count(),
+        'pagination_url_suffix': pagination_url_suffix,
+    }
+    
+    return render(request, 'Admin/user_management.html', context)
+@login_required
+@user_passes_test(is_superuser)
+def user_add(request):
+    """Add new user"""
+    if request.method == 'POST':
+        form = UserCreateForm(request.POST)
+        if form.is_valid():
+            user = form.save()
+            messages.success(request, f'User {user.username} created successfully!')
+            return redirect('user_management')
+    else:
+        form = UserCreateForm()
+    
+    context = {
+        'form': form,
+        'title': 'Add New User'
+    }
+    
+    return render(request, 'Admin/user_form.html', context)
+
+@login_required
+@user_passes_test(is_superuser)
+def user_edit(request, pk):
+    """Edit user information"""
+    user = get_object_or_404(User, pk=pk)
+    
+    if request.method == 'POST':
+        form = UserEditForm(request.POST, instance=user)
+        if form.is_valid():
+            user = form.save()
+            messages.success(request, f'User {user.username} updated successfully!')
+            return redirect('user_management')
+    else:
+        form = UserEditForm(instance=user)
+    
+    context = {
+        'form': form,
+        'user': user,
+        'title': f'Edit User - {user.username}'
+    }
+    
+    return render(request, 'Admin/user_form.html', context)
+
+@login_required
+@user_passes_test(is_superuser)
+def user_delete(request, pk):
+    """Delete a user"""
+    user = get_object_or_404(User, pk=pk)
+    
+    # Prevent users from deleting themselves
+    if user == request.user:
+        messages.error(request, "You cannot delete your own account!")
+        return redirect('user_management')
+    
+    if request.method == 'POST':
+        username = user.username
+        user.delete()
+        messages.success(request, f'User {username} deleted successfully!')
+        return redirect('user_management')
+    
+    context = {
+        'user': user,
+    }
+    
+    return render(request, 'Admin/user_confirm_delete.html', context)
+
+@login_required
+@user_passes_test(is_superuser)
+def user_profile(request, pk):
+    """View user profile and details"""
+    user = get_object_or_404(User, pk=pk)
+    profile = getattr(user, 'profile', None)
+    
+    # Get user's order statistics if they created any orders
+    user_orders = Order.objects.filter(created_by=user)
+    total_orders = user_orders.count()
+    total_revenue = user_orders.aggregate(total=Sum('total_price'))['total'] or 0
+    
+    context = {
+        'user': user,
+        'profile': profile,
+        'total_orders': total_orders,
+        'total_revenue': total_revenue,
+    }
+    
+    return render(request, 'Admin/user_profile.html', context)
+
+@login_required
+def customer_management(request):
+    """Customer management page with search and filtering"""
+    customers = Customer.objects.annotate(
+        order_count=Count('orders'),
+        total_spent=Sum('orders__total_price')
+    ).order_by('-id')  # Fixed: Changed from '-created_at' to '-id'
+    
+    # Search functionality
+    search_query = request.GET.get('search', '')
+    if search_query:
+        customers = customers.filter(
+            Q(name__icontains=search_query) |
+            Q(phone__icontains=search_query)
+        )
+    
+    # Filter by shop if user is not superuser
+    user_shops = get_user_shops(request)
+    if user_shops is not None and user_shops:
+        # Get orders from user's shops and then get those customers
+        shop_customer_ids = Order.objects.filter(
+            shop__in=user_shops
+        ).values_list('customer_id', flat=True).distinct()
+        customers = customers.filter(id__in=shop_customer_ids)
+    
+    # Pagination
+    paginator = Paginator(customers, 20)
+    page_number = request.GET.get('page')
+    try:
+        page_obj = paginator.page(page_number)
+    except PageNotAnInteger:
+        page_obj = paginator.page(1)
+    except EmptyPage:
+        page_obj = paginator.page(paginator.num_pages)
+    
+    context = {
+        'customers': page_obj,
+        'search_query': search_query,
+        'total_customers': customers.count(),
+    }
+    
+    return render(request, 'Admin/customer_management.html', context)
+@login_required
+def customer_add(request):
+    """Add new customer"""
+    if request.method == 'POST':
+        form = CustomerForm(request.POST)
+        if form.is_valid():
+            customer = form.save(commit=False)
+            customer.created_by = request.user
+            customer.save()
+            messages.success(request, f'Customer {customer.name} added successfully!')
+            return redirect('customer_management')
+    else:
+        form = CustomerForm()
+    
+    context = {
+        'form': form,
+        'title': 'Add New Customer'
+    }
+    
+    return render(request, 'Admin/customer_form.html', context)
+
+@login_required
+def customer_edit(request, pk):
+    """Edit customer information"""
+    customer = get_object_or_404(Customer, pk=pk)
+    
+    # Check if user has permission to edit this customer
+    user_shops = get_user_shops(request)
+    if user_shops is not None and user_shops:
+        # Check if customer has orders in user's shops
+        customer_shop_orders = Order.objects.filter(
+            customer=customer,
+            shop__in=user_shops
+        ).exists()
+        if not customer_shop_orders and not request.user.is_superuser:
+            messages.error(request, "You don't have permission to edit this customer.")
+            return redirect('customer_management')
+    
+    if request.method == 'POST':
+        form = CustomerForm(request.POST, instance=customer)
+        if form.is_valid():
+            form.save()
+            messages.success(request, f'Customer {customer.name} updated successfully!')
+            return redirect('customer_management')
+    else:
+        form = CustomerForm(instance=customer)
+    
+    context = {
+        'form': form,
+        'customer': customer,
+        'title': f'Edit Customer - {customer.name}'
+    }
+    
+    return render(request, 'Admin/customer_form.html', context)
+
+@login_required
+def customer_delete(request, pk):
+    """Delete a customer (only if they have no orders)"""
+    customer = get_object_or_404(Customer, pk=pk)
+    
+    # Check if user has permission
+    user_shops = get_user_shops(request)
+    if user_shops is not None and user_shops:
+        customer_shop_orders = Order.objects.filter(
+            customer=customer,
+            shop__in=user_shops
+        ).exists()
+        if not customer_shop_orders and not request.user.is_superuser:
+            messages.error(request, "You don't have permission to delete this customer.")
+            return redirect('customer_management')
+    
+    if request.method == 'POST':
+        # Check if customer has orders
+        if customer.orders.exists():
+            messages.error(request, f'Cannot delete {customer.name} because they have existing orders.')
+            return redirect('customer_management')
+        
+        customer_name = customer.name
+        customer.delete()
+        messages.success(request, f'Customer {customer_name} deleted successfully!')
+        return redirect('customer_management')
+    
+    context = {
+        'customer': customer,
+    }
+    
+    return render(request, 'Admin/customer_confirm_delete.html', context)
+
+@login_required
+def customer_orders(request, pk):
+    """View all orders for a specific customer"""
+    customer = get_object_or_404(Customer, pk=pk)
+    
+    # Check permission
+    user_shops = get_user_shops(request)
+    orders = customer.orders.all()
+    
+    if user_shops is not None and user_shops and not request.user.is_superuser:
+        orders = orders.filter(shop__in=user_shops)
+        if not orders.exists():
+            messages.error(request, "You don't have permission to view this customer's orders.")
+            return redirect('customer_management')
+    
+    # Get statistics
+    total_orders = orders.count()
+    total_spent = orders.aggregate(total=Sum('total_price'))['total'] or 0
+    avg_order_value = total_spent / total_orders if total_orders > 0 else 0
+    
+    # Pagination
+    paginator = Paginator(orders, 15)
+    page_number = request.GET.get('page')
+    try:
+        page_obj = paginator.page(page_number)
+    except PageNotAnInteger:
+        page_obj = paginator.page(1)
+    except EmptyPage:
+        page_obj = paginator.page(paginator.num_pages)
+    
+    context = {
+        'customer': customer,
+        'orders': page_obj,
+        'total_orders': total_orders,
+        'total_spent': total_spent,
+        'avg_order_value': avg_order_value,
+    }
+    
+    return render(request, 'Admin/customer_orders.html', context)

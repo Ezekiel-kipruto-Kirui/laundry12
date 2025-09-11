@@ -1,0 +1,93 @@
+{% load static tailwind_tags %}
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Clean Page Laundry - Admin Dashboard</title>
+    {% tailwind_css %}
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap');
+
+        body {
+            font-family: 'Poppins', sans-serif;
+        }
+
+        .sidebar-gradient {
+            background: linear-gradient(180deg, hsl(0, 0%, 100%) 0%, hsl(0, 0%, 100%) 100%);
+        }
+
+        .gradient-bg {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+
+        .hover-lift:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1);
+        }
+
+        .nav-item.active {
+            background-color: #1e40af;
+            color: white;
+        }
+
+        .chart-container {
+            position: relative;
+            height: 250px;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .fade-in {
+            animation: fadeIn 0.5s ease-in-out;
+        }
+
+        /* Fix for sidebar and main content layout */
+        .main-content {
+            margin-left: 16rem;
+            /* 64 * 0.25rem = 16rem which equals 256px */
+            width: calc(100% - 16rem);
+        }
+
+        @media (max-width: 768px) {
+            .main-content {
+                margin-left: 0;
+                width: 100%;
+            }
+        }
+    </style>
+
+    <!-- Header -->
+    <header class="  bg-white relative shadow-sm border-b border-gray-200 mt-0">
+        <div class="flex items-center justify-between px-6 py-4">
+            <div class="flex items-center">
+                <i class="fas fa-user-circle w-10 h-10 text-gray-400 mr-3"></i>
+                <div>
+                    <p class="text-gray-800 font-medium">Welcome back, Admin!</p>
+                    <p class="text-xs text-gray-500">Last login: Today at 09:24 AM</p>
+                </div>
+            </div>
+            <div class="flex items-center space-x-4">
+                <button class="relative p-2 text-gray-600 hover:text-pink-600">
+                    <i class="fas fa-bell"></i>
+                    <span
+                        class="absolute top-0 right-0 w-4 h-4 bg-pink-500 text-white text-xs rounded-full flex items-center justify-center">3</span>
+                </button>
+                <button class="bg-blue-800 text-white px-4 py-2 rounded-lg flex items-center">
+                    <i class="fas fa-plus mr-2"></i> New Order
+                </button>
+            </div>
+        </div>
+    </header>
