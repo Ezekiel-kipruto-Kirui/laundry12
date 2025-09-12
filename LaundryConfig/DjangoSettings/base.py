@@ -31,7 +31,7 @@ DEBUG = env.bool('DJANGO_DEBUG', default=False)  # Set to False for production
 ALLOWED_HOSTS = ['laundry12-4.onrender.com', '*']
 
 
-NPM_BIN_PATH = env("NPM_BIN_PATH", None)
+NPM_BIN_PATH = os.environ.get("NPM_BIN_PATH", None)
 # Application definition
 
 INSTALLED_APPS = [
