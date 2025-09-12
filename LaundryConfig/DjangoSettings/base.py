@@ -70,7 +70,7 @@ MIDDLEWARE = [
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
-ACCOUNT_ACTIVATION_DAYS = 7  # One-week activation window
+ACCOUNT_ACTIVATION_DAYS = 0  # One-week activation window
 REGISTRATION_OPEN = True
 TAILWIND_APP_NAME = 'theme'
 TAILWIND_CONFIG_FILE = 'tailwind.config.js'

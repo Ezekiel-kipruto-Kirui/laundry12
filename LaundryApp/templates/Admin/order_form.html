@@ -1,13 +1,14 @@
-<!DOCTYPE html>
-<html lang="en">
+{% extends "../home.html" %}
 
-<head>
+{% block title %}{{ title }}{% endblock %}
+
+{% block content %}
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Laundry Order Form</title>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-    <script src="https://cdn.tailwindcss.com"></script>
+   
     <script>
         tailwind.config = {
             theme: {
@@ -159,47 +160,12 @@
         </div>
     </div>
 
-    <!-- Navigation Bar -->
-    <nav class="fixed top-0 left-0 right-0 z-40 bg-white shadow-md py-3 px-4 md:px-6">
-        <div class="max-w-6xl mx-auto flex justify-between items-center">
-            <div class="flex items-center space-x-2 md:space-x-3">
-                <div class="bg-gradient-to-r from-blue-500 to-purple-600 p-2 rounded-lg shadow-md">
-                    <i class="fas fa-shirt text-white text-lg"></i>
-                </div>
-                <a href="{% url 'index' %}"
-                    class="bg-gray-100 rounded-full px-3 py-1.5 md:px-4 md:py-2 text-gray-700 hover:bg-gray-200 transition-colors shadow-sm text-sm md:text-base">
-                    <i class="fas fa-arrow-left mr-1 md:mr-2"></i>
-                    <span class="hidden md:inline">Dashboard</span>
-                </a>
-                <a href="{% url 'customordertable' %}"
-                    class="bg-gray-100 rounded-full px-3 py-1.5 md:px-4 md:py-2 text-gray-700 hover:bg-gray-200 transition-colors shadow-sm text-sm md:text-base">
-                    <span class="hidden md:inline">View Orders</span>
-                    <span class="md:hidden">Orders</span>
-                </a>
-                <span class="text-lg font-semibold text-gray-900 hidden md:block">LaundryManager</span>
-            </div>
-
-            <div class="flex items-center space-x-2 md:space-x-4">
-                <a href="#" class="text-gray-700 hover:text-blue-500 transition-colors p-2">
-                    <i class="fas fa-bell"></i>
-                </a>
-                <a href="#" class="text-gray-700 hover:text-blue-500 transition-colors p-2">
-                    <i class="fas fa-cog"></i>
-                </a>
-            </div>
-        </div>
-    </nav>
+   
 
     <div class="pt-20 pb-10 px-4">
         <div class="max-w-5xl mx-auto">
             <!-- Header -->
-            <div
-                class="bg-gradient-to-r from-accent-500 to-purple-700 text-white rounded-2xl p-6 md:p-8 mb-6 md:mb-8 shadow-lg">
-                <div class="flex items-center justify-center">
-                    <i class="fas fa-plus-circle text-xl md:text-2xl mr-3 md:mr-4"></i>
-                    <h1 class="text-xl md:text-2xl font-semibold opacity-95">Add a new order for your customer</h1>
-                </div>
-            </div>
+           
 
             <!-- Main Form Card -->
             <div class="bg-white rounded-2xl shadow-xl border border-gray-100 overflow-hidden">
@@ -1094,5 +1060,4 @@
     });
 </script>
 </body>
-
-</html>
+{% endblock %}

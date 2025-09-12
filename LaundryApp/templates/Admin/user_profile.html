@@ -1,106 +1,182 @@
-{% extends "base.html" %}
+{% extends "../home.html" %}
 
 {% block title %}{{ user.username }}'s Profile - Laundry Management System{% endblock %}
 
 {% block content %}
-<div class="container-fluid">
-    <div class="d-sm-flex align-items-center justify-content-between mb-4">
-        <h1 class="h3 mb-0">{{ user.get_full_name }}'s Profile</h1>
-        <div>
-            <a href="{% url 'user_edit' user.pk %}" class="btn btn-warning">
-                <i class="fas fa-edit"></i> Edit Profile
-            </a>
+<div class="container mx-auto px-4 py-8">
+    <!-- Header Section -->
+    <div class="flex flex-col md:flex-row md:items-center md:justify-between mb-8">
+        <div class="mb-4 md:mb-0">
+            <h1 class="text-3xl font-bold text-gray-800">{{ user.get_full_name }}'s Profile</h1>
+            <p class="text-gray-600 mt-2">User details and performance metrics</p>
         </div>
+       
     </div>
+<!-- Quick Actions -->
+<div class="mt-8 bg-white rounded-xl shadow-lg p-6 border border-gray-100">
+    <h3 class="text-xl font-semibold text-gray-800 mb-4">Quick Actions</h3>
+    <div class="flex space-x-3">
+        <a href="{% url 'user_edit' user.pk %}"
+            class="bg-blue-500 hover:bg-amber-600 text-white px-6 py-3 rounded-lg font-semibold transition-colors duration-200 flex items-center">
+            <i class="fas fa-edit mr-2"></i> Edit Profile
+        </a>
+        <a href="{% url 'user_management' %}"
+            class="bg-gray-500 hover:bg-gray-600 text-white px-6 py-3 rounded-lg font-semibold transition-colors duration-200 flex items-center">
+            <i class="fas fa-arrow-left mr-2"></i> Back to Users
+        </a>
+        <a href="{% url 'user_management' %}"
+            class="bg-blue-500 hover:bg-amber-600 text-white px-6 py-3 rounded-lg font-semibold transition-colors duration-200 flex items-center">
+            <i class="fas fa-users text-2xl mb-2"></i>
+            <p class="font-semibold">View All Users</p>
+        </a>
+    </div>
+    
+</div>
+    <!-- Main Content Grid -->
+    <div class="grid grid-cols-2 gap-4 mt-6">
+        <!-- User Details Card -->
+        <div class="bg-white rounded-xl shadow-lg overflow-hidden border border-gray-100">
+            <div class="bg-gradient-to-r from-blue-500 to-blue-600 px-6 py-4">
+                <h2 class="text-xl font-semibold text-white">User Information</h2>
+            </div>
+            <div class="p-6">
+                <div class="space-y-6">
+                    <!-- Username -->
+                    <div class="flex items-center justify-between py-3 border-b border-gray-100">
+                        <span class="text-gray-600 font-medium">Username</span>
+                        <span class="text-gray-800 font-semibold">{{ user.username }}</span>
+                    </div>
 
-    <div class="row">
-        <!-- User Details -->
-        <div class="col-lg-6 mb-4">
-            <div class="card shadow">
-                <div class="card-header py-3">
-                    <h6 class="m-0 font-weight-bold text-primary">User Information</h6>
-                </div>
-                <div class="card-body">
-                    <div class="row">
-                        <div class="col-sm-4 font-weight-bold">Username:</div>
-                        <div class="col-sm-8">{{ user.username }}</div>
+                    <!-- Email -->
+                    <div class="flex items-center justify-between py-3 border-b border-gray-100">
+                        <span class="text-gray-600 font-medium">Email</span>
+                        <span class="text-gray-800 font-semibold">{{ user.email }}</span>
                     </div>
-                    <div class="row mt-2">
-                        <div class="col-sm-4 font-weight-bold">Email:</div>
-                        <div class="col-sm-8">{{ user.email }}</div>
+
+                    <!-- Full Name -->
+                    <div class="flex items-center justify-between py-3 border-b border-gray-100">
+                        <span class="text-gray-600 font-medium">Full Name</span>
+                        <span class="text-gray-800 font-semibold">{{ user.get_full_name }}</span>
                     </div>
-                    <div class="row mt-2">
-                        <div class="col-sm-4 font-weight-bold">Full Name:</div>
-                        <div class="col-sm-8">{{ user.get_full_name }}</div>
+
+                    <!-- Shop -->
+                    <div class="flex items-center justify-between py-3 border-b border-gray-100">
+                        <span class="text-gray-600 font-medium">Shop</span>
+                        <span
+                            class="{% if profile.shop %}bg-blue-100 text-blue-800{% else %}bg-gray-100 text-gray-600{% endif %} px-3 py-1 rounded-full text-sm font-medium">
+                            {% if profile.shop %}{{ profile.shop }}{% else %}Not assigned{% endif %}
+                        </span>
                     </div>
-                    <div class="row mt-2">
-                        <div class="col-sm-4 font-weight-bold">Shop:</div>
-                        <div class="col-sm-8">
-                            {% if profile.shop %}
-                            <span class="badge bg-info">{{ profile.shop }}</span>
-                            {% else %}
-                            <span class="badge bg-secondary">Not assigned</span>
-                            {% endif %}
-                        </div>
+
+                    <!-- Status -->
+                    <div class="flex items-center justify-between py-3 border-b border-gray-100">
+                        <span class="text-gray-600 font-medium">Status</span>
+                        <span
+                            class="{% if user.is_active %}bg-green-100 text-green-800{% else %}bg-red-100 text-red-800{% endif %} px-3 py-1 rounded-full text-sm font-medium">
+                            {% if user.is_active %}Active{% else %}Inactive{% endif %}
+                        </span>
                     </div>
-                    <div class="row mt-2">
-                        <div class="col-sm-4 font-weight-bold">Status:</div>
-                        <div class="col-sm-8">
-                            <span class="badge bg-{% if user.is_active %}success{% else %}danger{% endif %}">
-                                {% if user.is_active %}Active{% else %}Inactive{% endif %}
-                            </span>
-                        </div>
+
+                    <!-- Staff Status -->
+                    <div class="flex items-center justify-between py-3 border-b border-gray-100">
+                        <span class="text-gray-600 font-medium">Staff Member</span>
+                        <span
+                            class="{% if user.is_staff %}bg-purple-100 text-purple-800{% else %}bg-gray-100 text-gray-600{% endif %} px-3 py-1 rounded-full text-sm font-medium">
+                            {% if user.is_staff %}Yes{% else %}No{% endif %}
+                        </span>
                     </div>
-                    <div class="row mt-2">
-                        <div class="col-sm-4 font-weight-bold">Staff:</div>
-                        <div class="col-sm-8">
-                            <span class="badge bg-{% if user.is_staff %}primary{% else %}secondary{% endif %}">
-                                {% if user.is_staff %}Yes{% else %}No{% endif %}
-                            </span>
-                        </div>
+
+                    <!-- Joined Date -->
+                    <div class="flex items-center justify-between py-3 border-b border-gray-100">
+                        <span class="text-gray-600 font-medium">Joined</span>
+                        <span class="text-gray-800 font-semibold">{{ user.date_joined|date:"M d, Y H:i" }}</span>
                     </div>
-                    <div class="row mt-2">
-                        <div class="col-sm-4 font-weight-bold">Joined:</div>
-                        <div class="col-sm-8">{{ user.date_joined|date:"M d, Y H:i" }}</div>
-                    </div>
-                    <div class="row mt-2">
-                        <div class="col-sm-4 font-weight-bold">Last Login:</div>
-                        <div class="col-sm-8">
+
+                    <!-- Last Login -->
+                    <div class="flex items-center justify-between py-3">
+                        <span class="text-gray-600 font-medium">Last Login</span>
+                        <span class="text-gray-800 font-semibold">
                             {% if user.last_login %}
                             {{ user.last_login|date:"M d, Y H:i" }}
                             {% else %}
-                            Never
+                            <span class="text-gray-400">Never</span>
                             {% endif %}
-                        </div>
+                        </span>
                     </div>
                 </div>
             </div>
         </div>
 
-        <!-- User Statistics -->
-        <div class="col-lg-6 mb-4">
-            <div class="card shadow">
-                <div class="card-header py-3">
-                    <h6 class="m-0 font-weight-bold text-primary">Order Statistics</h6>
-                </div>
-                <div class="card-body">
-                    <div class="row">
-                        <div class="col-sm-6 font-weight-bold">Total Orders Created:</div>
-                        <div class="col-sm-6">{{ total_orders }}</div>
+    <!--recent-->
+    <div class="mt-8 bg-white rounded-xl shadow-lg p-6 border border-gray-100">
+        <div class="flex items-center justify-between mb-6">
+            <h3 class="text-xl font-semibold text-gray-800">Recent Activity</h3>
+            <span class="bg-gray-100 text-gray-600 px-3 py-1 rounded-full text-sm">Last 7 days</span>
+        </div>
+        <div class="space-y-4">
+            <div class="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+                <div class="flex items-center">
+                    <div class="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center mr-4">
+                        <i class="fas fa-user-plus text-green-600"></i>
                     </div>
-                    <div class="row mt-2">
-                        <div class="col-sm-6 font-weight-bold">Total Revenue Generated:</div>
-                        <div class="col-sm-6">KSh {{ total_revenue }}</div>
+                    <div>
+                        <p class="font-medium text-gray-800">Profile created</p>
+                        <p class="text-sm text-gray-600">{{ user.date_joined|date:"M d, Y" }}</p>
                     </div>
                 </div>
+                <span class="bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm">System</span>
+            </div>
+    
+            <div class="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+                <div class="flex items-center">
+                    <div class="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center mr-4">
+                        <i class="fas fa-sign-in-alt text-blue-600"></i>
+                    </div>
+                    <div>
+                        <p class="font-medium text-gray-800">Last login</p>
+                        <p class="text-sm text-gray-600">
+                            {% if user.last_login %}
+                            {{ user.last_login|date:"M d, Y H:i" }}
+                            {% else %}
+                            Never logged in
+                            {% endif %}
+                        </p>
+                    </div>
+                </div>
+                <span class="bg-green-100 text-green-800 px-3 py-1 rounded-full text-sm">Login</span>
             </div>
         </div>
     </div>
-
-    <div class="mt-3">
-        <a href="{% url 'user_management' %}" class="btn btn-secondary">
-            <i class="fas fa-arrow-left"></i> Back to Users
-        </a>
+        
     </div>
+
+   
+
+    <!-- Recent Activity Section (Optional) -->
+   
 </div>
+
+<!-- Custom Styles -->
+<style>
+    .bg-gradient-to-r {
+        background: linear-gradient(to right, var(--tw-gradient-stops));
+    }
+
+    .transition-colors {
+        transition-property: background-color, border-color, color, fill, stroke;
+        transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    .duration-200 {
+        transition-duration: 200ms;
+    }
+
+    .shadow-lg {
+        box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+    }
+
+    .hover\:shadow-xl:hover {
+        box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+    }
+</style>
 {% endblock %}

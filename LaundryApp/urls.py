@@ -17,7 +17,7 @@ urlpatterns = [
     path('Mpesa',views.index, name='index'),
     path('daraja/stk_push',views.stk_push_callback, name='stk_push_callback'),
     path('mpesa/callback/', views.stk_push_callback, name='mpesa_callback'),
-    path('dashboard/', cache_page(60 * 5)(views.dashboard_view), 
+    path('Report/', cache_page(60 * 5)(views.dashboard_view), 
          name='laundryapp_dashboard'),
     
     path('', views.generaldashboard, name='dashboard'),

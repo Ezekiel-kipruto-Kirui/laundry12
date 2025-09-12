@@ -1,91 +1,206 @@
-{% extends "base.html" %}
+{% extends "../home.html" %}
 
 {% block title %}Customer Management - Laundry Management System{% endblock %}
 
 {% block content %}
-<div class="container-fluid">
-    <div class="d-sm-flex align-items-center justify-content-between mb-4">
-        <h1 class="h3 mb-0">Customer Management</h1>
-        <div>
-            <a href="{% url 'customer_add' %}" class="btn btn-primary">
-                <i class="fas fa-plus"></i> Add New Customer
-            </a>
+<div class="min-h-screen bg-gray-50 py-8">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <!-- Header -->
+        <div class="flex flex-col md:flex-row md:items-center md:justify-between mb-8">
+            
+            <div class="mt-4 md:mt-0">
+                
+            </div>
         </div>
-    </div>
 
-    <!-- Search Section -->
-    <div class="card shadow mb-4">
-        <div class="card-header py-3">
-            <h6 class="m-0 font-weight-bold text-primary">Search Customers</h6>
-        </div>
-        <div class="card-body">
-            <form method="get" class="row g-3">
-                <div class="col-md-10">
-                    <input type="text" name="search" class="form-control" placeholder="Search by name or phone..."
-                        value="{{ search_query }}">
+        <!-- Search Section -->
+        <div class="bg-white flex flex-md-row justify-between rounded-2xl shadow-sm border border-gray-200 p-6 mb-8">
+            
+            <a href="{% url 'customer_add' %}"
+                class="inline-flex items-center px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg transition-colors duration-200 shadow-sm">
+                <i class="fas fa-plus-circle mr-2"></i>
+                Add New Customer
+            </a>
+            <form method="get" class="flex flex-col sm:flex-row gap-4">
+                <div class="flex-1">
+                    <input type="text" name="search"
+                        class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        placeholder="Search by name or phone number..." value="{{ search_query }}">
                 </div>
-                <div class="col-md-2">
-                    <button type="submit" class="btn btn-primary w-100">
-                        <i class="fas fa-search"></i> Search
-                    </button>
-                </div>
+                <button type="submit"
+                    class="px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg transition-colors duration-200 flex items-center justify-center">
+                    <i class="fas fa-search mr-2"></i>
+                    Search
+                </button>
             </form>
         </div>
+<!-- Quick Stats -->
+<div class="grid grid-cols-1 md:grid-cols-3 gap-6 mt-8 mb-8">
+    <div class="bg-white rounded-2xl shadow-sm border border-gray-200 p-6">
+        <div class="flex items-center">
+            <div class="w-12 h-12 bg-blue-500 rounded-lg flex items-center justify-center mr-4">
+                <i class="fas fa-users text-white text-xl"></i>
+            </div>
+            <div>
+                <p class="text-2xl font-bold text-gray-900">{{ total_customers }}</p>
+                <p class="text-sm text-gray-600">Total Customers</p>
+            </div>
+        </div>
     </div>
 
-    <!-- Customers Table -->
-    <div class="card shadow">
-        <div class="card-header py-3">
-            <h6 class="m-0 font-weight-bold text-primary">Customers List ({{ total_customers }})</h6>
+    <div class="bg-white rounded-2xl shadow-sm border border-gray-200 p-6">
+        <div class="flex items-center">
+            <div class="w-12 h-12 bg-green-500 rounded-lg flex items-center justify-center mr-4">
+                <i class="fas fa-shopping-bag text-white text-xl"></i>
+            </div>
+            <div>
+                <p class="text-2xl font-bold text-gray-900">
+                    {{ customers|length }}
+                </p>
+                <p class="text-sm text-gray-600">Displayed Customers</p>
+            </div>
         </div>
-        <div class="card-body">
-            <div class="table-responsive">
-                <table class="table table-bordered" width="100%" cellspacing="0">
-                    <thead class="thead-dark">
+    </div>
+
+    <div class="bg-white rounded-2xl shadow-sm border border-gray-200 p-6">
+        <div class="flex items-center">
+            <div class="w-12 h-12 bg-purple-500 rounded-lg flex items-center justify-center mr-4">
+                <i class="fas fa-chart-line text-white text-xl"></i>
+            </div>
+            <div>
+                <p class="text-2xl font-bold text-gray-900">
+                    {% with total=customers|length %}{% if total > 0 %}{{ total }}{% else %}0{% endif %}{%endwith %}
+                </p>
+                <p class="text-sm text-gray-600">Active in Search</p>
+            </div>
+        </div>
+    </div>
+</div>
+        <!-- Customers Card -->
+        <div class="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
+            <!-- Card Header -->
+            <div class="px-6 py-4 border-b border-gray-200 bg-gray-50">
+                <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between">
+                    <h2 class="text-xl font-semibold text-gray-900">Customers List</h2>
+                    <span class="text-sm text-gray-600 mt-2 sm:mt-0">{{ total_customers }} customer{{total_customers|pluralize }}</span>
+                </div>
+            </div>
+
+            <!-- Table -->
+            <div class="overflow-x-auto">
+                <table class="w-full">
+                    <thead class="bg-gray-50">
                         <tr>
-                            <th>Name</th>
-                            <th>Phone</th>
-                            <th>Total Orders</th>
-                            <th>Total Spent</th>
-                            <th>Last Order</th>
-                            <th>Actions</th>
+                            <th class="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                Customer</th>
+                            <th class="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                Contact</th>
+                            <th class="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                Orders</th>
+                            <th class="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                Total Spent</th>
+                            <th class="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                Last Order</th>
+                            <th class="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                Actions</th>
                         </tr>
                     </thead>
-                    <tbody>
+                    <tbody class="bg-white divide-y divide-gray-200">
                         {% for customer in customers %}
-                        <tr>
-                            <td>{{ customer.name }}</td>
-                            <td>{{ customer.phone }}</td>
-                            <td class="text-center">
-                                <span class="badge bg-info">{{ customer.order_count }}</span>
+                        <tr class="hover:bg-gray-50 transition-colors duration-150">
+                            <!-- Name -->
+                            <td class="px-6 py-4 whitespace-nowrap">
+                                <div class="flex items-center">
+                                    <div
+                                        class="w-10 h-10 bg-blue-500 rounded-full flex items-center justify-center mr-4 flex-shrink-0">
+                                        <i class="fas fa-user text-white"></i>
+                                    </div>
+                                    <div>
+                                        <div class="text-sm font-medium text-gray-900">{{ customer.name }}</div>
+                                        <div class="text-sm text-gray-500">ID: {{ customer.id }}</div>
+                                    </div>
+                                </div>
                             </td>
-                            <td>KSh {{ customer.total_spent|default:0 }}</td>
-                            <td>
-                                {% with last_order=customer.orders.first %}
-                                {% if last_order %}
-                                {{ last_order.created_at|date:"M d, Y" }}
-                                {% else %}
-                                Never
-                                {% endif %}
-                                {% endwith %}
+
+                            <!-- Phone -->
+                            <td class="px-6 py-4 whitespace-nowrap">
+                                <div class="text-sm text-gray-900">{{ customer.phone }}</div>
+                                <div class="text-sm text-gray-500">Primary contact</div>
                             </td>
-                            <td>
-                                <div class="btn-group" role="group">
-                                    <a href="{% url 'customer_orders' customer.pk %}" class="btn btn-sm btn-info">
-                                        <i class="fas fa-eye"></i>
+
+                            <!-- Orders -->
+                            <td class="px-6 py-4 whitespace-nowrap">
+                                <span
+                                    class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-blue-100 text-blue-800">
+                                    <i class="fas fa-shopping-bag mr-1"></i>
+                                    {{ customer.order_count }}
+                                </span>
+                            </td>
+
+                            <!-- Total Spent -->
+                            <td class="px-6 py-4 whitespace-nowrap">
+                                <div class="text-sm font-semibold text-green-600">
+                                    KSh {{ customer.total_spent|default:0}}</div>
+                                <div class="text-xs text-gray-500">Lifetime value</div>
+                            </td>
+
+                            <!-- Last Order -->
+                            <td class="px-6 py-4 whitespace-nowrap">
+                                <div class="text-sm text-gray-900">
+                                    {% with last_order=customer.orders.first %}
+                                    {% if last_order %}
+                                    {{ last_order.created_at|date:"M d, Y" }}
+                                    {% else %}
+                                    <span class="text-gray-400">Never</span>
+                                    {% endif %}
+                                    {% endwith %}
+                                </div>
+                                <div class="text-xs text-gray-500">Last activity</div>
+                            </td>
+
+                            <!-- Actions -->
+                            <td class="px-6 py-4 whitespace-nowrap">
+                                <div class="flex items-center space-x-2">
+                                    <!-- View Orders -->
+                                    <a href="{% url 'customer_orders' customer.pk %}"
+                                        class="inline-flex items-center p-2 bg-blue-100 hover:bg-blue-200 text-blue-700 rounded-lg transition-colors duration-200 group"
+                                        title="View Orders">
+                                        <i
+                                            class="fas fa-eye group-hover:scale-110 transition-transform duration-200"></i>
                                     </a>
-                                    <a href="{% url 'customer_edit' customer.pk %}" class="btn btn-sm btn-warning">
-                                        <i class="fas fa-edit"></i>
+
+                                    <!-- Edit -->
+                                    <a href="{% url 'customer_edit' customer.pk %}"
+                                        class="inline-flex items-center p-2 bg-amber-100 hover:bg-amber-200 text-amber-700 rounded-lg transition-colors duration-200 group"
+                                        title="Edit Customer">
+                                        <i
+                                            class="fas fa-edit group-hover:scale-110 transition-transform duration-200"></i>
                                     </a>
-                                    <a href="{% url 'customer_delete' customer.pk %}" class="btn btn-sm btn-danger">
-                                        <i class="fas fa-trash"></i>
+
+                                    <!-- Delete -->
+                                    <a href="{% url 'customer_delete' customer.pk %}"
+                                        class="inline-flex items-center p-2 bg-red-100 hover:bg-red-200 text-red-700 rounded-lg transition-colors duration-200 group"
+                                        title="Delete Customer">
+                                        <i
+                                            class="fas fa-trash group-hover:scale-110 transition-transform duration-200"></i>
                                     </a>
                                 </div>
                             </td>
                         </tr>
                         {% empty %}
                         <tr>
-                            <td colspan="6" class="text-center">No customers found</td>
+                            <td colspan="6" class="px-6 py-12 text-center">
+                                <div class="text-gray-400 mb-4">
+                                    <i class="fas fa-users text-4xl"></i>
+                                </div>
+                                <p class="text-gray-500 text-lg">No customers found</p>
+                                <p class="text-gray-400 text-sm mt-2">Try adjusting your search criteria or add a new
+                                    customer</p>
+                                <a href="{% url 'customer_add' %}"
+                                    class="inline-block mt-4 px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors duration-200">
+                                    Add First Customer
+                                </a>
+                            </td>
                         </tr>
                         {% endfor %}
                     </tbody>
@@ -94,38 +209,69 @@
 
             <!-- Pagination -->
             {% if customers.has_other_pages %}
-            <nav aria-label="Page navigation">
-                <ul class="pagination justify-content-center">
-                    {% if customers.has_previous %}
-                    <li class="page-item">
-                        <a class="page-link"
-                            href="?page={{ customers.previous_page_number }}{% if search_query %}&search={{ search_query }}{% endif %}"
-                            aria-label="Previous">
-                            <span aria-hidden="true">&laquo;</span>
+            <div class="px-6 py-4 bg-gray-50 border-t border-gray-200">
+                <nav class="flex items-center justify-between">
+                    <div class="text-sm text-gray-700">
+                        Showing {{ customers.start_index }} to {{ customers.end_index }} of {{ customers.paginator.count
+                        }} entries
+                    </div>
+                    <div class="flex space-x-2">
+                        {% if customers.has_previous %}
+                        <a href="?page={{ customers.previous_page_number }}{% if search_query %}&search={{ search_query }}{% endif %}"
+                            class="px-4 py-2 bg-white border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors duration-200">
+                            Previous
                         </a>
-                    </li>
-                    {% endif %}
+                        {% endif %}
 
-                    {% for i in customers.paginator.page_range %}
-                    <li class="page-item {% if customers.number == i %}active{% endif %}">
-                        <a class="page-link"
-                            href="?page={{ i }}{% if search_query %}&search={{ search_query }}{% endif %}">{{ i }}</a>
-                    </li>
-                    {% endfor %}
-
-                    {% if customers.has_next %}
-                    <li class="page-item">
-                        <a class="page-link"
-                            href="?page={{ customers.next_page_number }}{% if search_query %}&search={{ search_query }}{% endif %}"
-                            aria-label="Next">
-                            <span aria-hidden="true">&raquo;</span>
+                        {% for i in customers.paginator.page_range %}
+                        {% if customers.number == i %}
+                        <span
+                            class="px-4 py-2 bg-blue-600 border border-blue-600 rounded-md text-sm font-medium text-white">
+                            {{ i }}
+                        </span>
+                        {% else %}
+                        <a href="?page={{ i }}{% if search_query %}&search={{ search_query }}{% endif %}"
+                            class="px-4 py-2 bg-white border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors duration-200">
+                            {{ i }}
                         </a>
-                    </li>
-                    {% endif %}
-                </ul>
-            </nav>
+                        {% endif %}
+                        {% endfor %}
+
+                        {% if customers.has_next %}
+                        <a href="?page={{ customers.next_page_number }}{% if search_query %}&search={{ search_query }}{% endif %}"
+                            class="px-4 py-2 bg-white border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors duration-200">
+                            Next
+                        </a>
+                        {% endif %}
+                    </div>
+                </nav>
+            </div>
             {% endif %}
         </div>
+
+       
     </div>
 </div>
+
+<style>
+    .shadow-sm {
+        box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
+    }
+
+    .transition-colors {
+        transition-property: background-color, border-color, color, fill, stroke;
+        transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+        transition-duration: 150ms;
+    }
+
+    .hover\:scale-110:hover {
+        transform: scale(1.1);
+    }
+
+    .transition-transform {
+        transition-property: transform;
+        transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+        transition-duration: 150ms;
+    }
+</style>
 {% endblock %}

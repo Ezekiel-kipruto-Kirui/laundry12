@@ -635,16 +635,27 @@ def user_management(request):
     }
     
     return render(request, 'Admin/user_management.html', context)
+
 @login_required
 @user_passes_test(is_superuser)
 def user_add(request):
-    """Add new user"""
+    """Add new user with proper validation"""
     if request.method == 'POST':
         form = UserCreateForm(request.POST)
         if form.is_valid():
-            user = form.save()
-            messages.success(request, f'User {user.username} created successfully!')
-            return redirect('user_management')
+            try:
+                user = form.save()
+                messages.success(request, f'User {user.username} created successfully!')
+                return redirect('user_management')
+            except Exception as e:
+                messages.error(request, f'Error creating user: {str(e)}')
+        else:
+            # Collect all form errors
+            error_messages = []
+            for field, errors in form.errors.items():
+                for error in errors:
+                    error_messages.append(f"{field}: {error}")
+            messages.error(request, 'Please correct the following errors: ' + '; '.join(error_messages))
     else:
         form = UserCreateForm()
     
@@ -653,7 +664,9 @@ def user_add(request):
         'title': 'Add New User'
     }
     
+    # CRITICAL: Make sure this uses the correct template
     return render(request, 'Admin/user_form.html', context)
+
 
 @login_required
 @user_passes_test(is_superuser)
@@ -676,7 +689,9 @@ def user_edit(request, pk):
         'title': f'Edit User - {user.username}'
     }
     
+    # CRITICAL: Make sure this uses the correct template
     return render(request, 'Admin/user_form.html', context)
+
 
 @login_required
 @user_passes_test(is_superuser)
@@ -700,6 +715,7 @@ def user_delete(request, pk):
     }
     
     return render(request, 'Admin/user_confirm_delete.html', context)
+
 @login_required
 @user_passes_test(is_superuser)
 def user_profile(request, pk):
@@ -707,13 +723,15 @@ def user_profile(request, pk):
     user = get_object_or_404(User, pk=pk)
     profile = getattr(user, 'profile', None)
     
-    # Get orders created by this user
-    user_orders = Order.objects.filter(created_by=user)
-    total_orders = user_orders.count()
-    total_revenue = user_orders.aggregate(total=Sum('total_price'))['total'] or 0
-    
     # Get customers created by this user
     customers_created = Customer.objects.filter(created_by=user).count()
+    
+    # Get orders for customers created by this user
+    customers = Customer.objects.filter(created_by=user)
+    user_orders = Order.objects.filter(customer__in=customers)
+    
+    total_orders = user_orders.count()
+    total_revenue = user_orders.aggregate(total=Sum('total_price'))['total'] or 0
     
     context = {
         'user': user,
@@ -724,6 +742,7 @@ def user_profile(request, pk):
     }
     
     return render(request, 'Admin/user_profile.html', context)
+
 @login_required
 def customer_management(request):
     """Customer management page with search and filtering"""
