@@ -1,3 +1,4 @@
+from decimal import Decimal
 from django.shortcuts import render, redirect
 from django.http import HttpResponse, JsonResponse
 from django_daraja.mpesa.core import MpesaClient
@@ -61,6 +62,7 @@ def get_user_shops(request):
         return None  # Superusers can access all shops
 
     user_groups = request.user.groups.values_list('name', flat=True)
+    
     shops = []
 
     if SHOP_A in user_groups:
@@ -220,6 +222,261 @@ def customordertable(request):
         'today': timezone.now().date(),
     }
     return render(request, 'Admin/orders_table.html', context)
+
+@login_required
+def order_detail(request, order_code):
+    """View detailed information about a specific order"""
+    try:
+        order = Order.objects.select_related('customer').prefetch_related(
+            Prefetch('items', queryset=OrderItem.objects.all())
+        ).get(uniquecode=order_code)
+        
+        # Check if user has permission to view this order
+        user_shops = get_user_shops(request)
+        if user_shops is not None and user_shops:  # Not superuser
+            if order.shop not in user_shops:
+                raise Http404("You don't have permission to view this order.")
+        
+        context = {
+            'order': order,
+            'today': timezone.now().date(),
+        }
+        return render(request, 'Admin/order_detail.html', context)
+        
+    except Order.DoesNotExist:
+        raise Http404("Order not found")
+
+@login_required
+def order_edit(request, order_code):
+    """Edit an existing order"""
+    try:
+        order = Order.objects.select_related('customer').prefetch_related(
+            Prefetch('items', queryset=OrderItem.objects.all())
+        ).get(uniquecode=order_code)
+        
+        # Check if user has permission to edit this order
+        user_shops = get_user_shops(request)
+        if user_shops is not None and user_shops:  # Not superuser
+            if order.shop not in user_shops:
+                messages.error(request, "You don't have permission to edit this order.")
+                return redirect('customordertable')
+        
+        if request.method == 'POST':
+            # Create a mutable copy of the POST data
+            post_data = request.POST.copy()
+            
+            # For users with only one shop, override the shop value
+            if user_shops and len(user_shops) == 1:
+                post_data['shop'] = user_shops[0]
+            
+            # Update customer information
+            customer = order.customer
+            customer_form = CustomerForm(post_data, instance=customer)
+            
+            # Update order information
+            order_form = OrderForm(post_data, instance=order)
+            
+            # Handle order items
+            OrderItemFormSet = forms.formset_factory(OrderItemForm, extra=0)
+            item_formset = OrderItemFormSet(post_data, prefix='items')
+            
+            if customer_form.is_valid() and order_form.is_valid() and item_formset.is_valid():
+                try:
+                    # Save customer
+                    customer_form.save()
+                    
+                    # Save order
+                    updated_order = order_form.save(commit=False)
+                    updated_order.save()
+                    
+                    # Handle order items - delete existing and create new ones
+                    order.items.all().delete()
+                    for form in item_formset:
+                        if form.cleaned_data and not form.cleaned_data.get('DELETE', False):
+                            order_item = form.save(commit=False)
+                            order_item.order = updated_order
+                            order_item.save()
+                    
+                    # Recalculate total price
+                    updated_order.calculate_total_price()
+                    updated_order.save()
+                    
+                    messages.success(request, f'Order {order.uniquecode} updated successfully!')
+                    return redirect('customordertable')
+                    
+                except Exception as e:
+                    messages.error(request, f'Error updating order: {str(e)}')
+                    logger.error(f"Order update error: {str(e)}")
+            else:
+                # Collect all form errors
+                error_messages = []
+                if not customer_form.is_valid():
+                    for field, errors in customer_form.errors.items():
+                        for error in errors:
+                            error_messages.append(f"Customer {field}: {error}")
+                
+                if not order_form.is_valid():
+                    for field, errors in order_form.errors.items():
+                        for error in errors:
+                            error_messages.append(f"Order {field}: {error}")
+                
+                if not item_formset.is_valid():
+                    for i, form in enumerate(item_formset):
+                        if not form.is_valid():
+                            for field, errors in form.errors.items():
+                                for error in errors:
+                                    error_messages.append(f"Item {i+1} {field}: {error}")
+                
+                messages.error(request, 'Please correct the following errors: ' + '; '.join(error_messages))
+        else:
+            # GET request - populate forms with existing data
+            customer_form = CustomerForm(instance=order.customer)
+            order_form = OrderForm(instance=order)
+            
+            # Prepare initial data for order items
+            initial_items = []
+            for item in order.items.all():
+                initial_items.append({
+                    'servicetype': item.servicetype,
+                    'itemtype': item.itemtype,
+                    'itemname': item.itemname,
+                    'quantity': item.quantity,
+                    'itemcondition': item.itemcondition,
+                    'unit_price': item.unit_price,
+                    'additional_info': item.additional_info,
+                })
+            
+            OrderItemFormSet = forms.formset_factory(OrderItemForm, extra=1)
+            item_formset = OrderItemFormSet(prefix='items', initial=initial_items)
+        
+        context = {
+            'customer_form': customer_form,
+            'order_form': order_form,
+            'item_formset': item_formset,
+            'order': order,
+            'user_has_single_shop': user_shops and len(user_shops) == 1,
+            'user_shop': user_shops[0] if user_shops else '',
+            'editing': True,
+        }
+        
+        return render(request, 'Admin/order_edit_form.html', context)
+        
+    except Order.DoesNotExist:
+        raise Http404("Order not found")
+
+@login_required
+def order_delete(request, order_code):
+    """Delete an order"""
+    try:
+        order = Order.objects.get(uniquecode=order_code)
+        
+        # Check if user has permission to delete this order
+        user_shops = get_user_shops(request)
+        if user_shops is not None and user_shops:  # Not superuser
+            if order.shop not in user_shops:
+                messages.error(request, "You don't have permission to delete this order.")
+                return redirect('customordertable')
+        
+        if request.method == 'POST':
+            order_code = order.uniquecode
+            order.delete()
+            messages.success(request, f'Order {order_code} deleted successfully!')
+            return redirect('customordertable')
+        
+        context = {
+            'order': order,
+        }
+        return render(request, 'Admin/order_confirm_delete.html', context)
+        
+    except Order.DoesNotExist:
+        raise Http404("Order not found")
+
+
+@login_required
+@require_POST
+def mark_order_completed(request, order_code):
+    """Optimized mark order as completed"""
+    order = get_object_or_404(Order, uniquecode=order_code)
+    
+    # Check permission
+    user_shops = get_user_shops(request)
+    if user_shops is not None and user_shops and order.shop not in user_shops:
+        return JsonResponse({
+            'success': False,
+            'message': "You don't have permission to update this order."
+        })
+    
+    # Ensure values are proper decimals before saving
+    try:
+        # Convert to Decimal if they are strings or other types
+        if isinstance(order.total_price, str):
+            order.total_price = Decimal(order.total_price)
+        if isinstance(order.amount_paid, str):
+            order.amount_paid = Decimal(order.amount_paid)
+    except (TypeError, ValueError):
+        # Handle conversion errors
+        order.total_price = Decimal('0.00')
+        order.amount_paid = Decimal('0.00')
+    
+    order.order_status = 'Completed'
+    order.save()
+    
+    return JsonResponse({
+        'success': True,
+        'message': f'Order {order_code} marked as completed!'
+    })
+
+
+@login_required
+def update_payment_status(request, order_code):
+    """Update payment status of an order"""
+    try:
+        order = Order.objects.get(uniquecode=order_code)
+        
+        # Check if user has permission to update this order
+        user_shops = get_user_shops(request)
+        if user_shops is not None and user_shops:  # Not superuser
+            if order.shop not in user_shops:
+                return JsonResponse({
+                    'success': False,
+                    'message': "You don't have permission to update this order."
+                })
+        
+        if request.method == 'POST':
+            payment_status = request.POST.get('payment_status')
+            amount_paid = request.POST.get('amount_paid', 0)
+            
+            if payment_status in dict(Order.PAYMENT_STATUS_CHOICES).keys():
+                order.payment_status = payment_status
+                
+                try:
+                    order.amount_paid = float(amount_paid)
+                    order.balance = float(order.total_price) - float(amount_paid)
+                except (ValueError, TypeError):
+                    order.balance = order.total_price - order.amount_paid
+                
+                order.save()
+                
+                return JsonResponse({
+                    'success': True,
+                    'message': f'Payment status updated to {payment_status}!'
+                })
+            else:
+                return JsonResponse({
+                    'success': False,
+                    'message': 'Invalid payment status.'
+                })
+        
+        return JsonResponse({
+            'success': False,
+            'message': 'Invalid request method.'
+        })
+        
+    except Order.DoesNotExist:
+        return JsonResponse({
+            'success': False,
+            'message': 'Order not found.'
+        })
 
 @csrf_exempt
 @require_POST

@@ -1,7 +1,6 @@
 {% load static tailwind_tags %}
 {% load static %}
 
-
 <!DOCTYPE html>
 <html lang="en">
 
@@ -38,6 +37,49 @@
             transform: translateY(-2px);
             box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1);
         }
+
+        /* Improved sidebar toggle button */
+        .sidebar-toggle-btn {
+            transition: all 0.3s ease;
+            width: 36px;
+            height: 36px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 8px;
+            background-color: rgba(255, 255, 255, 0.1);
+        }
+
+        .sidebar-toggle-btn:hover {
+            background-color: rgba(255, 255, 255, 0.2);
+            transform: rotate(180deg);
+        }
+
+        /* Collapsed sidebar styles */
+        .sidebar-collapsed {
+            width: 80px !important;
+        }
+
+        .sidebar-collapsed .sidebar-text {
+            display: none;
+        }
+
+        .sidebar-collapsed .sidebar-badge {
+            display: none;
+        }
+
+        .sidebar-collapsed .sidebar-header-text {
+            display: none;
+        }
+
+        .content-expanded {
+            margin-left: 80px !important;
+        }
+
+        /* Mobile overlay improvements */
+        .mobile-overlay {
+            transition: opacity 0.3s ease;
+        }
     </style>
 
     {% block extrastyle %}{% endblock %}
@@ -54,10 +96,10 @@
                     <div class="w-8 h-8 bg-blue-500 rounded-lg flex items-center justify-center">
                         <i class="fas fa-shirt text-white text-sm"></i>
                     </div>
-                    <span class="text-white text-xl font-semibold">LaundryAdmin</span>
+                    <span class="text-white text-xl font-semibold sidebar-header-text">LaundryAdmin</span>
                 </div>
-                <button id="sidebar-toggle" class="text-gray-400 hover:text-white">
-                    <i class="fas fa-bars"></i>
+                <button id="sidebar-toggle" class="sidebar-toggle-btn text-gray-400 hover:text-white">
+                    <i class="fas fa-chevron-left"></i>
                 </button>
             </div>
         </div>
@@ -68,59 +110,55 @@
             <a href="{% url 'dashboard' %}"
                 class="flex items-center space-x-3 px-4 py-3 text-gray-300 hover:bg-gray-700 hover:text-white rounded-lg transition-colors group">
                 <i class="fas fa-tachometer-alt w-5 text-center"></i>
-                <span>Dashboard</span>
+                <span class="sidebar-text">Dashboard</span>
             </a>
 
             <!-- Create Order -->
             <a href="{% url 'createorder' %}"
                 class="flex items-center space-x-3 px-4 py-3 text-gray-300 hover:bg-gray-700 hover:text-white rounded-lg transition-colors group">
                 <i class="fas fa-plus-circle w-5 text-center"></i>
-                <span>Create Order</span>
+                <span class="sidebar-text">Create Order</span>
             </a>
 
             <!-- Orders -->
             <a href="{% url 'customordertable' %}"
                 class="flex items-center space-x-3 px-4 py-3 text-gray-300 hover:bg-gray-700 hover:text-white rounded-lg transition-colors group">
                 <i class="fas fa-shopping-cart w-5 text-center"></i>
-                <span>Orders</span>
-                <span class="bg-blue-500 text-white text-xs px-2 py-1 rounded-full ml-auto">24</span>
+                <span class="sidebar-text">Orders</span>
+                <span class="bg-blue-500 text-white text-xs px-2 py-1 rounded-full ml-auto sidebar-badge">24</span>
             </a>
 
             <!-- Customers -->
             <a href="{% url 'customer_management' %}"
                 class="flex items-center space-x-3 px-4 py-3 text-gray-300 hover:bg-gray-700 hover:text-white rounded-lg transition-colors group">
                 <i class="fas fa-users w-5 text-center"></i>
-                <span>Customers</span>
+                <span class="sidebar-text">Customers</span>
             </a>
 
             {% if user.is_authenticated %}
-                {% if user.is_superuser %}
+            {% if user.is_superuser %}
             <!-- Analytics -->
             <a href="{% url 'laundryapp_dashboard' %}"
                 class="flex items-center space-x-3 px-4 py-3 text-gray-300 hover:bg-gray-700 hover:text-white rounded-lg transition-colors group">
                 <i class="fas fa-chart-line w-5 text-center"></i>
-                <span>Reports</span>
+                <span class="sidebar-text">Reports</span>
             </a>
-                
+
 
             <!-- Settings -->
             <a href="{% url 'user_management' %}"
                 class="flex items-center space-x-3 px-4 py-3 text-gray-300 hover:bg-gray-700 hover:text-white rounded-lg transition-colors group">
                 <i class="fas fa-cog w-5 text-center"></i>
-                <span>Site management</span>
+                <span class="sidebar-text">Site management</span>
             </a>
             {% endif %}
             {% endif %}
         </nav>
 
         <!-- Quick Stats -->
-
-
-        <!-- User Section -->
-    <div class="absolute bottom-0 w-full p-4 border-t border-gray-700">
+        
     </div>
-    </div>
-    
+
     <!-- Main Content -->
     <div id="main-content" class="content-transition ml-64 min-h-screen">
         <!-- Header -->
@@ -132,30 +170,23 @@
                             <span class="text-white font-semibold">{{ user.get_username|first|upper }}</span>
                         </div>
                         <!-- Online status indicator -->
-                        <div class="absolute bottom-0 right-0 w-3 h-3 bg-green-500 border-2 border-gray-800 rounded-full"></div>
+                        <div class="absolute bottom-0 right-0 w-3 h-3 bg-green-500 shadow-xl border-gray-500 rounded-full">
+                        </div>
                     </div>
                     <div class="flex-1 min-w-0">
                         <p class="text-blue-800 text-sm font-medium truncate">{{ user.get_username }}</p>
-                        <p class="text-green-400 text-xs">Online</p>
-                        </div>
-                
+        </div>
                 </div>
-
+        
                 <div class="flex items-center space-x-4">
-                    <!-- Search -->
-                    <div class="relative">
-                        <input type="text" placeholder="Search..."
-                            class="pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 w-64">
-                        <i class="fas fa-search absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"></i>
-                    </div>
-
+        
                     <!-- Notifications -->
                     <a href="{% url 'logout' %}" class="text-blue-800 hover:text-blue-200">
-                        <i class="fas fa-sign-out-alt"> Logout</i>
+                        <i class="fas fa-sign-out-alt"></i>Logout
                     </a>
-
+        
                     <!-- User Menu -->
-                  
+        
                 </div>
             </div>
         </header>
@@ -183,7 +214,7 @@
     </div>
 
     <!-- Mobile Overlay -->
-    <div id="mobile-overlay" class="fixed inset-0 bg-black bg-opacity-50 z-40 hidden lg:hidden"></div>
+    <div id="mobile-overlay" class="mobile-overlay fixed inset-0 bg-black bg-opacity-50 z-40 hidden lg:hidden"></div>
 
     <script>
         // Sidebar functionality
@@ -193,17 +224,32 @@
         const mobileSidebarToggle = document.getElementById('mobile-sidebar-toggle');
         const mobileOverlay = document.getElementById('mobile-overlay');
 
-        // Toggle sidebar on desktop
+            // Check if sidebar state is stored in localStorage
+            const isSidebarCollapsed = localStorage.getItem('sidebarCollapsed') === 'true';
+
+            // Initialize sidebar state
+            if (isSidebarCollapsed) {
+                collapseSidebar();
+            }
+
+            // Toggle sidebar on desktop (collapse/expand)
         sidebarToggle.addEventListener('click', () => {
-            sidebar.classList.toggle('-ml-64');
-            mainContent.classList.toggle('ml-0');
-            mainContent.classList.toggle('ml-64');
+            if (sidebar.classList.contains('sidebar-collapsed')) {
+                expandSidebar();
+            } else {
+                collapseSidebar();
+            }
         });
 
-        // Toggle sidebar on mobile
+            // Toggle sidebar on mobile (show/hide)
         mobileSidebarToggle.addEventListener('click', () => {
             sidebar.classList.toggle('-ml-64');
             mobileOverlay.classList.toggle('hidden');
+
+            // If expanding sidebar on mobile and it was collapsed, expand it fully
+            if (!sidebar.classList.contains('-ml-64') && localStorage.getItem('sidebarCollapsed') === 'true') {
+                expandSidebar();
+            }
         });
 
         // Close sidebar when clicking on overlay
@@ -212,16 +258,48 @@
             mobileOverlay.classList.add('hidden');
         });
 
+            // Collapse sidebar function (like Django Unfold)
+            function collapseSidebar() {
+                sidebar.classList.add('sidebar-collapsed');
+                mainContent.classList.add('content-expanded');
+                mainContent.classList.remove('ml-64');
+                sidebarToggle.querySelector('i').classList.remove('fa-chevron-left');
+                sidebarToggle.querySelector('i').classList.add('fa-chevron-right');
+                localStorage.setItem('sidebarCollapsed', 'true');
+            }
+
+            // Expand sidebar function
+            function expandSidebar() {
+                sidebar.classList.remove('sidebar-collapsed');
+                mainContent.classList.remove('content-expanded');
+                mainContent.classList.add('ml-64');
+                sidebarToggle.querySelector('i').classList.remove('fa-chevron-right');
+                sidebarToggle.querySelector('i').classList.add('fa-chevron-left');
+                localStorage.setItem('sidebarCollapsed', 'false');
+            }
+
         // Handle responsive behavior
         function handleResize() {
             if (window.innerWidth < 1024) {
-                sidebar.classList.add('-ml-64');
-                mainContent.classList.remove('ml-64');
-                mainContent.classList.add('ml-0');
+                // On mobile, always show expanded sidebar when visible
+                sidebar.classList.remove('sidebar-collapsed');
+                mainContent.classList.remove('content-expanded');
+
+                if (!sidebar.classList.contains('-ml-64')) {
+                    mainContent.classList.add('ml-64');
+                } else {
+                    mainContent.classList.remove('ml-64');
+                }
             } else {
+                // On desktop, respect the collapsed state
                 sidebar.classList.remove('-ml-64');
-                mainContent.classList.remove('ml-0');
-                mainContent.classList.add('ml-64');
+                mobileOverlay.classList.add('hidden');
+
+                if (localStorage.getItem('sidebarCollapsed') === 'true') {
+                    collapseSidebar();
+                } else {
+                    expandSidebar();
+                }
             }
         }
 
@@ -229,7 +307,7 @@
         handleResize();
         window.addEventListener('resize', handleResize);
 
-        // Keyboard shortcuts
+            // Keyboard shortcuts (Ctrl+B to toggle sidebar like Django Unfold)
         document.addEventListener('keydown', (e) => {
             if (e.ctrlKey && e.key === 'b') {
                 e.preventDefault();

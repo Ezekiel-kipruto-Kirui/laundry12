@@ -27,9 +27,16 @@ urlpatterns = [
     
     path('createorder/', views.createorder, name='createorder'),
     
-    path('create-order-api/', views.create_order_api, name='create_order_api'),
+    #path('create-order-api/', views.create_order_api, name='create_order_api'),
     
-    path('check-customer/', views.check_customer, name='check_customer'),
+    #path('check-customer/', views.check_customer, name='check_customer'),
+
+
+    path('order/<str:order_code>/', views.order_detail, name='order_detail'),
+    path('order/<str:order_code>/edit/', views.order_edit, name='order_edit'),
+    path('order/<str:order_code>/delete/', views.order_delete, name='order_delete'),
+    path('order/<str:order_code>/complete/', views.mark_order_completed, name='mark_order_completed'),
+    path('order/<str:order_code>/update-payment/', views.update_payment_status, name='update_payment_status'),
     
      path('user-management/', views.user_management, name='user_management'),
     path('user/add/', views.user_add, name='user_add'),

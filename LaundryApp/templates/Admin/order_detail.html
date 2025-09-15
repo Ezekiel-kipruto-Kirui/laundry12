@@ -1,0 +1,351 @@
+{% extends '../home.html' %}
+{% load static %}
+
+{% block title %}{% if editing %}Edit{% else %}Create{% endif %} Order{% endblock %}
+
+{% block content %}
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% if editing %}Edit{% else %}Create{% endif %} Order - Laundry Management</title>
+    
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+
+        
+    </style>
+</head>
+
+<body class="min-h-screen bg-gray-50 font-inter">
+    <div class="max-w-7xl mx-auto p-4 lg:p-6">
+        <!-- Header -->
+        <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
+            <div>
+                <div class="flex items-center gap-3 mb-3">
+                    <a href="{% url 'customordertable' %}"
+                        class="inline-flex items-center px-4 py-2 bg-white rounded-lg shadow-sm border border-gray-200 text-gray-700 hover:text-blue-600 hover:shadow-md transition-all duration-200">
+                        <i class="fas fa-arrow-left mr-2"></i>
+                        <span class="text-sm font-medium">Back to Orders</span>
+                    </a>
+                </div>
+                <h1 class="text-2xl font-bold text-gray-900">
+                    {% if editing %}Edit Order - {{ order.uniquecode }}{% else %}Create New Order{% endif %}
+                </h1>
+                <p class="text-gray-600 mt-1">
+                    {% if editing %}Update order details and items{% else %}Add a new laundry order to the system{% endif %}
+                </p>
+            </div>
+        </div>
+
+        <!-- Main Form -->
+        <div class="card p-6 mb-6">
+            <form method="post" id="orderForm">
+                {% csrf_token %}
+
+                {% if messages %}
+                <div class="alert-info">
+                    {% for message in messages %}
+                    <p class="flex items-center">
+                        <i class="fas fa-info-circle mr-2"></i>
+                        {{ message }}
+                    </p>
+                    {% endfor %}
+                </div>
+                {% endif %}
+
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
+                    <!-- Customer Information -->
+                    <div>
+                        <h6 class="text-lg font-semibold text-gray-900 mb-4 pb-2 border-b border-gray-200">
+                            <i class="fas fa-user text-blue-500 mr-2"></i>Customer Information
+                        </h6>
+
+                        <div class="space-y-4">
+                            <div>
+                                <label for="id_phone" class="form-label">
+                                    <i class="fas fa-phone text-gray-400 mr-2"></i>Phone Number *
+                                </label>
+                                {{ customer_form.phone }}
+                                <small class="text-sm text-gray-500 mt-1">Enter customer phone number</small>
+                            </div>
+
+                            <div>
+                                <label for="id_name" class="form-label">
+                                    <i class="fas fa-signature text-gray-400 mr-2"></i>Customer Name *
+                                </label>
+                                {{ customer_form.name }}
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Order Information -->
+                    <div>
+                        <h6 class="text-lg font-semibold text-gray-900 mb-4 pb-2 border-b border-gray-200">
+                            <i class="fas fa-clipboard-list text-green-500 mr-2"></i>Order Information
+                        </h6>
+
+                        <div class="space-y-4">
+                            <div>
+                                <label for="id_shop" class="form-label">
+                                    <i class="fas fa-store text-gray-400 mr-2"></i>Shop
+                                </label>
+                                {{ order_form.shop }}
+                            </div>
+
+                            <div>
+                                <label for="id_delivery_date" class="form-label">
+                                    <i class="fas fa-calendar-day text-gray-400 mr-2"></i>Delivery Date
+                                </label>
+                                {{ order_form.delivery_date }}
+                            </div>
+
+                            <div>
+                                <label for="id_payment_type" class="form-label">
+                                    <i class="fas fa-credit-card text-gray-400 mr-2"></i>Payment Type
+                                </label>
+                                {{ order_form.payment_type }}
+                            </div>
+
+                            <div>
+                                <label for="id_address" class="form-label">
+                                    <i class="fas fa-map-marker-alt text-gray-400 mr-2"></i>Address
+                                </label>
+                                {{ order_form.address }}
+                            </div>
+
+                            <div>
+                                <label for="id_addressdetails" class="form-label">
+                                    <i class="fas fa-map-pin text-gray-400 mr-2"></i>Address Details
+                                </label>
+                                {{ order_form.addressdetails }}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Order Items Section -->
+                <div class="mb-8">
+                    <h6 class="text-lg font-semibold text-gray-900 mb-4 pb-2 border-b border-gray-200">
+                        <i class="fas fa-tshirt text-purple-500 mr-2"></i>Order Items
+                    </h6>
+
+                    <div id="items-formset">
+                        {{ item_formset.management_form }}
+
+                        <div class="overflow-x-auto">
+                            <table class="w-full border-collapse" id="items-table">
+                                <thead>
+                                    <tr class="bg-gray-50">
+                                        <th
+                                            class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                            Service Type</th>
+                                        <th
+                                            class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                            Item Type</th>
+                                        <th
+                                            class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                            Item Name(s)</th>
+                                        <th
+                                            class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                            Qty</th>
+                                        <th
+                                            class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                            Condition</th>
+                                        <th
+                                            class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                            Unit Price</th>
+                                        <th
+                                            class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                            Additional Info</th>
+                                        <th
+                                            class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                            Action</th>
+                                    </tr>
+                                </thead>
+                                <tbody class="divide-y divide-gray-200">
+                                    {% for form in item_formset %}
+                                    <tr class="item-row">
+                                        <td class="px-4 py-3">{{ form.servicetype }}</td>
+                                        <td class="px-4 py-3">{{ form.itemtype }}</td>
+                                        <td class="px-4 py-3">{{ form.itemname }}</td>
+                                        <td class="px-4 py-3">{{ form.quantity }}</td>
+                                        <td class="px-4 py-3">{{ form.itemcondition }}</td>
+                                        <td class="px-4 py-3">{{ form.unit_price }}</td>
+                                        <td class="px-4 py-3">{{ form.additional_info }}</td>
+                                        <td class="px-4 py-3">
+                                            {% if not forloop.first %}
+                                            <button type="button" class="btn-danger remove-row">
+                                                <i class="fas fa-trash"></i>
+                                            </button>
+                                            {% endif %}
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <button type="button" class="btn-success mt-4" id="add-item">
+                            <i class="fas fa-plus mr-2"></i>Add Item
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Form Actions -->
+                <div class="flex flex-col sm:flex-row gap-4 justify-end pt-6 border-t border-gray-200">
+                    <a href="{% if editing %}{% url 'order_detail' order.uniquecode %}{% else %}{% url 'customordertable' %}{% endif %}"
+                        class="btn-secondary text-center">
+                        <i class="fas fa-times mr-2"></i>Cancel
+                    </a>
+                    <button type="submit" class="btn-primary">
+                        <i class="fas fa-{% if editing %}save{% else %}plus{% endif %} mr-2"></i>
+                        {% if editing %}Update{% else %}Create{% endif %} Order
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Template for new item rows -->
+    <template id="item-template">
+        <tr class="item-row">
+            <td class="px-4 py-3">
+                <select name="items-__prefix__-servicetype" class="form-select">
+                    {% for value, label in order_form.fields.servicetype.choices %}
+                    <option value="{{ value }}">{{ label }}</option>
+                    {% endfor %}
+                </select>
+            </td>
+            <td class="px-4 py-3">
+                <select name="items-__prefix__-itemtype" class="form-select">
+                    {% for value, label in order_form.fields.itemtype.choices %}
+                    <option value="{{ value }}">{{ label }}</option>
+                    {% endfor %}
+                </select>
+            </td>
+            <td class="px-4 py-3">
+                <input type="text" name="items-__prefix__-itemname" class="form-input"
+                    placeholder="Item names (comma separated)">
+            </td>
+            <td class="px-4 py-3">
+                <input type="number" name="items-__prefix__-quantity" class="form-input" value="1" min="1">
+            </td>
+            <td class="px-4 py-3">
+                <select name="items-__prefix__-itemcondition" class="form-select">
+                    {% for value, label in order_form.fields.itemcondition.choices %}
+                    <option value="{{ value }}">{{ label }}</option>
+                    {% endfor %}
+                </select>
+            </td>
+            <td class="px-4 py-3">
+                <input type="number" name="items-__prefix__-unit_price" class="form-input" step="0.01"
+                    placeholder="0.00">
+            </td>
+            <td class="px-4 py-3">
+                <textarea name="items-__prefix__-additional_info" class="form-textarea" rows="1"
+                    placeholder="Additional information"></textarea>
+            </td>
+            <td class="px-4 py-3">
+                <button type="button" class="btn-danger remove-row">
+                    <i class="fas fa-trash"></i>
+                </button>
+            </td>
+        </tr>
+    </template>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            // Add styling to form fields
+            document.querySelectorAll('input, select, textarea').forEach(element => {
+                if (!element.classList.contains('form-input') &&
+                    !element.classList.contains('form-select') &&
+                    !element.classList.contains('form-textarea')) {
+                    if (element.tagName === 'SELECT') {
+                        element.classList.add('form-select');
+                    } else if (element.tagName === 'TEXTAREA') {
+                        element.classList.add('form-textarea');
+                    } else {
+                        element.classList.add('form-input');
+                    }
+                }
+            });
+
+            // Add new item row
+            document.getElementById('add-item').addEventListener('click', function () {
+                const totalForms = document.getElementById('id_items-TOTAL_FORMS');
+                const formNum = parseInt(totalForms.value);
+                const template = document.getElementById('item-template').content.cloneNode(true);
+
+                // Update all names in the template
+                template.querySelectorAll('[name]').forEach(element => {
+                    element.name = element.name.replace(/__prefix__/g, formNum);
+                    // Add proper styling to new elements
+                    if (element.tagName === 'SELECT') {
+                        element.classList.add('form-select');
+                    } else if (element.tagName === 'TEXTAREA') {
+                        element.classList.add('form-textarea');
+                    } else {
+                        element.classList.add('form-input');
+                    }
+                });
+
+                document.getElementById('items-table').querySelector('tbody').appendChild(template);
+                totalForms.value = formNum + 1;
+            });
+
+            // Remove item row
+            document.addEventListener('click', function (e) {
+                if (e.target.classList.contains('remove-row') || e.target.closest('.remove-row')) {
+                    const row = e.target.closest('.item-row');
+                    if (document.querySelectorAll('.item-row').length > 1) {
+                        row.remove();
+                        // Update form indices
+                        const rows = document.querySelectorAll('.item-row');
+                        document.getElementById('id_items-TOTAL_FORMS').value = rows.length;
+
+                        rows.forEach((row, index) => {
+                            row.querySelectorAll('[name]').forEach(element => {
+                                element.name = element.name.replace(/items-\d+-/, `items-${index}-`);
+                            });
+                        });
+                    }
+                }
+            });
+
+            // Auto-fill customer name when phone number is entered
+            const phoneInput = document.getElementById('id_phone');
+            if (phoneInput) {
+                phoneInput.addEventListener('blur', function () {
+                    const phone = this.value;
+                    if (phone) {
+                        fetch(`/check-customer/?phone=${encodeURIComponent(phone)}`)
+                            .then(response => response.json())
+                            .then(data => {
+                                if (data.exists) {
+                                    document.getElementById('id_name').value = data.name;
+                                }
+                            })
+                            .catch(error => {
+                                console.error('Error checking customer:', error);
+                            });
+                    }
+                });
+            }
+
+            // Add delivery date picker functionality
+            const deliveryDateInput = document.querySelector('input[name="delivery_date"]');
+            if (deliveryDateInput) {
+                // Set minimum date to today
+                const today = new Date().toISOString().split('T')[0];
+                deliveryDateInput.min = today;
+            }
+        });
+    </script>
+</body>
+
+</html>
+{% endblock %}

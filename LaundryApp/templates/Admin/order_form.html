@@ -310,7 +310,7 @@
                                     {{ order_form.delivery_date }}
                                     <label for="id_delivery_date"
                                         class="form-label absolute left-4 top-3 pointer-events-none">
-                                        Delivery Date *
+                                        Picking date/Delivery Date *
                                     </label>
                                     {% if order_form.delivery_date.errors %}
                                     <div class="text-red-500 text-sm mt-2">{{ order_form.delivery_date.errors }}</div>
@@ -324,7 +324,7 @@
                                     {{ order_form.address }}
                                     <label for="id_address"
                                         class="form-label absolute left-4 top-3 pointer-events-none">
-                                        Delivery Address
+                                        Estate/Address
                                     </label>
                                     {% if order_form.address.errors %}
                                     <div class="text-red-500 text-sm mt-2">{{ order_form.address.errors }}</div>
@@ -336,7 +336,7 @@
                                     {{ order_form.addressdetails }}
                                     <label for="id_addressdetails"
                                         class="form-label absolute left-4 top-3 pointer-events-none">
-                                        Address Details
+                                        To Be delivered to
                                     </label>
                                     {% if order_form.addressdetails.errors %}
                                     <div class="text-red-500 text-sm mt-2">{{ order_form.addressdetails.errors }}</div>
@@ -354,7 +354,7 @@
                                     <i class="fas fa-tshirt mr-2 md:mr-3"></i>Order Items
                                 </h2>
                                 <button type="button" id="add-item-btn"
-                                    class="bg-accent-500 hover:bg-accent-600 text-white px-3 py-2 md:px-4 md:py-2 rounded-lg font-semibold flex items-center transition-colors shadow-md hover:shadow-lg text-sm md:text-base">
+                                    class="bg-blue-500 hover:bg-accent-600 text-white px-3 py-2 md:px-4 md:py-2 rounded-lg font-semibold flex items-center transition-colors shadow-md hover:shadow-lg text-sm md:text-base">
                                     <i class="fas fa-plus mr-1 md:mr-2"></i> Add Item
                                 </button>
                             </div>
@@ -466,13 +466,7 @@
                             </div>
 
                             <!-- Total Display -->
-                            <div
-                                class="bg-gradient-to-r from-accent-500 to-purple-700 text-white p-4 md:p-6 rounded-xl mt-4 md:mt-6 shadow-lg">
-                                <div class="flex justify-between items-center">
-                                    <span class="text-base md:text-lg font-semibold">Order Total:</span>
-                                    <span id="order-total" class="text-2xl md:text-3xl font-bold">KSh 0.00</span>
-                                </div>
-                            </div>
+                            
                         </div>
                     </div>
 
@@ -526,7 +520,7 @@
                         </button>
 
                         <button type="button" id="next-btn"
-                            class="ml-auto bg-accent-500 hover:bg-accent-600 text-white px-4 py-2 md:px-6 md:py-3 rounded-lg font-semibold transition-colors shadow-md hover:shadow-lg text-sm md:text-base">
+                            class="ml-auto bg-blue-500 hover:bg-accent-600 text-white px-4 py-2 md:px-6 md:py-3 rounded-lg font-semibold transition-colors shadow-md hover:shadow-lg text-sm md:text-base">
                             Next <i class="fas fa-arrow-right ml-1 md:ml-2"></i>
                         </button>
 
@@ -571,7 +565,7 @@
         });
     </script>
 
-   <script>
+ <script>
     document.addEventListener('DOMContentLoaded', function () {
         // Handle shop field for users with single shop assignment
         '{% if user_has_single_shop %}'
@@ -831,11 +825,12 @@
             });
         }
 
-        // Item management functionality
+        // Item management functionality - Simplified for total amount
         let itemCount = parseInt("{{ item_formset.total_form_count }}");
         const addItemBtn = document.getElementById('add-item-btn');
         const orderItemsContainer = document.getElementById('order-items-container');
         const totalFormsInput = document.getElementById('id_items-TOTAL_FORMS');
+        const totalAmountInput = document.getElementById('id_total_amount');
 
         if (addItemBtn && orderItemsContainer && totalFormsInput) {
             // Add new item
@@ -868,10 +863,10 @@
                     quantityInput.value = 1;
                 }
 
-                // Set unit price to 0
-                const priceInput = newItem.querySelector('input[name$="unit_price"]');
-                if (priceInput) {
-                    priceInput.value = 0;
+                // Set description to empty
+                const descriptionInput = newItem.querySelector('input[name$="description"]');
+                if (descriptionInput) {
+                    descriptionInput.value = '';
                 }
 
                 // Add remove button
@@ -896,25 +891,14 @@
                         } else {
                             newItem.remove();
                         }
-                        calculateTotal();
                     }
                 });
-
-                // Add event listeners for price calculation
-                const quantityInputNew = newItem.querySelector('input[name$="quantity"]');
-                const priceInputNew = newItem.querySelector('input[name$="unit_price"]');
-                
-
-                if (quantityInputNew) quantityInputNew.addEventListener('input', calculateTotal);
-                if (priceInputNew) priceInputNew.addEventListener('input', calculateTotal);
 
                 orderItemsContainer.appendChild(newItem);
 
                 // Update the total forms count
                 itemCount++;
                 totalFormsInput.value = itemCount;
-
-                calculateTotal();
             });
 
             // Add remove functionality to existing items
@@ -929,44 +913,24 @@
                         } else {
                             itemCard.remove();
                         }
-                        calculateTotal();
                     }
                 }
             });
         }
 
-        // Calculate order total
-        function calculateTotal() {
+        // Calculate order total based on total amount input
+        function updateTotalDisplay() {
             const orderTotalElement = document.getElementById('order-total');
-            if (!orderTotalElement) return;
+            if (!orderTotalElement || !totalAmountInput) return;
 
-            let total = 0;
-            const items = document.querySelectorAll('.item-form');
-
-            items.forEach(item => {
-                if (item.style.display !== 'none') {
-                    const quantityInput = item.querySelector('input[name$="quantity"]');
-                    const priceInput = item.querySelector('input[name$="unit_price"]');
-
-                    const quantity = quantityInput ? parseFloat(quantityInput.value) || 0 : 0;
-                    const unitPrice = priceInput ? parseFloat(priceInput.value) || 0 : 0;
-                    total += quantity * unitPrice;
-                }
-
-            });
-
+            const total = parseFloat(totalAmountInput.value) || 0;
             orderTotalElement.textContent = `KSh ${total.toFixed(2)}`;
-            
-            
-
         }
 
-        // Add event listeners for price calculation
-        document.addEventListener('input', function (e) {
-            if (e.target.name && (e.target.name.includes('quantity') || e.target.name.includes('unit_price'))) {
-                calculateTotal();
-            }
-        });
+        // Add event listener for total amount input
+        if (totalAmountInput) {
+            totalAmountInput.addEventListener('input', updateTotalDisplay);
+        }
 
         // Form submission handling
         if (orderForm) {
@@ -1056,7 +1020,7 @@
         updateFormSteps();
 
         // Initial calculation
-        calculateTotal();
+        updateTotalDisplay();
     });
 </script>
 </body>

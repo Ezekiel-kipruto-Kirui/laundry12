@@ -18,7 +18,7 @@ try:
     from django.db.models import JSONField
 except Exception:
     from django.contrib.postgres.fields import JSONField
-# models.py - Add this to your existing models
+
 class UserProfile(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='profile')
     SHOP_CHOICES = (
@@ -31,7 +31,6 @@ class UserProfile(models.Model):
     def __str__(self):
         return f"{self.user.username} - {self.shop}"
 
-# Create user profile when a new user is created
 @receiver(post_save, sender=User)
 def create_user_profile(sender, instance, created, **kwargs):
     if created:
@@ -140,6 +139,9 @@ class Order(models.Model):
                 else:
                     raise IntegrityError("Could not generate a unique order code after multiple attempts.")
             
+            # Calculate balance before saving
+            self.balance = self.total_price - self.amount_paid
+            
             # Store current status as previous before saving
             if self.pk:
                 try:
@@ -147,7 +149,6 @@ class Order(models.Model):
                     self.previous_order_status = old_instance.order_status
                 except Order.DoesNotExist:
                     pass
-            
             
             super().save(*args, **kwargs)
 
@@ -209,7 +210,7 @@ class OrderItem(models.Model):
             self.itemname = ', '.join(items)
         
         # Calculate total price for this item
-        self.total_item_price = (self.unit_price or 0) * (self.quantity or 0)
+        self.total_item_price = (self.unit_price or 0)
         
         super().save(*args, **kwargs)
         
@@ -217,7 +218,9 @@ class OrderItem(models.Model):
         if self.order:
             order_total = self.order.items.aggregate(total=Sum('total_item_price'))['total'] or 0
             self.order.total_price = order_total
-            self.order.save(update_fields=['total_price'])
+            # Update balance after updating total_price
+            self.order.balance = self.order.total_price - self.order.amount_paid
+            self.order.save(update_fields=['total_price', 'balance'])
 
     def get_item_list(self):
         """Return item names as a list"""
@@ -241,18 +244,16 @@ class OrderItem(models.Model):
         return f"{self.quantity} x {', '.join(items)} ({self.servicetype})"
 
 
-# In your models.py file, update the Payment model:
 class Payment(models.Model):
     order = models.OneToOneField(Order, on_delete=models.CASCADE, related_name='payment')
     price = models.DecimalField(max_digits=10, decimal_places=2)
     
-    # Remove any ordering that references payment_date
     class Meta:
-        # Remove any ordering that references non-existent fields
-        ordering = ['-id']  # Order by ID descending instead
+        ordering = ['-id']
     
     def __str__(self):
         return f"Payment for {self.order.uniquecode} - KSh {self.price}"
+
 @receiver(post_save, sender=Order)
 def handle_order_sms(sender, instance, created, **kwargs):
     customer_phone = str(instance.customer.phone)
