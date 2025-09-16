@@ -355,7 +355,7 @@
                                 <div class="text-xs">{{ order.customer.name|truncatechars:15 }}</div>
                             </td>
                             <td>
-                                <div class="text-xs">{{ order.address|truncatewords:2 }}</div>
+                                <div class="text-xs">{{ customer_form.address|truncatewords:2 }}</div>
                             </td>
                             <td>
                                 {% for item in order.items.all|slice:":1" %}

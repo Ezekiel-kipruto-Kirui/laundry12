@@ -1,4 +1,5 @@
 {% extends "../home.html" %}
+{% load static %}
 
 {% block title %}User Management - Laundry Management System{% endblock %}
 
@@ -6,66 +7,112 @@
 <div class="min-h-screen bg-gray-50 py-8">
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <!-- Header -->
-        
-            <div class="mt-4 md:mt-0 absolute right-0 top-5">
-            
-            </div>
-        
+        <div class="mb-8">
+            <h1 class="text-3xl font-bold text-gray-900">User Management</h1>
+            <p class="text-gray-600 mt-2">Manage system users, their roles, and access permissions</p>
+        </div>
 
         <!-- Statistics Cards -->
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
             <!-- Total Users -->
-            <div class="bg-white rounded-2xl shadow-sm border border-gray-200 p-6">
+            <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
                 <div class="flex items-center">
                     <div class="w-12 h-12 bg-blue-500 rounded-lg flex items-center justify-center mr-4">
-                        <i class="fas fa-users text-white text-xl"></i>
+                        <i class="fas fa-users text-white text-lg"></i>
                     </div>
                     <div>
                         <p class="text-2xl font-bold text-gray-900">{{ total_users }}</p>
                         <p class="text-sm text-gray-600">Total Users</p>
                     </div>
-                    </div>
-                    </div>
+                </div>
+            </div>
 
             <!-- Active Users -->
-            <div class="bg-white rounded-2xl shadow-sm border border-gray-200 p-6">
+            <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
                 <div class="flex items-center">
                     <div class="w-12 h-12 bg-green-500 rounded-lg flex items-center justify-center mr-4">
-                        <i class="fas fa-user-check text-white text-xl"></i>
+                        <i class="fas fa-user-check text-white text-lg"></i>
                     </div>
                     <div>
                         <p class="text-2xl font-bold text-gray-900">{{ active_users }}</p>
                         <p class="text-sm text-gray-600">Active Users</p>
                     </div>
-                    </div>
-                    </div>
+                </div>
+            </div>
 
             <!-- Staff Users -->
-            <div class="bg-white rounded-2xl shadow-sm border border-gray-200 p-6">
+            <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
                 <div class="flex items-center">
                     <div class="w-12 h-12 bg-purple-500 rounded-lg flex items-center justify-center mr-4">
-                        <i class="fas fa-user-tie text-white text-xl"></i>
+                        <i class="fas fa-user-tie text-white text-lg"></i>
                     </div>
                     <div>
                         <p class="text-2xl font-bold text-gray-900">{{ staff_users }}</p>
                         <p class="text-sm text-gray-600">Staff Users</p>
                     </div>
+                </div>
+            </div>
+
+            <!-- Superusers -->
+            <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+                <div class="flex items-center">
+                    <div class="w-12 h-12 bg-yellow-500 rounded-lg flex items-center justify-center mr-4">
+                        <i class="fas fa-crown text-white text-lg"></i>
                     </div>
+                    <div>
+                        <p class="text-2xl font-bold text-gray-900">{{ superusers }}</p>
+                        <p class="text-sm text-gray-600">Superusers</p>
                     </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Additional Stats -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+            <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-lg font-semibold text-gray-900">Recently Active</p>
+                        <p class="text-2xl font-bold text-blue-600">{{ recently_active }}</p>
+                        <p class="text-sm text-gray-600">Logged in last 7 days</p>
                     </div>
+                    <div class="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
+                        <i class="fas fa-clock text-blue-500"></i>
+                    </div>
+                </div>
+            </div>
+
+            <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-lg font-semibold text-gray-900">Never Logged In</p>
+                        <p class="text-2xl font-bold text-red-600">{{ never_logged_in }}</p>
+                        <p class="text-sm text-gray-600">No login activity</p>
+                    </div>
+                    <div class="w-10 h-10 bg-red-100 rounded-full flex items-center justify-center">
+                        <i class="fas fa-exclamation-triangle text-red-500"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
 
         <!-- Search and Filter Section -->
-        <div class="bg-white  rounded-2xl shadow-sm border border-gray-200 p-6 mb-8">
-            <h2 class="text-xl font-semibold text-gray-900 mb-4">Search & Filter Users</h2>
-            <form method="get" class="flex flex-row justify-between md:grid-cols-4 gap-4">
+        <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-8">
+            <h2 class="text-xl font-semibold text-gray-900 mb-6">Search & Filter Users</h2>
+            <form method="get" class="grid grid-cols-1 md:grid-cols-5 gap-4">
+                <!-- Search -->
                 <div>
-                    <input type="text" name="search"
-                        class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                        placeholder="Search users..." value="{{ search_query }}">
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Search</label>
+                    <input type="text" name="search" value="{{ search_query }}"
+                        class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors duration-200"
+                        placeholder="Search users...">
                 </div>
-<div>
-    <select name="shop"
-        class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+
+                <!-- Shop Filter -->
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Shop</label>
+                    <select name="shop"
+                        class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors duration-200">
                         {% for option in shop_options %}
                         <option value="{{ option.value }}" {% if option.selected %}selected{% endif %}>
                             {{ option.label }}
@@ -73,9 +120,12 @@
                         {% endfor %}
                     </select>
                 </div>
-<div>
-    <select name="status"
-        class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+
+                <!-- Status Filter -->
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Status</label>
+                    <select name="status"
+                        class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors duration-200">
                         {% for option in status_options %}
                         <option value="{{ option.value }}" {% if option.selected %}selected{% endif %}>
                             {{ option.label }}
@@ -83,128 +133,253 @@
                         {% endfor %}
                     </select>
                 </div>
-<button type="submit"
-    class="w-full md:w-auto px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg transition-colors duration-200 flex items-center justify-center">
-    <i class="fas fa-filter mr-2"></i>
-    Apply Filters
-</button>
+
+                <!-- User Type Filter -->
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">User Type</label>
+                    <select name="user_type"
+                        class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors duration-200">
+                        {% for option in user_type_options %}
+                        <option value="{{ option.value }}" {% if option.selected %}selected{% endif %}>
+                            {{ option.label }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <!-- Apply Button -->
+                <div class="flex items-end">
+                    <button type="submit"
+                        class="w-full px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg transition-colors duration-200 flex items-center justify-center shadow-sm hover:shadow-md">
+                        <i class="fas fa-filter mr-2"></i>
+                        Apply Filters
+                    </button>
+                </div>
             </form>
+
+            <!-- Active Filters -->
+            {% if current_filters.shop or current_filters.status or current_filters.user_type %}
+            <div class="mt-6 pt-4 border-t border-gray-200">
+                <span class="text-sm font-medium text-gray-700 mb-3 block">Active filters:</span>
+                <div class="flex flex-wrap gap-2">
+                    {% if current_filters.shop %}
+                    <span
+                        class="inline-flex items-center px-3 py-1 bg-blue-100 text-blue-800 text-sm rounded-full font-medium">
+                        Shop: {{ current_filters.shop }}
+                        <a href="?{% for key, value in current_filters.items %}{% if key != 'shop' %}{{ key }}={{ value }}&{% endif %}{% endfor %}"
+                            class="ml-2 text-blue-600 hover:text-blue-800">
+                            <i class="fas fa-times"></i>
+                        </a>
+                    </span>
+                    {% endif %}
+                    {% if current_filters.status %}
+                    <span
+                        class="inline-flex items-center px-3 py-1 bg-green-100 text-green-800 text-sm rounded-full font-medium">
+                        Status: {{ current_filters.status }}
+                        <a href="?{% for key, value in current_filters.items %}{% if key != 'status' %}{{ key }}={{ value }}&{% endif %}{% endfor %}"
+                            class="ml-2 text-green-600 hover:text-green-800">
+                            <i class="fas fa-times"></i>
+                        </a>
+                    </span>
+                    {% endif %}
+                    {% if current_filters.user_type %}
+                    <span
+                        class="inline-flex items-center px-3 py-1 bg-purple-100 text-purple-800 text-sm rounded-full font-medium">
+                        Type: {{ current_filters.user_type }}
+                        <a href="?{% for key, value in current_filters.items %}{% if key != 'user_type' %}{{ key }}={{ value }}&{% endif %}{% endfor %}"
+                            class="ml-2 text-purple-600 hover:text-purple-800">
+                            <i class="fas fa-times"></i>
+                        </a>
+                    </span>
+                    {% endif %}
+                </div>
+            </div>
+            {% endif %}
         </div>
 
         <!-- Users Table -->
-        <div class="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
+        <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
             <!-- Card Header -->
             <div class="px-6 py-4 border-b border-gray-200 bg-gray-50">
-                <div class="flex flex-col justify-between sm:flex-row sm:items-center sm:justify-between">
-                    <div class="flex flex-row m-10">
+                <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between">
+                    <div>
                         <h2 class="text-xl font-semibold text-gray-900">Users List</h2>
-                        <span class="text-sm text-gray-600 mt-2 sm:mt-0">{{ users.paginator.count }}
-                            user{{users.paginator.count|pluralize }} found</span>
+                        <p class="text-sm text-gray-600 mt-1">{{ users.paginator.count }} user{{
+                            users.paginator.count|pluralize }} found</p>
                     </div>
-                        <a href="{% url 'user_add' %}"
-                            class="inline-flex items-center px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg transition-colors duration-200 shadow-sm">
-                            <i class="fas fa-plus-circle mr-2"></i>
-                            Add New User
-                        </a>
-                        </div>
-                        </div>
-                        
-                        <!-- Table -->
-                        <div class="overflow-x-auto">
-                            <table class="w-full">
-                                <thead class="bg-gray-50">
+                    <a href="{% url 'user_add' %}"
+                        class="mt-4 sm:mt-0 inline-flex items-center px-6 py-3 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white font-semibold rounded-lg transition-all duration-200 shadow-sm hover:shadow-md transform hover:-translate-y-0.5">
+                        <i class="fas fa-plus-circle mr-2"></i>
+                        Add New User
+                    </a>
+                </div>
+            </div>
+
+            <!-- Table -->
+            <div class="overflow-x-auto">
+                <table class="w-full divide-y divide-gray-200">
+                    <thead class="bg-gray-50">
                         <tr>
-                            <th class="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                User</th>
-                            <th class="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                Contact</th>
-                            <th class="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                Shop</th>
-                            <th class="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                Status</th>
-                            <th class="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                Role</th>
-                            <th class="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                Joined</th>
-                            <th class="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                Actions</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                User
+                            </th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                Contact
+                            </th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                Shop & Role
+                            </th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                Status
+                            </th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                Last Activity
+                            </th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                Joined
+                            </th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                Actions
+                            </th>
                         </tr>
                     </thead>
                     <tbody class="bg-white divide-y divide-gray-200">
-                        {% for user in users %}
+                        {% for user_data in users %}
                         <tr class="hover:bg-gray-50 transition-colors duration-150">
                             <!-- User Info -->
                             <td class="px-6 py-4 whitespace-nowrap">
                                 <div class="flex items-center">
-                                    <div class="w-10 h-10 bg-blue-500 rounded-full flex items-center justify-center mr-4 flex-shrink-0">
-                                        <i class="fas fa-user text-white"></i>
+                                    <div
+                                        class="w-10 h-10 bg-gradient-to-r from-blue-500 to-blue-600 rounded-full flex items-center justify-center mr-3 flex-shrink-0">
+                                        <i class="fas fa-user text-white text-sm"></i>
                                     </div>
                                     <div>
-                                        <div class="text-sm font-medium text-gray-900">{{ user.username }}</div>
-                                        <div class="text-sm text-gray-500">{{ user.get_full_name }}</div>
+                                        <div class="text-sm font-medium text-gray-900">{{ user_data.user.username }}
+                                        </div>
+                                        <div class="text-sm text-gray-500">
+                                            {% if user_data.user.get_full_name %}
+                                            {{ user_data.user.get_full_name }}
+                                            {% else %}
+                                            No name provided
+                                            {% endif %}
+                                        </div>
                                     </div>
                                 </div>
                             </td>
-                        
-                            <!-- Email -->
+
+                            <!-- Contact -->
                             <td class="px-6 py-4 whitespace-nowrap">
-                                <div class="text-sm text-gray-900">{{ user.email }}</div>
-                                <div class="text-sm text-gray-500">Primary contact</div>
+                                <div class="text-sm text-gray-900">{{ user_data.user.email|default:"No email" }}</div>
+                                <div class="text-xs text-gray-500">Primary contact</div>
                             </td>
-                        
-                            <!-- Shop -->
+
+                            <!-- Shop & Role -->
                             <td class="px-6 py-4 whitespace-nowrap">
-                                {% if user.profile.shop %}
-                                <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-blue-100 text-blue-800">
-                                    {{ user.profile.shop }}
-                                </span>
-                                {% else %}
-                                <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-gray-100 text-gray-600">
-                                    Not assigned
-                                </span>
+                                <div class="space-y-2">
+                                    <!-- Shop -->
+                                    <div>
+                                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium 
+                                            {% if user_data.shop == 'Shop A' %}bg-blue-100 text-blue-800
+                                            {% elif user_data.shop == 'Shop B' %}bg-green-100 text-green-800
+                                            {% else %}bg-gray-100 text-gray-600{% endif %}">
+                                            <i class="fas fa-store mr-1 text-xs"></i>
+                                            {{ user_data.shop }}
+                                        </span>
+                                    </div>
+                                    <!-- User Type -->
+                                    <div>
+                                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium 
+                                            {% if user_data.user_type == 'admin' %}bg-purple-100 text-purple-800
+                                            {% elif user_data.user_type == 'staff' %}bg-amber-100 text-amber-800
+                                            {% else %}bg-gray-100 text-gray-600{% endif %}">
+                                            <i
+                                                class="fas {% if user_data.user_type == 'admin' %}fa-crown{% else %}fa-user-tie{% endif %} mr-1 text-xs"></i>
+                                            {{ user_data.user_type|title }}
+                                        </span>
+                                    </div>
+                                </div>
+                            </td>
+
+                            <!-- Status -->
+                            <td class="px-6 py-4 whitespace-nowrap">
+                                <div class="space-y-2">
+                                    <!-- Account Status -->
+                                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium 
+                                        {% if user_data.status == 'active' %}bg-green-100 text-green-800
+                                        {% elif user_data.status == 'inactive' %}bg-red-100 text-red-800
+                                        {% elif user_data.status == 'superuser' %}bg-yellow-100 text-yellow-800
+                                        {% elif user_data.status == 'staff' %}bg-blue-100 text-blue-800
+                                        {% else %}bg-gray-100 text-gray-600{% endif %}">
+                                        {% if user_data.status == 'active' %}
+                                        <i class="fas fa-check-circle mr-1 text-xs"></i>
+                                        {% elif user_data.status == 'inactive' %}
+                                        <i class="fas fa-times-circle mr-1 text-xs"></i>
+                                        {% elif user_data.status == 'superuser' %}
+                                        <i class="fas fa-crown mr-1 text-xs"></i>
+                                        {% elif user_data.status == 'staff' %}
+                                        <i class="fas fa-user-tie mr-1 text-xs"></i>
+                                        {% endif %}
+                                        {{ user_data.status_text }}
+                                    </span>
+                                    <!-- Online Status -->
+                                    {% if user_data.is_online %}
+                                    <span
+                                        class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                                        <span class="w-2 h-2 bg-green-500 rounded-full mr-1"></span>
+                                        Online
+                                    </span>
+                                    {% endif %}
+                                </div>
+                            </td>
+
+                            <!-- Last Activity -->
+                            <td class="px-6 py-4 whitespace-nowrap">
+                                <div class="text-sm text-gray-900">
+                                    {% if user_data.last_login == 'Never' %}
+                                    <span class="text-gray-400">Never logged in</span>
+                                    {% else %}
+                                    {{ user_data.last_login }}
+                                    {% endif %}
+                                </div>
+                                {% if user_data.days_since_login %}
+                                <div class="text-xs text-gray-500">
+                                    {{ user_data.days_since_login }} day{{ user_data.days_since_login|pluralize }} ago
+                                </div>
                                 {% endif %}
                             </td>
-<!-- Status -->
-<td class="px-6 py-4 whitespace-nowrap">
-    <span
-        class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium {% if user.is_active %}bg-green-100 text-green-800{% else %}bg-red-100 text-red-800{% endif %}">
-                                    {% if user.is_active %}Active{% else %}Inactive{% endif %}
-                                </span>
-                            </td>
-<!-- Staff Role -->
-<td class="px-6 py-4 whitespace-nowrap">
-    <span
-        class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium {% if user.is_staff %}bg-purple-100 text-purple-800{% else %}bg-gray-100 text-gray-600{% endif %}">
-        {% if user.is_staff %}Staff{% else %}User{% endif %}
-                                </span>
-                            </td>
-<!-- Joined Date -->
-<td class="px-6 py-4 whitespace-nowrap">
-    <div class="text-sm text-gray-900">{{ user.date_joined|date:"M d, Y" }}</div>
-    <div class="text-xs text-gray-500">{{ user.date_joined|timesince }} ago</div>
-</td>
 
-<!-- Actions -->
-<td class="px-6 py-4 whitespace-nowrap">
-    <div class="flex items-center space-x-2">
-        <!-- View Profile -->
-        <a href="{% url 'user_profile' user.pk %}"
-            class="inline-flex items-center p-2 bg-blue-100 hover:bg-blue-200 text-blue-700 rounded-lg transition-colors duration-200 group"
-            title="View Profile">
-            <i class="fas fa-eye group-hover:scale-110 transition-transform duration-200"></i>
+                            <!-- Joined Date -->
+                            <td class="px-6 py-4 whitespace-nowrap">
+                                <div class="text-sm text-gray-900">{{ user_data.user.date_joined|date:"M d, Y" }}</div>
+                                <div class="text-xs text-gray-500">{{ user_data.user.date_joined|timesince }} ago</div>
+                            </td>
+
+                            <!-- Actions -->
+                            <td class="px-6 py-4 whitespace-nowrap">
+                                <div class="flex items-center space-x-2">
+                                    <!-- View Profile -->
+                                    <a href="{% url 'user_profile' user_data.user.pk %}"
+                                        class="inline-flex items-center p-2 bg-blue-100 hover:bg-blue-200 text-blue-700 rounded-lg transition-colors duration-200 group"
+                                        title="View Profile">
+                                        <i
+                                            class="fas fa-eye text-sm group-hover:scale-110 transition-transform duration-200"></i>
                                     </a>
-<!-- Edit User -->
-<a href="{% url 'user_edit' user.pk %}"
-    class="inline-flex items-center p-2 bg-amber-100 hover:bg-amber-200 text-amber-700 rounded-lg transition-colors duration-200 group"
-    title="Edit User">
-    <i class="fas fa-edit group-hover:scale-110 transition-transform duration-200"></i>
+                                    <!-- Edit User -->
+                                    <a href="{% url 'user_edit' user_data.user.pk %}"
+                                        class="inline-flex items-center p-2 bg-amber-100 hover:bg-amber-200 text-amber-700 rounded-lg transition-colors duration-200 group"
+                                        title="Edit User">
+                                        <i
+                                            class="fas fa-edit text-sm group-hover:scale-110 transition-transform duration-200"></i>
                                     </a>
-<!-- Delete User -->
-<a href="{% url 'user_delete' user.pk %}"
-    class="inline-flex items-center p-2 bg-red-100 hover:bg-red-200 text-red-700 rounded-lg transition-colors duration-200 group"
-    title="Delete User">
-    <i class="fas fa-trash group-hover:scale-110 transition-transform duration-200"></i>
+                                    <!-- Delete User -->
+                                    {% if user_data.user != request.user %}
+                                    <a href="{% url 'user_delete' user_data.user.pk %}"
+                                        class="inline-flex items-center p-2 bg-red-100 hover:bg-red-200 text-red-700 rounded-lg transition-colors duration-200 group"
+                                        title="Delete User">
+                                        <i
+                                            class="fas fa-trash text-sm group-hover:scale-110 transition-transform duration-200"></i>
                                     </a>
+                                    {% endif %}
                                 </div>
                             </td>
                         </tr>
@@ -218,7 +393,7 @@
                                 <p class="text-gray-400 text-sm mt-2">Try adjusting your search criteria or add a new
                                     user</p>
                                 <a href="{% url 'user_add' %}"
-                                    class="inline-block mt-4 px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors duration-200">
+                                    class="inline-block mt-4 px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors duration-200 text-sm font-semibold">
                                     Add First User
                                 </a>
                             </td>
@@ -231,63 +406,43 @@
             <!-- Pagination -->
             {% if users.has_other_pages %}
             <div class="px-6 py-4 bg-gray-50 border-t border-gray-200">
-                <nav class="flex items-center justify-between">
+                <div class="flex flex-col sm:flex-row items-center justify-between space-y-4 sm:space-y-0">
                     <div class="text-sm text-gray-700">
                         Showing {{ users.start_index }} to {{ users.end_index }} of {{ users.paginator.count }} entries
                     </div>
                     <div class="flex space-x-2">
                         {% if users.has_previous %}
                         <a href="?page={{ users.previous_page_number }}{{ pagination_url_suffix }}"
-                            class="px-4 py-2 bg-white border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors duration-200">
+                            class="px-4 py-2 bg-white border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors duration-200 shadow-sm">
                             Previous
                         </a>
                         {% endif %}
 
                         {% for i in users.paginator.page_range %}
                         {% if users.number == i %}
-                        <span class="px-4 py-2 bg-blue-600 border border-blue-600 rounded-md text-sm font-medium text-white">
+                        <span
+                            class="px-4 py-2 bg-blue-600 border border-blue-600 rounded-lg text-sm font-medium text-white shadow-sm">
                             {{ i }}
                         </span>
-                        {% else %}
-                        <a href="?page={{ i }}{{ pagination_url_suffix }}"
-                            class="px-4 py-2 bg-white border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors duration-200">
+                        {% elif i > users.number|add:'-3' and i < users.number|add:'3' %} <a
+                            href="?page={{ i }}{{ pagination_url_suffix }}"
+                            class="px-4 py-2 bg-white border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors duration-200 shadow-sm">
                             {{ i }}
-                        </a>
-                        {% endif %}
-                        {% endfor %}
+                            </a>
+                            {% endif %}
+                            {% endfor %}
 
-                        {% if users.has_next %}
-                        <a href="?page={{ users.next_page_number }}{{ pagination_url_suffix }}"
-                            class="px-4 py-2 bg-white border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors duration-200">
-                            Next
-                        </a>
-                        {% endif %}
+                            {% if users.has_next %}
+                            <a href="?page={{ users.next_page_number }}{{ pagination_url_suffix }}"
+                                class="px-4 py-2 bg-white border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors duration-200 shadow-sm">
+                                Next
+                            </a>
+                            {% endif %}
                     </div>
-                    </nav>
+                </div>
             </div>
             {% endif %}
         </div>
     </div>
 </div>
-<style>
-    .shadow-sm {
-        box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
-    }
-
-    .transition-colors {
-        transition-property: background-color, border-color, color, fill, stroke;
-        transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
-        transition-duration: 150ms;
-    }
-
-    .hover\:scale-110:hover {
-        transform: scale(1.1);
-    }
-
-    .transition-transform {
-        transition-property: transform;
-        transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
-        transition-duration: 150ms;
-    }
-</style>
 {% endblock %}

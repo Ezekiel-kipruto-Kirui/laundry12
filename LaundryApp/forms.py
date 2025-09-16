@@ -59,9 +59,10 @@ class ProfileEditForm(forms.ModelForm):
     """Form for editing user profile (shop assignment)"""
     class Meta:
         model = UserProfile
-        fields = ['shop']
+        fields = ['shop','user_type']
         widgets = {
-            'shop': forms.Select(attrs={'class': 'form-control'})
+            'shop': forms.Select(attrs={'class': 'form-control'}),
+            'user_type': forms.Select(attrs={'class': 'form-control'})
         }
 
 
@@ -69,10 +70,11 @@ class CustomerForm(forms.ModelForm):
     """Form for customer creation and editing"""
     class Meta:
         model = Customer
-        fields = ['name', 'phone']
+        fields = ['name', 'phone','address']
         widgets = {
             'name': forms.TextInput(attrs={'class': 'form-control'}),
             'phone': forms.TextInput(attrs={'class': 'form-control'}),
+            'address': forms.TextInput(attrs={'class': 'form-control'}),
         }
     
     def clean_phone(self):
@@ -92,14 +94,14 @@ class OrderForm(forms.ModelForm):
     """Form for order creation and editing"""
     class Meta:
         model = Order
-        fields = ['shop', 'delivery_date', 'payment_type', 'payment_status', 'order_status', 'address','amount_paid', 'balance', 'addressdetails']
+        fields = ['shop', 'delivery_date', 'payment_type', 'payment_status', 'order_status','amount_paid', 'balance', 'addressdetails']
         widgets = {
             'shop': forms.Select(attrs={'class': 'form-control'}),
             'delivery_date': forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}),
             'payment_type': forms.Select(attrs={'class': 'form-control'}),
             'payment_status': forms.Select(attrs={'class': 'form-control'}),
             'order_status': forms.Select(attrs={'class': 'form-control'}),
-            'address': forms.TextInput(attrs={'class': 'form-control'}),
+            
             'addressdetails': forms.Textarea(attrs={'class': 'form-control', 'rows': 3}),
             'amount_paid': forms.NumberInput(attrs={'class': 'form-control'}),
             'balance': forms.NumberInput(attrs={'class': 'form-control'}),

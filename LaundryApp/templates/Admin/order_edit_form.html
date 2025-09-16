@@ -16,7 +16,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{% if editing %}Edit{% else %}Create{% endif %} Order - Laundry Management</title>
+    <title>{% if editing %}Edit Order - {{ order.uniquecode }}{% else %}Create New Order{% endif %} - Laundry Management
+    </title>
 </head>
 
 <body class="min-h-screen bg-gray-50 font-inter">
@@ -25,10 +26,10 @@
         <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
             <div>
                 <div class="flex items-center gap-3 mb-3">
-                    <a href="{% url 'customordertable' %}"
+                    <a href="{% if editing %}{% url 'order_detail' order_code=order.uniquecode %}{% else %}{% url 'customordertable' %}{% endif %}"
                         class="inline-flex items-center px-4 py-2 bg-white rounded-lg shadow-sm border border-gray-200 text-gray-700 hover:text-blue-600 hover:shadow-md transition-all duration-200">
                         <i class="fas fa-arrow-left mr-2"></i>
-                        <span class="text-sm font-medium">Back to Orders</span>
+                        <span class="text-sm font-medium">Back to {% if editing %}Order{% else %}Orders{% endif %}</span>
                     </a>
                 </div>
                 <h1 class="text-2xl font-bold text-gray-900">
@@ -46,97 +47,124 @@
                 {% csrf_token %}
 
                 {% if messages %}
-                <div class="bg-blue-50 border border-blue-200 text-blue-700 px-4 py-3 rounded-lg mb-6">
+                <div class="mb-6">
                     {% for message in messages %}
-                    <p class="flex items-center">
-                        <i class="fas fa-info-circle mr-2"></i>
-                        {{ message }}
-                    </p>
+                    <div
+                        class="{% if message.tags == 'error' %}bg-red-50 border-red-200 text-red-700{% else %}bg-blue-50 border-blue-200 text-blue-700{% endif %} border px-4 py-3 rounded-lg">
+                        <p class="flex items-center">
+                            <i
+                                class="fas {% if message.tags == 'error' %}fa-exclamation-circle{% else %}fa-info-circle{% endif %} mr-2"></i>
+                            {{ message }}
+                        </p>
+                    </div>
                     {% endfor %}
                 </div>
                 {% endif %}
 
-                <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
-                    <!-- Customer Information -->
-                    <div>
-                        <h2 class="text-lg font-semibold text-gray-900 mb-4 pb-2 border-b border-gray-200 flex items-center">
-                            <i class="fas fa-user text-blue-500 mr-2"></i>Customer Information
-                        </h2>
+                <!-- Customer Information Section -->
+                <div class="mb-8">
+                    <h2
+                        class="text-lg font-semibold text-gray-900 mb-4 pb-2 border-b border-gray-200 flex items-center">
+                        <i class="fas fa-user text-blue-500 mr-2"></i>Customer Information
+                    </h2>
 
-                        <div class="space-y-4">
-                            <div>
-                                <label for="id_phone" class="block text-sm font-medium text-gray-700 mb-2 flex items-center">
-                                    <i class="fas fa-phone text-gray-400 mr-2 text-sm"></i>Phone Number *
-                                </label>
-                                <input type="text" name="phone" id="id_phone" required class="w-full px-4 py-2.5 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 shadow-sm transition-all duration-200 bg-white">
-                                <small class="text-sm text-gray-500 mt-1 block">Enter customer phone number</small>
-                            </div>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Customer Name *</label>
+                            {{ customer_form.name }}
+                            {% if customer_form.name.errors %}
+                            <p class="text-red-500 text-sm mt-1">{{ customer_form.name.errors.0 }}</p>
+                            {% endif %}
+                        </div>
 
-                            <div>
-                                <label for="id_name" class="block text-sm font-medium text-gray-700 mb-2 flex items-center">
-                                    <i class="fas fa-signature text-gray-400 mr-2 text-sm"></i>Customer Name *
-                                </label>
-                                <input type="text" name="name" id="id_name" required class="w-full px-4 py-2.5 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 shadow-sm transition-all duration-200 bg-white">
-                            </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Phone Number *</label>
+                            {{ customer_form.phone }}
+                            {% if customer_form.phone.errors %}
+                            <p class="text-red-500 text-sm mt-1">{{ customer_form.phone.errors.0 }}</p>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Order Information Section -->
+                <div class="mb-8">
+                    <h2
+                        class="text-lg font-semibold text-gray-900 mb-4 pb-2 border-b border-gray-200 flex items-center">
+                        <i class="fas fa-clipboard-list text-green-500 mr-2"></i>Order Information
+                    </h2>
+
+                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Shop</label>
+                            {{ order_form.shop }}
+                            {% if order_form.shop.errors %}
+                            <p class="text-red-500 text-sm mt-1">{{ order_form.shop.errors.0 }}</p>
+                            {% endif %}
+                        </div>
+
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Order Status</label>
+                            {{ order_form.order_status }}
+                            {% if order_form.order_status.errors %}
+                            <p class="text-red-500 text-sm mt-1">{{ order_form.order_status.errors.0 }}</p>
+                            {% endif %}
+                        </div>
+
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Payment Status</label>
+                            {{ order_form.payment_status }}
+                            {% if order_form.payment_status.errors %}
+                            <p class="text-red-500 text-sm mt-1">{{ order_form.payment_status.errors.0 }}</p>
+                            {% endif %}
+                        </div>
+
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Payment Type</label>
+                            {{ order_form.payment_type }}
+                            {% if order_form.payment_type.errors %}
+                            <p class="text-red-500 text-sm mt-1">{{ order_form.payment_type.errors.0 }}</p>
+                            {% endif %}
+                        </div>
+
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Delivery Date</label>
+                            {{ order_form.delivery_date }}
+                            {% if order_form.delivery_date.errors %}
+                            <p class="text-red-500 text-sm mt-1">{{ order_form.delivery_date.errors.0 }}</p>
+                            {% endif %}
+                        </div>
+
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Amount Paid</label>
+                            {{ order_form.amount_paid }}
+                            {% if order_form.amount_paid.errors %}
+                            <p class="text-red-500 text-sm mt-1">{{ order_form.amount_paid.errors.0 }}</p>
+                            {% endif %}
                         </div>
                     </div>
 
-                    <!-- Order Information -->
-                    <div>
-                        <h2 class="text-lg font-semibold text-gray-900 mb-4 pb-2 border-b border-gray-200 flex items-center">
-                            <i class="fas fa-clipboard-list text-green-500 mr-2"></i>Order Information
-                        </h2>
+                    <div class="mt-6">
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Address</label>
+                        {{ order_form.address }}
+                        {% if order_form.address.errors %}
+                        <p class="text-red-500 text-sm mt-1">{{ order_form.address.errors.0 }}</p>
+                        {% endif %}
+                    </div>
 
-                        <div class="space-y-4">
-                            <div>
-                                <label for="id_shop" class="block text-sm font-medium text-gray-700 mb-2 flex items-center">
-                                    <i class="fas fa-store text-gray-400 mr-2 text-sm"></i>Shop
-                                </label>
-                                <select name="shop" id="id_shop" class="w-full px-4 py-2.5 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 shadow-sm transition-all duration-200 bg-white">
-                                    {% for value, label in order_form.fields.shop.choices %}
-                                    <option value="{{ value }}">{{ label }}</option>
-                                    {% endfor %}
-                                </select>
-                            </div>
-
-                            <div>
-                                <label for="id_delivery_date" class="block text-sm font-medium text-gray-700 mb-2 flex items-center">
-                                    <i class="fas fa-calendar-day text-gray-400 mr-2 text-sm"></i>Delivery Date
-                                </label>
-                                <input type="date" name="delivery_date" id="id_delivery_date" class="w-full px-4 py-2.5 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 shadow-sm transition-all duration-200 bg-white">
-                            </div>
-
-                            <div>
-                                <label for="id_payment_type" class="block text-sm font-medium text-gray-700 mb-2 flex items-center">
-                                    <i class="fas fa-credit-card text-gray-400 mr-2 text-sm"></i>Payment Type
-                                </label>
-                                <select name="payment_type" id="id_payment_type" class="w-full px-4 py-2.5 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 shadow-sm transition-all duration-200 bg-white">
-                                    {% for value, label in order_form.fields.payment_type.choices %}
-                                    <option value="{{ value }}">{{ label }}</option>
-                                    {% endfor %}
-                                </select>
-                            </div>
-
-                            <div>
-                                <label for="id_address" class="block text-sm font-medium text-gray-700 mb-2 flex items-center">
-                                    <i class="fas fa-map-marker-alt text-gray-400 mr-2 text-sm"></i>Address
-                                </label>
-                                <input type="text" name="address" id="id_address" class="w-full px-4 py-2.5 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 shadow-sm transition-all duration-200 bg-white">
-                            </div>
-
-                            <div>
-                                <label for="id_addressdetails" class="block text-sm font-medium text-gray-700 mb-2 flex items-center">
-                                    <i class="fas fa-map-pin text-gray-400 mr-2 text-sm"></i>Address Details
-                                </label>
-                                <input type="text" name="addressdetails" id="id_addressdetails" class="w-full px-4 py-2.5 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 shadow-sm transition-all duration-200 bg-white">
-                            </div>
-                        </div>
+                    <div class="mt-6">
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Address Details</label>
+                        {{ order_form.addressdetails }}
+                        {% if order_form.addressdetails.errors %}
+                        <p class="text-red-500 text-sm mt-1">{{ order_form.addressdetails.errors.0 }}</p>
+                        {% endif %}
                     </div>
                 </div>
 
                 <!-- Order Items Section -->
                 <div class="mb-8">
-                    <h2 class="text-lg font-semibold text-gray-900 mb-4 pb-2 border-b border-gray-200 flex items-center">
+                    <h2
+                        class="text-lg font-semibold text-gray-900 mb-4 pb-2 border-b border-gray-200 flex items-center">
                         <i class="fas fa-tshirt text-purple-500 mr-2"></i>Order Items
                     </h2>
 
@@ -147,55 +175,81 @@
                             <table class="w-full border-collapse" id="items-table">
                                 <thead>
                                     <tr class="bg-gray-50">
-                                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Service Type</th>
-                                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Item Type</th>
-                                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Item Name(s)</th>
-                                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Qty</th>
-                                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Condition</th>
-                                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Unit Price</th>
-                                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Additional Info</th>
-                                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Action</th>
+                                        <th
+                                            class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                            Service Type</th>
+                                        <th
+                                            class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                            Item Type</th>
+                                        <th
+                                            class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                            Item Name(s)</th>
+                                        <th
+                                            class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                            Qty</th>
+                                        <th
+                                            class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                            Condition</th>
+                                        <th
+                                            class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                            Unit Price</th>
+                                        <th
+                                            class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                            Additional Info</th>
+                                        <th
+                                            class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                            Action</th>
                                     </tr>
                                 </thead>
                                 <tbody class="divide-y divide-gray-200">
                                     {% for form in item_formset %}
                                     <tr class="transition-all duration-200 hover:bg-gray-50">
                                         <td class="px-4 py-3 border-t border-gray-200">
-                                            <select name="items-{{ forloop.counter0 }}-servicetype" class="w-full px-4 py-2.5 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 shadow-sm transition-all duration-200 bg-white">
-                                                {% for value, label in order_form.fields.servicetype.choices %}
-                                                <option value="{{ value }}" {% if form.servicetype.value == value %}selected{% endif %}>{{ label }}</option>
-                                                {% endfor %}
-                                            </select>
+                                            {{ form.servicetype }}
+                                            {% if form.servicetype.errors %}
+                                            <p class="text-red-500 text-xs mt-1">{{ form.servicetype.errors.0 }}</p>
+                                            {% endif %}
                                         </td>
                                         <td class="px-4 py-3 border-t border-gray-200">
-                                            <select name="items-{{ forloop.counter0 }}-itemtype" class="w-full px-4 py-2.5 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 shadow-sm transition-all duration-200 bg-white">
-                                                {% for value, label in order_form.fields.itemtype.choices %}
-                                                <option value="{{ value }}" {% if form.itemtype.value == value %}selected{% endif %}>{{ label }}</option>
-                                                {% endfor %}
-                                            </select>
+                                            {{ form.itemtype }}
+                                            {% if form.itemtype.errors %}
+                                            <p class="text-red-500 text-xs mt-1">{{ form.itemtype.errors.0 }}</p>
+                                            {% endif %}
                                         </td>
                                         <td class="px-4 py-3 border-t border-gray-200">
-                                            <input type="text" name="items-{{ forloop.counter0 }}-itemname" value="{{ form.itemname.value|default:'' }}" class="w-full px-4 py-2.5 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 shadow-sm transition-all duration-200 bg-white" placeholder="Item names (comma separated)">
+                                            {{ form.itemname }}
+                                            {% if form.itemname.errors %}
+                                            <p class="text-red-500 text-xs mt-1">{{ form.itemname.errors.0 }}</p>
+                                            {% endif %}
                                         </td>
                                         <td class="px-4 py-3 border-t border-gray-200">
-                                            <input type="number" name="items-{{ forloop.counter0 }}-quantity" value="{{ form.quantity.value|default:'1' }}" min="1" class="w-full px-4 py-2.5 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 shadow-sm transition-all duration-200 bg-white">
+                                            {{ form.quantity }}
+                                            {% if form.quantity.errors %}
+                                            <p class="text-red-500 text-xs mt-1">{{ form.quantity.errors.0 }}</p>
+                                            {% endif %}
                                         </td>
                                         <td class="px-4 py-3 border-t border-gray-200">
-                                            <select name="items-{{ forloop.counter0 }}-itemcondition" class="w-full px-4 py-2.5 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 shadow-sm transition-all duration-200 bg-white">
-                                                {% for value, label in order_form.fields.itemcondition.choices %}
-                                                <option value="{{ value }}" {% if form.itemcondition.value == value %}selected{% endif %}>{{ label }}</option>
-                                                {% endfor %}
-                                            </select>
+                                            {{ form.itemcondition }}
+                                            {% if form.itemcondition.errors %}
+                                            <p class="text-red-500 text-xs mt-1">{{ form.itemcondition.errors.0 }}</p>
+                                            {% endif %}
                                         </td>
                                         <td class="px-4 py-3 border-t border-gray-200">
-                                            <input type="number" name="items-{{ forloop.counter0 }}-unit_price" value="{{ form.unit_price.value|default:'' }}" step="0.01" class="w-full px-4 py-2.5 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 shadow-sm transition-all duration-200 bg-white" placeholder="0.00">
+                                            {{ form.unit_price }}
+                                            {% if form.unit_price.errors %}
+                                            <p class="text-red-500 text-xs mt-1">{{ form.unit_price.errors.0 }}</p>
+                                            {% endif %}
                                         </td>
                                         <td class="px-4 py-3 border-t border-gray-200">
-                                            <textarea name="items-{{ forloop.counter0 }}-additional_info" class="w-full px-4 py-2.5 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 shadow-sm transition-all duration-200 resize-none bg-white" rows="1" placeholder="Additional information">{{ form.additional_info.value|default:'' }}</textarea>
+                                            {{ form.additional_info }}
+                                            {% if form.additional_info.errors %}
+                                            <p class="text-red-500 text-xs mt-1">{{ form.additional_info.errors.0 }}</p>
+                                            {% endif %}
                                         </td>
                                         <td class="px-4 py-3 border-t border-gray-200">
                                             {% if not forloop.first %}
-                                            <button type="button" class="bg-red-500 text-white px-3 py-1.5 rounded text-sm font-medium shadow-sm hover:bg-red-600 transition-all duration-200 remove-row">
+                                            <button type="button"
+                                                class="bg-red-500 text-white px-3 py-1.5 rounded text-sm font-medium shadow-sm hover:bg-red-600 transition-all duration-200 remove-row">
                                                 <i class="fas fa-trash"></i>
                                             </button>
                                             {% endif %}
@@ -206,7 +260,9 @@
                             </table>
                         </div>
 
-                        <button type="button" class="bg-green-500 text-white px-4 py-2 rounded-lg font-medium shadow-md hover:bg-green-600 transition-all duration-200 mt-4 flex items-center" id="add-item">
+                        <button type="button"
+                            class="bg-green-500 text-white px-4 py-2 rounded-lg font-medium shadow-md hover:bg-green-600 transition-all duration-200 mt-4 flex items-center"
+                            id="add-item">
                             <i class="fas fa-plus mr-2"></i>Add Item
                         </button>
                     </div>
@@ -214,11 +270,12 @@
 
                 <!-- Form Actions -->
                 <div class="flex flex-col sm:flex-row gap-4 justify-end pt-6 border-t border-gray-200">
-                    <a href="{% if editing %}{% url 'order_detail' order.id %}{% else %}{% url 'customordertable' %}{% endif %}"
+                    <a href="{% if editing %}{% url 'order_detail' order_code=order.uniquecode %}{% else %}{% url 'customordertable' %}{% endif %}"
                         class="bg-gray-200 text-gray-700 px-6 py-2.5 rounded-lg font-medium shadow-md hover:bg-gray-300 transition-all duration-200 text-center flex items-center justify-center">
                         <i class="fas fa-times mr-2"></i>Cancel
                     </a>
-                    <button type="submit" class="bg-gradient-to-r from-blue-500 to-blue-600 text-white px-6 py-2.5 rounded-lg font-medium shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 transition-all duration-200 hover:from-blue-600 hover:to-blue-700 flex items-center">
+                    <button type="submit"
+                        class="bg-gradient-to-r from-blue-500 to-blue-600 text-white px-6 py-2.5 rounded-lg font-medium shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 transition-all duration-200 hover:from-blue-600 hover:to-blue-700 flex items-center">
                         <i class="fas fa-{% if editing %}save{% else %}plus{% endif %} mr-2"></i>
                         {% if editing %}Update{% else %}Create{% endif %} Order
                     </button>
@@ -231,40 +288,52 @@
     <template id="item-template">
         <tr class="transition-all duration-200 hover:bg-gray-50">
             <td class="px-4 py-3 border-t border-gray-200">
-                <select name="items-__prefix__-servicetype" class="w-full px-4 py-2.5 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 shadow-sm transition-all duration-200 bg-white">
+                <select name="items-__prefix__-servicetype"
+                    class="w-full px-4 py-2.5 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 shadow-sm transition-all duration-200 bg-white">
                     {% for value, label in order_form.fields.servicetype.choices %}
                     <option value="{{ value }}">{{ label }}</option>
                     {% endfor %}
                 </select>
             </td>
             <td class="px-4 py-3 border-t border-gray-200">
-                <select name="items-__prefix__-itemtype" class="w-full px-4 py-2.5 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 shadow-sm transition-all duration-200 bg-white">
+                <select name="items-__prefix__-itemtype"
+                    class="w-full px-4 py-2.5 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 shadow-sm transition-all duration-200 bg-white">
                     {% for value, label in order_form.fields.itemtype.choices %}
                     <option value="{{ value }}">{{ label }}</option>
                     {% endfor %}
                 </select>
             </td>
             <td class="px-4 py-3 border-t border-gray-200">
-                <input type="text" name="items-__prefix__-itemname" class="w-full px-4 py-2.5 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 shadow-sm transition-all duration-200 bg-white" placeholder="Item names (comma separated)">
+                <input type="text" name="items-__prefix__-itemname"
+                    class="w-full px-4 py-2.5 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 shadow-sm transition-all duration-200 bg-white"
+                    placeholder="Item names (comma separated)">
             </td>
             <td class="px-4 py-3 border-t border-gray-200">
-                <input type="number" name="items-__prefix__-quantity" class="w-full px-4 py-2.5 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 shadow-sm transition-all duration-200 bg-white" value="1" min="1">
+                <input type="number" name="items-__prefix__-quantity"
+                    class="w-full px-4 py-2.5 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 shadow-sm transition-all duration-200 bg-white"
+                    value="1" min="1">
             </td>
             <td class="px-4 py-3 border-t border-gray-200">
-                <select name="items-__prefix__-itemcondition" class="w-full px-4 py-2.5 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 shadow-sm transition-all duration-200 bg-white">
+                <select name="items-__prefix__-itemcondition"
+                    class="w-full px-4 py-2.5 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 shadow-sm transition-all duration-200 bg-white">
                     {% for value, label in order_form.fields.itemcondition.choices %}
                     <option value="{{ value }}">{{ label }}</option>
                     {% endfor %}
                 </select>
             </td>
             <td class="px-4 py-3 border-t border-gray-200">
-                <input type="number" name="items-__prefix__-unit_price" class="w-full px-4 py-2.5 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 shadow-sm transition-all duration-200 bg-white" step="0.01" placeholder="0.00">
+                <input type="number" name="items-__prefix__-unit_price"
+                    class="w-full px-4 py-2.5 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 shadow-sm transition-all duration-200 bg-white"
+                    step="0.01" placeholder="0.00">
             </td>
             <td class="px-4 py-3 border-t border-gray-200">
-                <textarea name="items-__prefix__-additional_info" class="w-full px-4 py-2.5 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 shadow-sm transition-all duration-200 resize-none bg-white" rows="1" placeholder="Additional information"></textarea>
+                <textarea name="items-__prefix__-additional_info"
+                    class="w-full px-4 py-2.5 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 shadow-sm transition-all duration-200 resize-none bg-white"
+                    rows="1" placeholder="Additional information"></textarea>
             </td>
             <td class="px-4 py-3 border-t border-gray-200">
-                <button type="button" class="bg-red-500 text-white px-3 py-1.5 rounded text-sm font-medium shadow-sm hover:bg-red-600 transition-all duration-200 remove-row">
+                <button type="button"
+                    class="bg-red-500 text-white px-3 py-1.5 rounded text-sm font-medium shadow-sm hover:bg-red-600 transition-all duration-200 remove-row">
                     <i class="fas fa-trash"></i>
                 </button>
             </td>
@@ -313,11 +382,11 @@
                 phoneInput.addEventListener('blur', function () {
                     const phone = this.value;
                     if (phone) {
-                        fetch(`/check-customer/?phone=${encodeURIComponent(phone)}`)
+                        fetch(`/search-customers/?q=${encodeURIComponent(phone)}`)
                             .then(response => response.json())
                             .then(data => {
-                                if (data.exists) {
-                                    document.getElementById('id_name').value = data.name;
+                                if (data.customers && data.customers.length > 0) {
+                                    document.getElementById('id_name').value = data.customers[0].name;
                                 }
                             })
                             .catch(error => {
@@ -334,8 +403,50 @@
                 const today = new Date().toISOString().split('T')[0];
                 deliveryDateInput.min = today;
             }
+
+            // Style form fields
+            document.querySelectorAll('input, select, textarea').forEach(field => {
+                if (!field.classList.contains('hidden')) {
+                    field.classList.add('w-full', 'px-4', 'py-2.5', 'border', 'border-gray-200', 'rounded-lg',
+                        'focus:ring-2', 'focus:ring-blue-500', 'focus:border-blue-500',
+                        'shadow-sm', 'transition-all', 'duration-200', 'bg-white');
+                }
+            });
+
+            // If user has single shop, disable shop selection
+            '{% if user_has_single_shop %}'
+            const shopSelect = document.querySelector('select[name="shop"]');
+            if (shopSelect) {
+                shopSelect.disabled = true;
+                shopSelect.title = "Your account is assigned to this shop only";
+            }
+            '{% endif %}'
         });
     </script>
+
+    <style>
+        /* Additional styling for form elements */
+        input:disabled,
+        select:disabled,
+        textarea:disabled {
+            background-color: #f9fafb;
+            cursor: not-allowed;
+        }
+
+        .errorlist {
+            color: #ef4444;
+            font-size: 0.875rem;
+            margin-top: 0.25rem;
+        }
+
+        /* Style for form fields with errors */
+        input.error,
+        select.error,
+        textarea.error {
+            border-color: #ef4444;
+            background-color: #fef2f2;
+        }
+    </style>
 </body>
 
 </html>

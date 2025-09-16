@@ -1,5 +1,5 @@
 from decimal import Decimal
-from django.shortcuts import render, redirect
+from django.shortcuts import render, redirect, get_object_or_404
 from django.http import HttpResponse, JsonResponse
 from django_daraja.mpesa.core import MpesaClient
 import json
@@ -10,25 +10,25 @@ from datetime import datetime
 # Django imports
 from django import forms
 from django.contrib import messages
-from django.contrib.auth.decorators import login_required, user_passes_test
+from django.contrib.auth.decorators import login_required
 from django.http import Http404
-from django.shortcuts import render, redirect
 from django.urls import reverse
 from django.utils import timezone
 from django.views.decorators.csrf import csrf_exempt
-from django.views.decorators.http import require_POST, require_http_methods
+from django.views.decorators.http import require_POST
 from django.db.models import Q, Prefetch, Sum, Count
 from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
-from django.contrib.auth import login
 from django.contrib.auth import login as auth_login, logout as auth_logout
 from django.contrib.auth.forms import AuthenticationForm
-from django.contrib.auth.decorators import login_required, user_passes_test
-from django.shortcuts import render, get_object_or_404, redirect
 from django.contrib.auth.models import User
+from django.db import IntegrityError
+from django.contrib.auth.forms import PasswordChangeForm
+from django.contrib.auth import update_session_auth_hash
+
 
 # Local imports
-from .models import Customer, Order, OrderItem, Payment,UserProfile
-from .forms import CustomerForm, OrderForm, OrderItemForm,UserEditForm, UserCreateForm
+from .models import Customer, Order, OrderItem, UserProfile
+from .forms import CustomerForm, OrderForm, OrderItemForm, UserEditForm, UserCreateForm, ProfileEditForm
 from .resource import OrderResource
 from .analytics import DashboardAnalytics
 
@@ -39,49 +39,96 @@ logger = logging.getLogger(__name__)
 SHOP_A = 'Shop A'
 SHOP_B = 'Shop B'
 
-
-def __init__(self, *args, **kwargs):
-    super().__init__(*args, **kwargs)
-    self.analytics = DashboardAnalytics(self)
-
-def get_queryset(request):
-    return super().get_queryset(request).annotate(
-        items_count=Count('items')
-    )
-
-def filter_by_shops(queryset, shops):
-    return queryset.filter(shop__in=shops)
-
-def object_belongs_to_user_shops(self, obj, user_shops):
-    return obj.shop in user_shops
-
-    
+# Cached functions and reusable queries
 def get_user_shops(request):
-    """Get the shops associated with the current user based on group membership"""
+    """Get the shops associated with the current user based on profile"""
     if request.user.is_superuser:
         return None  # Superusers can access all shops
-
-    user_groups = request.user.groups.values_list('name', flat=True)
     
-    shops = []
+    try:
+        profile = request.user.profile
+        if profile.shop:
+            return [profile.shop]
+    except UserProfile.DoesNotExist:
+        pass
+    
+    return []
 
-    if SHOP_A in user_groups:
-        shops.append(SHOP_A)
-    if SHOP_B in user_groups:
-        shops.append(SHOP_B)
+def is_admin(user):
+    return (user.is_superuser or 
+            (hasattr(user, 'profile') and user.profile.user_type == 'admin'))
 
-    return shops if shops else []
+def is_staff(user):
+    return (user.is_staff or 
+            (hasattr(user, 'profile') and user.profile.user_type in ['admin', 'staff']))
 
-def is_superuser(user):
-    return user.is_superuser
+# Decorators for permission checking
+def shop_required(view_func):
+    """Decorator to ensure user has a shop assignment"""
+    @wraps(view_func)
+    def _wrapped_view(request, *args, **kwargs):
+        user_shops = get_user_shops(request)
+        if not user_shops and not request.user.is_superuser:
+            messages.error(request, "You don't have permission to access this page.")
+            return redirect('dashboard')
+        return view_func(request, *args, **kwargs)
+    return _wrapped_view
+
+def admin_required(view_func):
+    """Decorator to ensure user is an admin"""
+    @wraps(view_func)
+    def _wrapped_view(request, *args, **kwargs):
+        if not is_admin(request.user):
+            messages.error(request, "You don't have admin privileges.")
+            return redirect('dashboard')
+        return view_func(request, *args, **kwargs)
+    return _wrapped_view
+
+def staff_required(view_func):
+    """Decorator to ensure user is staff"""
+    @wraps(view_func)
+    def _wrapped_view(request, *args, **kwargs):
+        if not is_staff(request.user):
+            messages.error(request, "You don't have staff privileges.")
+            return redirect('dashboard')
+        return view_func(request, *args, **kwargs)
+    return _wrapped_view
+
+def get_base_order_queryset():
+    """Base queryset for orders with common prefetching"""
+    return Order.objects.select_related('customer').prefetch_related(
+        Prefetch('items', queryset=OrderItem.objects.only(
+            'servicetype', 'itemname', 'quantity', 'itemtype', 
+            'itemcondition', 'total_item_price',
+        ))
+    ).only(
+        'uniquecode', 'order_status', 'payment_status','payment_type',
+        'shop', 'delivery_date', 'amount_paid', 'balance', 'total_price', 'created_at', 
+        'customer__name', 'customer__phone', 'customer__address', 'addressdetails'
+    )
+
+def apply_order_permissions(queryset, request):
+    """Apply permission-based filtering to order queryset"""
+    user_shops = get_user_shops(request)
+    
+    if user_shops is not None:  # Not superuser
+        if user_shops:  # User has shop assignments
+            queryset = queryset.filter(shop__in=user_shops)
+        else:  # User has no shop assignments
+            queryset = queryset.none()
+    
+    # For staff users, only show orders they created
+    if (hasattr(request.user, 'profile') and 
+        request.user.profile.user_type == 'staff' and 
+        not request.user.is_superuser):
+        queryset = queryset.filter(created_by=request.user)
+    
+    return queryset
 
 # Views
 @login_required
+@admin_required
 def dashboard_view(request):
-    if not request.user.is_superuser:
-        logger.warning(f"Non-superuser {request.user.username} attempted to access dashboard")
-        raise Http404("You do not have permission to access this dashboard.")
-
     current_year = timezone.now().year
     try:
         selected_year = int(request.GET.get('year', current_year))
@@ -123,26 +170,16 @@ def dashboard_view(request):
     return render(request, 'Admin/reports.html', context)
 
 @login_required
+@shop_required
 def customordertable(request):
     # Start with base queryset - exclude delivered orders from the main query
-    orders = Order.objects.select_related('customer').prefetch_related(
-        Prefetch('items', queryset=OrderItem.objects.only(
-            'servicetype', 'itemname', 'quantity', 'itemtype', 
-            'itemcondition', 'total_item_price',
-        ))
-    ).only(
-        'uniquecode', 'order_status', 'payment_status','payment_type',
-        'shop', 'delivery_date', 'amount_paid', 'balance', 'total_price', 'created_at', 
-        'customer__name', 'customer__phone', 'address', 'addressdetails'
-    ).exclude(order_status='delivered')  # Exclude delivered orders
+    orders = get_base_order_queryset().exclude(order_status='delivered')
 
-    # Apply shop filtering based on user group
-    user_shops = get_user_shops(request)
-    if user_shops is not None:  # Not superuser
-        if user_shops:  # User has shop assignments
-            orders = orders.filter(shop__in=user_shops)
-        else:  # User has no shop assignments
-            orders = orders.none()
+    # Make sure we're not including orders without uniquecode
+    orders = orders.exclude(uniquecode__isnull=True).exclude(uniquecode='')
+
+    # Apply permission filtering
+    orders = apply_order_permissions(orders, request)
 
     # Apply status filters
     status_filter = request.GET.get('status', '')
@@ -162,8 +199,7 @@ def customordertable(request):
             Q(customer__name__icontains=search_query) |
             Q(customer__phone__icontains=search_query) |
             Q(items__servicetype__icontains=search_query) |
-            Q(items__itemname__icontains=search_query) |
-            Q(address__icontains=search_query)
+            Q(items__itemname__icontains=search_query) 
         ).distinct()
 
     # Check if export was requested
@@ -194,7 +230,7 @@ def customordertable(request):
     orders = orders.order_by('-created_at')
 
     # Pagination
-    paginator = Paginator(orders, 15)  # Show 25 orders per page
+    paginator = Paginator(orders, 15)
     page_number = request.GET.get('page')
     try:
         page_obj = paginator.page(page_number)
@@ -224,12 +260,11 @@ def customordertable(request):
     return render(request, 'Admin/orders_table.html', context)
 
 @login_required
+@shop_required
 def order_detail(request, order_code):
     """View detailed information about a specific order"""
     try:
-        order = Order.objects.select_related('customer').prefetch_related(
-            Prefetch('items', queryset=OrderItem.objects.all())
-        ).get(uniquecode=order_code)
+        order = get_base_order_queryset().get(uniquecode=order_code)
         
         # Check if user has permission to view this order
         user_shops = get_user_shops(request)
@@ -237,6 +272,13 @@ def order_detail(request, order_code):
             if order.shop not in user_shops:
                 raise Http404("You don't have permission to view this order.")
         
+        # For staff users, check if they created this order
+        if (hasattr(request.user, 'profile') and 
+            request.user.profile.user_type == 'staff' and 
+            not request.user.is_superuser and
+            order.created_by != request.user):
+            raise Http404("You don't have permission to view this order.")
+            
         context = {
             'order': order,
             'today': timezone.now().date(),
@@ -247,12 +289,11 @@ def order_detail(request, order_code):
         raise Http404("Order not found")
 
 @login_required
+@shop_required
 def order_edit(request, order_code):
     """Edit an existing order"""
     try:
-        order = Order.objects.select_related('customer').prefetch_related(
-            Prefetch('items', queryset=OrderItem.objects.all())
-        ).get(uniquecode=order_code)
+        order = get_base_order_queryset().get(uniquecode=order_code)
         
         # Check if user has permission to edit this order
         user_shops = get_user_shops(request)
@@ -260,6 +301,14 @@ def order_edit(request, order_code):
             if order.shop not in user_shops:
                 messages.error(request, "You don't have permission to edit this order.")
                 return redirect('customordertable')
+        
+        # For staff users, check if they created this order
+        if (hasattr(request.user, 'profile') and 
+            request.user.profile.user_type == 'staff' and 
+            not request.user.is_superuser and
+            order.created_by != request.user):
+            messages.error(request, "You don't have permission to edit this order.")
+            return redirect('customordertable')
         
         if request.method == 'POST':
             # Create a mutable copy of the POST data
@@ -298,7 +347,7 @@ def order_edit(request, order_code):
                             order_item.save()
                     
                     # Recalculate total price
-                    updated_order.calculate_total_price()
+                    #updated_order.calculate_total_price()
                     updated_order.save()
                     
                     messages.success(request, f'Order {order.uniquecode} updated successfully!')
@@ -365,10 +414,11 @@ def order_edit(request, order_code):
         raise Http404("Order not found")
 
 @login_required
+@shop_required
 def order_delete(request, order_code):
     """Delete an order"""
     try:
-        order = Order.objects.get(uniquecode=order_code)
+        order = Order.objects.only('uniquecode', 'shop', 'created_by').get(uniquecode=order_code)
         
         # Check if user has permission to delete this order
         user_shops = get_user_shops(request)
@@ -376,6 +426,14 @@ def order_delete(request, order_code):
             if order.shop not in user_shops:
                 messages.error(request, "You don't have permission to delete this order.")
                 return redirect('customordertable')
+        
+        # For staff users, check if they created this order
+        if (hasattr(request.user, 'profile') and 
+            request.user.profile.user_type == 'staff' and 
+            not request.user.is_superuser and
+            order.created_by != request.user):
+            messages.error(request, "You don't have permission to delete this order.")
+            return redirect('customordertable')
         
         if request.method == 'POST':
             order_code = order.uniquecode
@@ -391,8 +449,8 @@ def order_delete(request, order_code):
     except Order.DoesNotExist:
         raise Http404("Order not found")
 
-
 @login_required
+@shop_required
 @require_POST
 def mark_order_completed(request, order_code):
     """Optimized mark order as completed"""
@@ -401,6 +459,16 @@ def mark_order_completed(request, order_code):
     # Check permission
     user_shops = get_user_shops(request)
     if user_shops is not None and user_shops and order.shop not in user_shops:
+        return JsonResponse({
+            'success': False,
+            'message': "You don't have permission to update this order."
+        })
+    
+    # For staff users, check if they created this order
+    if (hasattr(request.user, 'profile') and 
+        request.user.profile.user_type == 'staff' and 
+        not request.user.is_superuser and
+        order.created_by != request.user):
         return JsonResponse({
             'success': False,
             'message': "You don't have permission to update this order."
@@ -426,12 +494,12 @@ def mark_order_completed(request, order_code):
         'message': f'Order {order_code} marked as completed!'
     })
 
-
 @login_required
+@shop_required
 def update_payment_status(request, order_code):
     """Update payment status of an order"""
     try:
-        order = Order.objects.get(uniquecode=order_code)
+        order = Order.objects.only('uniquecode', 'shop', 'created_by', 'total_price').get(uniquecode=order_code)
         
         # Check if user has permission to update this order
         user_shops = get_user_shops(request)
@@ -441,6 +509,16 @@ def update_payment_status(request, order_code):
                     'success': False,
                     'message': "You don't have permission to update this order."
                 })
+        
+        # For staff users, check if they created this order
+        if (hasattr(request.user, 'profile') and 
+            request.user.profile.user_type == 'staff' and 
+            not request.user.is_superuser and
+            order.created_by != request.user):
+            return JsonResponse({
+                'success': False,
+                'message': "You don't have permission to update this order."
+            })
         
         if request.method == 'POST':
             payment_status = request.POST.get('payment_status')
@@ -478,208 +556,157 @@ def update_payment_status(request, order_code):
             'message': 'Order not found.'
         })
 
-@csrf_exempt
-@require_POST
 @login_required
-def create_order_api(request):
-    """API endpoint to create a new order"""
-    try:
-        data = json.loads(request.body)
-        
-        # Extract data from request
-        customer_data = data.get('customer', {})
-        order_data = data.get('order', {})
-        items_data = data.get('items', [])
-        
-        # Get or create customer
-        phone = customer_data.get('phone', '')
-        name = customer_data.get('name', '')
-        
-        if not phone:
-            return JsonResponse({
-                'success': False,
-                'message': 'Phone number is required'
-            }, status=400)
-        
-        customer, created = Customer.objects.get_or_create(
-            phone=phone,
-            defaults={'name': name}
-        )
-        
-        # Update customer name if it's different
-        if not created and customer.name != name:
-            customer.name = name
-            customer.save()
-        
-        # Create order with proper defaults
-        order = Order.objects.create(
-            customer=customer,
-            shop=order_data.get('shop'),
-            delivery_date=order_data.get('delivery_date'),
-            payment_type=order_data.get('payment_type', 'pending_payment'),
-            payment_status=order_data.get('payment_status', 'pending'),
-            order_status=order_data.get('order_status', 'pending'),  # Ensure default
-            address=order_data.get('address', ''),
-            addressdetails=order_data.get('addressdetails', ''),
-            created_by=request.user if request.user.is_authenticated else None
-        )
-        
-        # Create order items
-        for item_data in items_data:
-            OrderItem.objects.create(
-                order=order,
-                servicetype=item_data.get('servicetype', 'Washing'),
-                itemtype=item_data.get('itemtype', 'Clothing'),
-                itemname=item_data.get('itemname', ''),
-                quantity=item_data.get('quantity', 1),
-                itemcondition=item_data.get('itemcondition', 'new'),
-                unit_price=item_data.get('unit_price', 0),
-                additional_info=item_data.get('additional_info', '')
-            )
-        
-        # Calculate total price
-        order.calculate_total_price()
-        order.save()
-        
-        return JsonResponse({
-            'success': True,
-            'order_code': order.uniquecode,
-            'total_price': float(order.total_price),
-            'message': 'Order created successfully'
-        })
-        
-    except Exception as e:
-        logger.error(f"API Order creation error: {str(e)}")
-        return JsonResponse({
-            'success': False,
-            'message': f'Error creating order: {str(e)}'
-        }, status=400)
-
-@login_required
+@shop_required
 def createorder(request):
     """View to handle order creation with Django forms"""
-    # Get user's shop based on group membership
     user_shops = get_user_shops(request)
-    default_shop = user_shops[0] if user_shops else ''
-    
+    default_shop = user_shops[0] if user_shops else None
+
     if request.method == 'POST':
-        # Create a mutable copy of the POST data
         post_data = request.POST.copy()
-        
-        # For users with only one shop, override the shop value
+
+        # Force shop if user has only one
         if user_shops and len(user_shops) == 1:
-            post_data['shop'] = user_shops[0]
-        
-        # Ensure order_status is set to 'pending' if not provided
-        if 'order_status' not in post_data or not post_data['order_status']:
+            post_data['shop'] = str(user_shops[0].id)  # Convert to string
+
+        # Default order_status
+        if not post_data.get('order_status'):
             post_data['order_status'] = 'pending'
-        
-        # Check if customer already exists FIRST
-        phone = post_data.get('phone', '')
+
+        # --- Customer handling ---
+        phone = post_data.get('phone', '').strip()
+        customer_id = post_data.get('customer_id', '').strip()
         customer = None
         customer_exists = False
-        
-        if phone:
+
+        # Check if we have a customer ID (from selection)
+        if customer_id:
+            try:
+                customer = Customer.objects.get(id=customer_id)
+                customer_exists = True
+                # Update customer details if changed
+                if customer.name != post_data.get('name', ''):
+                    customer.name = post_data.get('name', '')
+                    customer.save()
+            except Customer.DoesNotExist:
+                customer_exists = False
+        elif phone:
+            # Fallback to phone lookup
             try:
                 customer = Customer.objects.get(phone=phone)
                 customer_exists = True
-                # If customer exists, we'll bypass the customer form validation completely
+                # Update name if different
+                if customer.name != post_data.get('name', ''):
+                    customer.name = post_data.get('name', '')
+                    customer.save()
             except Customer.DoesNotExist:
                 customer_exists = False
-        
-        # Only validate customer form if customer doesn't exist
+
         if customer_exists:
-            # Customer exists - create a minimal valid form
-            customer_form = CustomerForm({'name': post_data.get('name', ''), 'phone': phone})
-            customer_form_is_valid = True  # Bypass validation for existing customers
+            customer_form_is_valid = True
+            customer_form = None
         else:
-            # Customer doesn't exist - validate the form normally
+            # Validate new customer form
             customer_form = CustomerForm(post_data)
             customer_form_is_valid = customer_form.is_valid()
-        
-        # Validate order form and item formset
+
+        # --- Order + Items ---
         order_form = OrderForm(post_data)
         OrderItemFormSet = forms.formset_factory(OrderItemForm, extra=0)
         item_formset = OrderItemFormSet(post_data, prefix='items')
-        
+
         order_form_is_valid = order_form.is_valid()
         item_formset_is_valid = item_formset.is_valid()
-        
+
         if all([customer_form_is_valid, order_form_is_valid, item_formset_is_valid]):
             try:
-                # If customer exists, use the existing customer
-                if customer_exists:
-                    # Update customer name if it's different
-                    if customer.name != post_data.get('name', ''):
-                        customer.name = post_data.get('name', '')
-                        customer.save()
-                else:
-                    # Save new customer
+                # Save or reuse customer
+                if not customer_exists:
                     customer = customer_form.save()
-                
-                # Save order with customer reference
+
+                # Save order - don't commit yet to let the model generate the unique code
                 order = order_form.save(commit=False)
                 order.customer = customer
                 order.created_by = request.user
                 
-                # Ensure order status is set (double safety)
                 if not order.order_status:
                     order.order_status = 'pending'
                 
-                order.save()
+                # Let the model's save() method generate the unique code
+                # Don't set total_price yet as items haven't been saved
+                order.total_price = 0  # Temporary value
+                order.amount_paid = order.amount_paid or 0
+                order.balance = -order.amount_paid  # Temporary value
                 
-                # Save order items
+                # Save the order to generate the unique code
+                order.save()
+
+                # Save items
                 for form in item_formset:
                     if form.cleaned_data and not form.cleaned_data.get('DELETE', False):
                         order_item = form.save(commit=False)
                         order_item.order = order
+                        # Calculate item total if needed
+                        if hasattr(order_item, 'quantity') and hasattr(order_item, 'unit_price'):
+                            if hasattr(order_item, 'total_item_price'):
+                                order_item.total_item_price = order_item.quantity * order_item.unit_price
                         order_item.save()
+
+                # Now update the totals after all items are saved
+                total_price = sum(
+                   item.unit_price 
+                    for item in order.items.all()
+                )
+                order.total_price = total_price
+                order.balance = total_price - (order.amount_paid or 0)
                 
-                # Recalculate total price
-                order.calculate_total_price()
+                # Save again to update totals
                 order.save()
-                
-                messages.success(request, f'Order created successfully! Order code: {order.uniquecode}')
-                return redirect('customordertable')  # Update this to your URL name
-                
+
+                messages.success(request, f'Order created successfully! Code: {order.uniquecode}')
+                return redirect('customordertable')
+
+            except IntegrityError as e:
+                if 'uniquecode' in str(e):
+                    # This shouldn't happen with your model's save method, but just in case
+                    logger.error(f"Order creation error (unique code conflict): {str(e)}")
+                    messages.error(request, 'Could not create order due to system error. Please try again.')
+                else:
+                    logger.error(f"Order creation error: {str(e)}")
+                    messages.error(request, f'Error creating order: {str(e)}')
             except Exception as e:
-                messages.error(request, f'Error creating order: {str(e)}')
-                # Log the error for debugging
                 logger.error(f"Order creation error: {str(e)}")
+                messages.error(request, f'Error creating order: {str(e)}')
+
         else:
-            # Collect all form errors
+            # Collect errors
             error_messages = []
-            if not customer_form_is_valid:
+            if customer_form and not customer_form_is_valid:
                 for field, errors in customer_form.errors.items():
                     for error in errors:
                         error_messages.append(f"Customer {field}: {error}")
-            
             if not order_form_is_valid:
                 for field, errors in order_form.errors.items():
                     for error in errors:
                         error_messages.append(f"Order {field}: {error}")
-            
             if not item_formset_is_valid:
                 for i, form in enumerate(item_formset):
-                    if not form.is_valid():
-                        for field, errors in form.errors.items():
-                            for error in errors:
-                                error_messages.append(f"Item {i+1} {field}: {error}")
-            
-            messages.error(request, 'Please correct the following errors: ' + '; '.join(error_messages))
-    else:
-        # GET request - initialize empty forms
+                    for field, errors in form.errors.items():
+                        for error in errors:
+                            error_messages.append(f"Item {i+1} {field}: {error}")
+
+            messages.error(request, 'Please correct errors: ' + '; '.join(error_messages))
+
+    else:  # GET
         customer_form = CustomerForm()
         order_form = OrderForm()
         if user_shops and len(user_shops) == 1:
-            order_form.fields['shop'].initial = user_shops[0]
-        
-        # Set default order status to 'pending'
+            order_form.fields['shop'].initial = user_shops[0].id
         order_form.fields['order_status'].initial = 'pending'
-        
         OrderItemFormSet = forms.formset_factory(OrderItemForm, extra=1)
         item_formset = OrderItemFormSet(prefix='items')
-    
+
     context = {
         'customer_form': customer_form,
         'order_form': order_form,
@@ -687,29 +714,48 @@ def createorder(request):
         'user_has_single_shop': user_shops and len(user_shops) == 1,
         'user_shop': default_shop,
     }
-    
     return render(request, 'Admin/order_form.html', context)
 
 @login_required
-def check_customer(request):
-    """Check if a customer exists by phone number"""
-    phone = request.GET.get('phone', '')
-    if phone:
-        try:
-            customer = Customer.objects.get(phone=phone)
-            return JsonResponse({
-                'exists': True,
+@shop_required
+def search_customers(request):
+    """API endpoint to search for customers by phone or name"""
+    if request.method == 'GET':
+        query = request.GET.get('q', '').strip()
+        
+        if len(query) < 2:
+            return JsonResponse({'customers': []})
+        
+        customers = Customer.objects.filter(
+            Q(phone__icontains=query) | Q(name__icontains=query)
+        )[:10]  # Limit to 10 results
+        
+        # Filter by shop if user is not superuser
+        user_shops = get_user_shops(request)
+        if user_shops is not None and user_shops:
+            # Get orders from user's shops and then get those customers
+            shop_customer_ids = Order.objects.filter(
+                shop__in=user_shops
+            ).values_list('customer_id', flat=True).distinct()
+            customers = customers.filter(id__in=shop_customer_ids)
+        
+        results = []
+        for customer in customers:
+            results.append({
+                'id': customer.id,
                 'name': customer.name,
-                'phone': customer.phone
+                'phone': str(customer.phone),  # Convert PhoneNumber to string
+                'address': customer.address,
             })
-        except Customer.DoesNotExist:
-            return JsonResponse({'exists': False})
-    return JsonResponse({'exists': False})
+        
+        return JsonResponse({'customers': results})
+    
+    return JsonResponse({'error': 'Invalid request'}, status=400)
 
 @login_required
 def generaldashboard(request):
     if not request.user.is_authenticated:
-        return redirect('login')  # Update to your login URL name
+        return redirect('login')
 
     # Get user's shops
     user_shops = get_user_shops(request)
@@ -725,6 +771,13 @@ def generaldashboard(request):
         orders = Order.objects.filter(shop__in=user_shops)
         # For counts, exclude delivered orders
         count_orders = Order.objects.filter(shop__in=user_shops).exclude(order_status='Delivered')
+        
+        # For staff users, only show orders they created
+        if (hasattr(request.user, 'profile') and 
+            request.user.profile.user_type == 'staff' and 
+            not request.user.is_superuser):
+            orders = orders.filter(created_by=request.user)
+            count_orders = count_orders.filter(created_by=request.user)
     else:
         # Users with no shop assignments see nothing
         orders = Order.objects.none()
@@ -812,17 +865,19 @@ def logout_view(request):
     """Log out the current user and redirect to login page"""
     auth_logout(request)
     messages.info(request, "You have been successfully logged out.")
-    return redirect('login')  # Replace 'login' with your login URL name
+    return redirect('login')
+
 @login_required
-@user_passes_test(is_superuser)
+@admin_required
 def user_management(request):
-    """User management page for superusers"""
+    """User management page for admins"""
     users = User.objects.select_related('profile').all().order_by('-date_joined')
     
     # Get filter parameters
     search_query = request.GET.get('search', '')
     shop_filter = request.GET.get('shop', '')
     status_filter = request.GET.get('status', '')
+    user_type_filter = request.GET.get('user_type', '')
     
     # Apply filters
     if search_query:
@@ -842,6 +897,11 @@ def user_management(request):
         users = users.filter(is_active=False)
     elif status_filter == 'staff':
         users = users.filter(is_staff=True)
+    elif status_filter == 'superuser':
+        users = users.filter(is_superuser=True)
+    
+    if user_type_filter:
+        users = users.filter(profile__user_type=user_type_filter)
     
     # Prepare filter options with selected status
     shop_options = [
@@ -854,11 +914,63 @@ def user_management(request):
         {'value': '', 'label': 'All Status', 'selected': status_filter == ''},
         {'value': 'active', 'label': 'Active', 'selected': status_filter == 'active'},
         {'value': 'inactive', 'label': 'Inactive', 'selected': status_filter == 'inactive'},
-        {'value': 'staff', 'label': 'Staff', 'selected': status_filter == 'staff'}
+        {'value': 'staff', 'label': 'Staff Users', 'selected': status_filter == 'staff'},
+        {'value': 'superuser', 'label': 'Superusers', 'selected': status_filter == 'superuser'}
     ]
     
+    user_type_options = [
+        {'value': '', 'label': 'All Types', 'selected': user_type_filter == ''},
+        {'value': 'admin', 'label': 'Admins', 'selected': user_type_filter == 'admin'},
+        {'value': 'staff', 'label': 'Staff', 'selected': user_type_filter == 'staff'}
+    ]
+    
+    # Add last login information and account status to each user
+    users_with_status = []
+    for user in users:
+        # Determine account status
+        if not user.is_active:
+            status = 'inactive'
+            status_class = 'danger'
+            status_text = 'Inactive'
+        elif user.is_superuser:
+            status = 'superuser'
+            status_class = 'primary'
+            status_text = 'Superuser'
+        elif user.is_staff:
+            status = 'staff'
+            status_class = 'info'
+            status_text = 'Staff'
+        else:
+            status = 'active'
+            status_class = 'success'
+            status_text = 'Active'
+        
+        # Get last login info
+        if user.last_login:
+            last_login = user.last_login.strftime('%Y-%m-%d %H:%M')
+            days_since_login = (timezone.now() - user.last_login).days
+        else:
+            last_login = 'Never'
+            days_since_login = None
+        
+        # Get user type from profile
+        user_type = getattr(user.profile, 'user_type', 'N/A') if hasattr(user, 'profile') else 'N/A'
+        shop = getattr(user.profile, 'shop', 'Not assigned') if hasattr(user, 'profile') else 'Not assigned'
+        
+        users_with_status.append({
+            'user': user,
+            'status': status,
+            'status_class': status_class,
+            'status_text': status_text,
+            'last_login': last_login,
+            'days_since_login': days_since_login,
+            'user_type': user_type,
+            'shop': shop,
+            'is_online': user.last_login and (timezone.now() - user.last_login).seconds < 300  # Online if logged in last 5 minutes
+        })
+    
     # Pagination
-    paginator = Paginator(users, 20)
+    paginator = Paginator(users_with_status, 20)
     page_number = request.GET.get('page')
     try:
         page_obj = paginator.page(page_number)
@@ -875,83 +987,198 @@ def user_management(request):
         pagination_params.append(f'shop={shop_filter}')
     if status_filter:
         pagination_params.append(f'status={status_filter}')
+    if user_type_filter:
+        pagination_params.append(f'user_type={user_type_filter}')
     
     pagination_url_suffix = '&'.join(pagination_params)
     if pagination_url_suffix:
         pagination_url_suffix = '&' + pagination_url_suffix
+    
+    # Statistics
+    total_users = users.count()
+    active_users = users.filter(is_active=True).count()
+    inactive_users = users.filter(is_active=False).count()
+    staff_users = users.filter(is_staff=True, is_superuser=False).count()
+    superusers = users.filter(is_superuser=True).count()
+    
+    # Users who never logged in
+    never_logged_in = users.filter(last_login__isnull=True).count()
+    
+    # Recently active users (last 7 days)
+    seven_days_ago = timezone.now() - timezone.timedelta(days=7)
+    recently_active = users.filter(last_login__gte=seven_days_ago).count()
     
     context = {
         'users': page_obj,
         'search_query': search_query,
         'shop_options': shop_options,
         'status_options': status_options,
-        'total_users': users.count(),
-        'active_users': users.filter(is_active=True).count(),
-        'staff_users': users.filter(is_staff=True).count(),
+        'user_type_options': user_type_options,
+        'total_users': total_users,
+        'active_users': active_users,
+        'inactive_users': inactive_users,
+        'staff_users': staff_users,
+        'superusers': superusers,
+        'never_logged_in': never_logged_in,
+        'recently_active': recently_active,
         'pagination_url_suffix': pagination_url_suffix,
+        'current_filters': {
+            'shop': shop_filter,
+            'status': status_filter,
+            'user_type': user_type_filter
+        }
     }
     
     return render(request, 'Admin/user_management.html', context)
 
 @login_required
-@user_passes_test(is_superuser)
+@admin_required
 def user_add(request):
     """Add new user with proper validation"""
     if request.method == 'POST':
         form = UserCreateForm(request.POST)
-        if form.is_valid():
+        profile_form = ProfileEditForm(request.POST)
+
+        if form.is_valid() and profile_form.is_valid():
             try:
-                user = form.save()
-                messages.success(request, f'User {user.username} created successfully!')
+                # Save the user
+                user = form.save(commit=False)
+
+                # Assign role based on profile user_type
+                user_type = profile_form.cleaned_data.get("user_type")
+
+                if user_type == "admin":
+                    user.is_staff = True
+                    user.is_superuser = True
+                elif user_type == "staff":
+                    user.is_staff = True
+                    user.is_superuser = False
+
+                user.save()
+
+                # Create UserProfile
+                profile = profile_form.save(commit=False)
+                profile.user = user
+                profile.save()
+
+                messages.success(request, f'User {user.username} ({user_type}) created successfully!')
                 return redirect('user_management')
+
             except Exception as e:
                 messages.error(request, f'Error creating user: {str(e)}')
         else:
             # Collect all form errors
             error_messages = []
-            for field, errors in form.errors.items():
+            for field, errors in {**form.errors, **profile_form.errors}.items():
                 for error in errors:
                     error_messages.append(f"{field}: {error}")
             messages.error(request, 'Please correct the following errors: ' + '; '.join(error_messages))
     else:
         form = UserCreateForm()
-    
+        profile_form = ProfileEditForm()
+
     context = {
         'form': form,
+        'profile_form': profile_form,
         'title': 'Add New User'
     }
-    
-    # CRITICAL: Make sure this uses the correct template
+
     return render(request, 'Admin/user_form.html', context)
 
-
 @login_required
-@user_passes_test(is_superuser)
+@admin_required
 def user_edit(request, pk):
-    """Edit user information"""
+    """Edit user information including profile and password"""
     user = get_object_or_404(User, pk=pk)
     
+    # Get or create user profile
+    profile, created = UserProfile.objects.get_or_create(user=user)
+    
     if request.method == 'POST':
-        form = UserEditForm(request.POST, instance=user)
-        if form.is_valid():
-            user = form.save()
-            messages.success(request, f'User {user.username} updated successfully!')
-            return redirect('user_management')
+        user_form = UserEditForm(request.POST, instance=user, prefix='user')
+        profile_form = ProfileEditForm(request.POST, instance=profile, prefix='profile')
+        password_form = PasswordChangeForm(user, request.POST, prefix='password')
+        
+        # Check which form was submitted
+        if 'update_user' in request.POST and user_form.is_valid() and profile_form.is_valid():
+            try:
+                # Save user information
+                user = user_form.save(commit=False)
+                
+                # Update user type and permissions based on profile
+                user_type = profile_form.cleaned_data.get('user_type')
+                if user_type == 'admin':
+                    user.is_staff = True
+                    user.is_superuser = True
+                elif user_type == 'staff':
+                    user.is_staff = True
+                    user.is_superuser = False
+                
+                user.save()
+                
+                # Save profile information
+                profile = profile_form.save(commit=False)
+                profile.user = user
+                profile.save()
+                
+                messages.success(request, f'User {user.username} updated successfully!')
+                return redirect('user_management')
+                
+            except Exception as e:
+                messages.error(request, f'Error updating user: {str(e)}')
+        
+        elif 'change_password' in request.POST and password_form.is_valid():
+            try:
+                password_form.save()
+                # Update the session auth hash to keep the user logged in if changing own password
+                if request.user == user:
+                    update_session_auth_hash(request, user)
+                messages.success(request, 'Password updated successfully!')
+                return redirect('user_edit', pk=user.pk)
+                
+            except Exception as e:
+                messages.error(request, f'Error changing password: {str(e)}')
+        
+        else:
+            # Collect all form errors
+            error_messages = []
+            if not user_form.is_valid():
+                for field, errors in user_form.errors.items():
+                    for error in errors:
+                        error_messages.append(f"User {field}: {error}")
+            
+            if not profile_form.is_valid():
+                for field, errors in profile_form.errors.items():
+                    for error in errors:
+                        error_messages.append(f"Profile {field}: {error}")
+            
+            if 'change_password' in request.POST and not password_form.is_valid():
+                for field, errors in password_form.errors.items():
+                    for error in errors:
+                        error_messages.append(f"Password {field}: {error}")
+            
+            if error_messages:
+                messages.error(request, 'Please correct the following errors: ' + '; '.join(error_messages))
+    
     else:
-        form = UserEditForm(instance=user)
+        # GET request - initialize forms with current data
+        user_form = UserEditForm(instance=user, prefix='user')
+        profile_form = ProfileEditForm(instance=profile, prefix='profile')
+        password_form = PasswordChangeForm(user, prefix='password')
     
     context = {
-        'form': form,
+        'user_form': user_form,
+        'profile_form': profile_form,
+        'password_form': password_form,
         'user': user,
+        'profile': profile,
         'title': f'Edit User - {user.username}'
     }
     
-    # CRITICAL: Make sure this uses the correct template
-    return render(request, 'Admin/user_form.html', context)
-
+    return render(request, 'Admin/user_edit_form.html', context)
 
 @login_required
-@user_passes_test(is_superuser)
+@admin_required
 def user_delete(request, pk):
     """Delete a user"""
     user = get_object_or_404(User, pk=pk)
@@ -974,7 +1201,7 @@ def user_delete(request, pk):
     return render(request, 'Admin/user_confirm_delete.html', context)
 
 @login_required
-@user_passes_test(is_superuser)
+@admin_required
 def user_profile(request, pk):
     """View user profile and details"""
     user = get_object_or_404(User, pk=pk)
@@ -1001,12 +1228,13 @@ def user_profile(request, pk):
     return render(request, 'Admin/user_profile.html', context)
 
 @login_required
+@shop_required
 def customer_management(request):
     """Customer management page with search and filtering"""
     customers = Customer.objects.annotate(
         order_count=Count('orders'),
         total_spent=Sum('orders__total_price')
-    ).order_by('-id')  # Fixed: Changed from '-created_at' to '-id'
+    ).order_by('-id')
     
     # Search functionality
     search_query = request.GET.get('search', '')
@@ -1025,6 +1253,12 @@ def customer_management(request):
         ).values_list('customer_id', flat=True).distinct()
         customers = customers.filter(id__in=shop_customer_ids)
     
+    # For staff users, only show customers they created
+    if (hasattr(request.user, 'profile') and 
+        request.user.profile.user_type == 'staff' and 
+        not request.user.is_superuser):
+        customers = customers.filter(created_by=request.user)
+    
     # Pagination
     paginator = Paginator(customers, 20)
     page_number = request.GET.get('page')
@@ -1042,7 +1276,9 @@ def customer_management(request):
     }
     
     return render(request, 'Admin/customer_management.html', context)
+
 @login_required
+@shop_required
 def customer_add(request):
     """Add new customer"""
     if request.method == 'POST':
@@ -1064,6 +1300,7 @@ def customer_add(request):
     return render(request, 'Admin/customer_form.html', context)
 
 @login_required
+@shop_required
 def customer_edit(request, pk):
     """Edit customer information"""
     customer = get_object_or_404(Customer, pk=pk)
@@ -1079,6 +1316,14 @@ def customer_edit(request, pk):
         if not customer_shop_orders and not request.user.is_superuser:
             messages.error(request, "You don't have permission to edit this customer.")
             return redirect('customer_management')
+    
+    # For staff users, check if they created this customer
+    if (hasattr(request.user, 'profile') and 
+        request.user.profile.user_type == 'staff' and 
+        not request.user.is_superuser and
+        customer.created_by != request.user):
+        messages.error(request, "You don't have permission to edit this customer.")
+        return redirect('customer_management')
     
     if request.method == 'POST':
         form = CustomerForm(request.POST, instance=customer)
@@ -1098,6 +1343,7 @@ def customer_edit(request, pk):
     return render(request, 'Admin/customer_form.html', context)
 
 @login_required
+@shop_required
 def customer_delete(request, pk):
     """Delete a customer (only if they have no orders)"""
     customer = get_object_or_404(Customer, pk=pk)
@@ -1112,6 +1358,14 @@ def customer_delete(request, pk):
         if not customer_shop_orders and not request.user.is_superuser:
             messages.error(request, "You don't have permission to delete this customer.")
             return redirect('customer_management')
+    
+    # For staff users, check if they created this customer
+    if (hasattr(request.user, 'profile') and 
+        request.user.profile.user_type == 'staff' and 
+        not request.user.is_superuser and
+        customer.created_by != request.user):
+        messages.error(request, "You don't have permission to delete this customer.")
+        return redirect('customer_management')
     
     if request.method == 'POST':
         # Check if customer has orders
@@ -1131,6 +1385,7 @@ def customer_delete(request, pk):
     return render(request, 'Admin/customer_confirm_delete.html', context)
 
 @login_required
+@shop_required
 def customer_orders(request, pk):
     """View all orders for a specific customer"""
     customer = get_object_or_404(Customer, pk=pk)
@@ -1144,6 +1399,12 @@ def customer_orders(request, pk):
         if not orders.exists():
             messages.error(request, "You don't have permission to view this customer's orders.")
             return redirect('customer_management')
+    
+    # For staff users, only show orders they created
+    if (hasattr(request.user, 'profile') and 
+        request.user.profile.user_type == 'staff' and 
+        not request.user.is_superuser):
+        orders = orders.filter(created_by=request.user)
     
     # Get statistics
     total_orders = orders.count()
@@ -1168,4 +1429,4 @@ def customer_orders(request, pk):
         'avg_order_value': avg_order_value,
     }
     
-    return render(request, 'Admin/customer_orders.html', context)
+    return render(request, 'Admin/customer_orders.html', context) 

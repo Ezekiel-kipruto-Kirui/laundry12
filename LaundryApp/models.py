@@ -27,6 +27,12 @@ class UserProfile(models.Model):
         
     )
     shop = models.CharField(max_length=50, choices=SHOP_CHOICES, default='None')
+    USER_TYPE_CHOICES = (
+        ('admin', 'Admin'),
+        ('staff', 'Staff'),
+    )
+    user_type = models.CharField(choices=USER_TYPE_CHOICES)
+
     
     def __str__(self):
         return f"{self.user.username} - {self.shop}"
@@ -45,7 +51,8 @@ def save_user_profile(sender, instance, **kwargs):
 
 class Customer(models.Model):
     name = models.CharField(max_length=200)
-    phone = PhoneNumberField(region="KE")
+    phone = PhoneNumberField(region="KE",unique=True)
+    address = models.CharField(max_length=255, default='', blank=True)
     created_by = models.ForeignKey(
         User, 
         on_delete=models.SET_NULL, 
@@ -113,7 +120,7 @@ class Order(models.Model):
     )
     order_status = models.CharField(max_length=50, choices=ORDER_STATUS_CHOICES, default='pending', db_index=True)
     
-    address = models.CharField(max_length=255, default='', blank=True)
+    
     addressdetails = models.TextField(default='', blank=True)
     
     amount_paid = models.DecimalField(max_digits=12, decimal_places=2, default=0)
@@ -125,6 +132,7 @@ class Order(models.Model):
     # Store the previous status in the database instead of instance variable
     previous_order_status = models.CharField(max_length=50, blank=True, null=True)
 
+ 
     def save(self, *args, **kwargs):
         # Transactional unique code generation to prevent race conditions
         with transaction.atomic():
@@ -140,7 +148,13 @@ class Order(models.Model):
                     raise IntegrityError("Could not generate a unique order code after multiple attempts.")
             
             # Calculate balance before saving
-            self.balance = self.total_price - self.amount_paid
+            if self.amount_paid == 0:
+                self.payment_status = 'pending'
+            elif self.balance == 0:
+                self.payment_status = 'completed'
+            elif self.balance > 0 and self.balance < self.total_price:
+                self.payment_status = 'partial'
+
             
             # Store current status as previous before saving
             if self.pk:

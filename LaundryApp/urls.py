@@ -22,28 +22,23 @@ urlpatterns = [
     
     path('', views.generaldashboard, name='dashboard'),
 
-    
-    path('Tables/', views.customordertable, name='customordertable'),
-    
+    path('search-customers/', views.search_customers, name='search_customers'),
     path('createorder/', views.createorder, name='createorder'),
-    
-    #path('create-order-api/', views.create_order_api, name='create_order_api'),
-    
-    #path('check-customer/', views.check_customer, name='check_customer'),
 
-
+    path('Tables/', views.customordertable, name='customordertable'),
     path('order/<str:order_code>/', views.order_detail, name='order_detail'),
     path('order/<str:order_code>/edit/', views.order_edit, name='order_edit'),
     path('order/<str:order_code>/delete/', views.order_delete, name='order_delete'),
     path('order/<str:order_code>/complete/', views.mark_order_completed, name='mark_order_completed'),
     path('order/<str:order_code>/update-payment/', views.update_payment_status, name='update_payment_status'),
     
-     path('user-management/', views.user_management, name='user_management'),
+    path('user-management/', views.user_management, name='user_management'),
     path('user/add/', views.user_add, name='user_add'),
     path('user/<int:pk>/edit/', views.user_edit, name='user_edit'),
     path('user/<int:pk>/delete/', views.user_delete, name='user_delete'),
     path('user/<int:pk>/profile/', views.user_profile, name='user_profile'),
     
+   
     # Customer Management URLs
     path('customer-management/', views.customer_management, name='customer_management'),
     path('customer/add/', views.customer_add, name='customer_add'),
