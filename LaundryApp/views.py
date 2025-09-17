@@ -1434,9 +1434,44 @@ def customer_orders(request, pk):
     
     return render(request, 'Admin/customer_orders.html', context) 
 
+
 @login_required
 def create_expense_field(request):
+    # Default expense categories
+    default_expenses = [
+        "Electricity Token",
+        "Soap",
+        "Softener",
+        "Bleach",
+        "Stain removers",
+        "Laundry Bags",
+        "Hangers",
+        "Laundry Starch",
+        "Rent",
+        "Salaries",
+        "Delivery fees",
+        "Tags",
+        "Machine service fee"
+    ]
+    
     if request.method == "POST":
+        # Check if user wants to create default expenses
+        if 'create_defaults' in request.POST:
+            created_count = 0
+            for expense_name in default_expenses:
+                # Check if expense field already exists
+                if not ExpenseField.objects.filter(label=expense_name).exists():
+                    ExpenseField.objects.create(label=expense_name)
+                    created_count += 1
+            
+            if created_count > 0:
+                messages.success(request, f"Successfully created {created_count} default expense categories!")
+            else:
+                messages.info(request, "All default expense categories already exist.")
+            
+            return redirect("expense_field_list")
+        
+        # Process the regular form submission
         form = ExpenseFieldForm(request.POST)
         if form.is_valid():
             form.save()
@@ -1444,7 +1479,12 @@ def create_expense_field(request):
             return redirect("expense_field_list")
     else:
         form = ExpenseFieldForm()
-    return render(request, "expenses/create_expense_field.html", {"form": form})
+    
+    return render(request, "expenses/create_expense_field.html", {
+        "form": form,
+        "default_expenses": default_expenses
+    })
+
 
 @login_required
 def expense_field_list(request):
