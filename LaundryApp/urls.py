@@ -46,6 +46,13 @@ urlpatterns = [
     path('customer/<int:pk>/delete/', views.customer_delete, name='customer_delete'),
     path('customer/<int:pk>/orders/', views.customer_orders, name='customer_orders'),
    
-
+    path('expense-fields/create/', views.create_expense_field, name='create_expense_field'),
+    path('expense-fields/', views.expense_field_list, name='expense_field_list'),
+    path('expense-fields/edit/<int:field_id>/', views.edit_expense_field, name='edit_expense_field'),
+    path('expense-fields/delete/<int:field_id>/', views.delete_expense_field, name='delete_expense_field'),
+    path('expenses/create/', views.expense_form, name='expense_form'),
+    path('expenses/', views.expense_list, name='expense_list'),
+    path('expenses/edit/<int:record_id>/', views.edit_expense_record, name='edit_expense_record'),
+    path('expenses/delete/<int:record_id>/', views.delete_expense_record, name='delete_expense_record'),
     
 ]

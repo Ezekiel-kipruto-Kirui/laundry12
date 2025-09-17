@@ -1,0 +1,61 @@
+{% extends "../home.html" %}
+
+{% block title %}Record Expense - Expense Manager{% endblock %}
+
+{% block content %}
+<div class="max-w-md mx-auto">
+    <h1 class="text-2xl font-bold text-gray-800 mb-6">Record Expense</h1>
+
+    <div class="bg-white shadow-md rounded-lg p-6">
+        <form method="post">
+            {% csrf_token %}
+
+            <div class="mb-4">
+                <label for="{{ form.field.id_for_label }}"
+                    class="block text-sm font-medium text-gray-700 mb-1">Field</label>
+                {{ form.field }}
+                {% if form.field.errors %}
+                <p class="text-red-500 text-xs mt-1">{{ form.field.errors.0 }}</p>
+                {% endif %}
+            </div>
+
+            <div class="mb-4">
+                <label for="{{ form.amount.id_for_label }}"
+                    class="block text-sm font-medium text-gray-700 mb-1">Amount</label>
+                {{ form.amount }}
+                {% if form.amount.errors %}
+                <p class="text-red-500 text-xs mt-1">{{ form.amount.errors.0 }}</p>
+                {% endif %}
+            </div>
+
+            <div class="mb-4">
+                <label for="{{ form.date.id_for_label }}"
+                    class="block text-sm font-medium text-gray-700 mb-1">Date</label>
+                {{ form.date }}
+                {% if form.date.errors %}
+                <p class="text-red-500 text-xs mt-1">{{ form.date.errors.0 }}</p>
+                {% endif %}
+            </div>
+
+            <div class="mb-4">
+                <label for="{{ form.notes.id_for_label }}"
+                    class="block text-sm font-medium text-gray-700 mb-1">Notes</label>
+                {{ form.notes }}
+                {% if form.notes.errors %}
+                <p class="text-red-500 text-xs mt-1">{{ form.notes.errors.0 }}</p>
+                {% endif %}
+            </div>
+
+            <div class="flex space-x-3">
+                <button type="submit" class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg">
+                    Save Expense
+                </button>
+                <a href="{% url 'expense_list' %}"
+                    class="bg-gray-300 hover:bg-gray-400 text-gray-800 px-4 py-2 rounded-lg">
+                    Cancel
+                </a>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

@@ -1,38 +1,118 @@
-{% extends "base.html" %}
+{% extends "./base.html" %}
+{% load static tailwind_tags %}
 
-{% block title %}Login - Laundry Management System{% endblock %}
+{% block title %}Login - Clean Page Laundry{% endblock %}
 
 {% block content %}
-<div class="auth-container">
-    <h2 class="text-center mb-4">Login</h2>
+<div
+    class="min-h-screen flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8 bg-gradient-to-br from-slate-50 via-white to-blue-50/60">
+    <div class="max-w-md w-full">
+        <!-- Card Container -->
+        <div class="bg-white rounded-2xl shadow-xl overflow-hidden border border-gray-100">
+            <!-- Decorative Header -->
+            <div class="bg-gradient-to-r from-blue-600 to-indigo-700 py-8 px-8 relative overflow-hidden">
+                <!-- Subtle pattern overlay -->
+                <div class="absolute inset-0 opacity-10">
+                    <div class="absolute inset-0"
+                        style="background-image: url('data:image/svg+xml,%3Csvg width=\'20\' height=\'20\' viewBox=\'0 0 20 20\' xmlns=\'http://www.w3.org/2000/svg\'%3E%3Cpath d=\'M0 0h20L0 20z\' fill=\'%23ffffff\' fill-opacity=\'0.2\'/%3E%3C/svg%3E');">
+                    </div>
+                </div>
 
-    {% if form.errors %}
-    <div class="alert alert-danger">
-        Your username and password didn't match. Please try again.
-    </div>
-    {% endif %}
+                <div class="flex items-center justify-center relative z-10">
+                    <div class="bg-blue-500 p-2 rounded-full backdrop-blur-sm shadow-lg">
+                        <i class="fas fa-shirt text-white text-3xl"></i>
+                    </div>
+                </div>
+                <h2 class="mt-2 text-center text-3xl font-bold text-blue-200 tracking-tight">
+                    Welcome Back
+                </h2>
+                <p class="mt-2 text-center text-blue-100 text-sm font-medium">
+                    Sign in to your Clean Page Laundry account
+                </p>
+            </div>
 
-    <form method="post" action="{% url 'login' %}">
-        {% csrf_token %}
+            <!-- Form Content -->
+            <div class="px-6 py-4">
+                {% if form.errors %}
+                <div class="bg-red-50 border-l-4 border-red-500 p-4 mb-6 rounded-lg flex items-start shadow-sm">
+                    <div class="flex-shrink-0 mt-0.5">
+                        <i class="fas fa-exclamation-circle text-red-500"></i>
+                    </div>
+                    <div class="ml-3">
+                        <p class="text-sm text-red-800 font-medium">
+                            Your username and password didn't match. Please try again.
+                        </p>
+                    </div>
+                </div>
+                {% endif %}
 
-        <div class="mb-3">
-            <label for="id_username" class="form-label">Username</label>
-            <input type="text" name="username" class="form-control" id="id_username" required>
+                <form class="space-y-6 p-4 " method="post" action="{% url 'login' %}">
+                    {% csrf_token %}
+                    <input type="hidden" name="next" value="{{ next }}">
+
+                    <div class="space-y-5">
+                        <div>
+                            <label for="id_username" class="block text-sm font-semibold text-gray-800 mb-2">
+                                Username
+                            </label>
+                            <div class="relative">
+                                <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                    <i class="fas fa-user text-gray-500"></i>
+                                </div>
+                                <input id="id_username" name="username" type="text" required
+                                    class="block w-full pl-10 pr-3 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-600 focus:border-blue-600 transition duration-200 ease-in-out bg-gray-50/50 hover:bg-gray-50"
+                                    placeholder="Enter your username">
+                            </div>
+                        </div>
+
+                        <div>
+                            <label for="id_password" class="block text-sm font-semibold text-gray-800 mb-2">
+                                Password
+                            </label>
+                            <div class="relative">
+                                <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                    <i class="fas fa-lock text-gray-500"></i>
+                                </div>
+                                <input id="id_password" name="password" type="password" required
+                                    class="block w-full pl-10 pr-3 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-600 focus:border-blue-600 transition duration-200 ease-in-out bg-gray-50/50 hover:bg-gray-50"
+                                    placeholder="Enter your password">
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="flex items-center justify-between">
+                       
+
+                        <div class="text-sm">
+                            
+                        </div>
+                    </div>
+
+                    <div>
+                        <button type="submit"
+                            class=" bg-blue-800 m-8 relative w-full p-4 flex  justify-center py-3.5 px-4 border border-transparent text-base font-semibold rounded-lg text-white bg-gradient-to-r from-blue-600 to-indigo-700 hover:from-blue-700 hover:to-indigo-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-600 transition-all duration-300 ease-in-out shadow-md hover:shadow-lg">
+                            <span class="absolute left-0 inset-y-0 flex items-center pl-3">
+                                
+                            </span>
+                            Sign in
+                        </button>
+                    </div>
+                </form>
+
+                <div class="mt-8 text-center pt-5 border-t border-gray-200">
+                    <p class="text-sm text-gray-700">
+                        Don't have an account?
+                        <a href="#"
+                            class="font-semibold text-blue-700 hover:text-blue-800 transition-colors duration-200 ml-1">
+                            Contact us to register
+                        </a>
+                    </p>
+                </div>
+            </div>
         </div>
 
-        <div class="mb-3">
-            <label for="id_password" class="form-label">Password</label>
-            <input type="password" name="password" class="form-control" id="id_password" required>
-        </div>
-
-        <button type="submit" class="btn btn-primary w-100">Login</button>
-
-        <input type="hidden" name="next" value="{{ next }}">
-    </form>
-
-    <div class="text-center mt-3">
-        <p>Don't have an account? <a href="{% url 'django_registration_register' %}">Register here</a></p>
-        <p><a href="#">Forgot your password?</a></p>
+        <!-- Copyright notice -->
+        
     </div>
 </div>
 {% endblock %}

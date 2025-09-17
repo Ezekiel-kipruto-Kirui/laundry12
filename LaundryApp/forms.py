@@ -2,7 +2,7 @@
 from django import forms
 from django.contrib.auth.forms import AuthenticationForm, UserCreationForm, UserChangeForm, PasswordChangeForm
 from django.contrib.auth.models import User, Group
-from .models import Customer, Order, OrderItem, UserProfile
+from .models import Customer, Order, OrderItem, UserProfile,ExpenseField,ExpenseRecord
 
 class CustomAuthenticationForm(AuthenticationForm):
     """Custom authentication form with additional styling"""
@@ -171,4 +171,32 @@ class UserCreateForm(UserCreationForm):
             profile.save()
         
         return user
+    
+class ExpenseFieldForm(forms.ModelForm):
+    class Meta:
+        model = ExpenseField
+        fields = ['label']
+        widgets = {
+            'label': forms.TextInput(attrs={
+                'class': 'w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500'
+            })
+            
+        }
+
+class ExpenseRecordForm(forms.ModelForm):
+    class Meta:
+        model = ExpenseRecord
+        fields = ['field', 'amount']
+        widgets = {
+            'field': forms.Select(attrs={
+                'class': 'w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500'
+            }),
+            'amount': forms.NumberInput(attrs={
+                'class': 'w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500',
+                'step': '0.01'
+            }),
+          
+            
+        }
+ 
 

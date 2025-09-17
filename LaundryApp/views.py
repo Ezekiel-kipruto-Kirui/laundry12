@@ -5,7 +5,7 @@ from django_daraja.mpesa.core import MpesaClient
 import json
 import logging
 from functools import wraps
-from datetime import datetime
+from datetime import datetime, date, timedelta
 
 # Django imports
 from django import forms
@@ -16,7 +16,7 @@ from django.urls import reverse
 from django.utils import timezone
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_POST
-from django.db.models import Q, Prefetch, Sum, Count
+from django.db.models import Q, Prefetch, Sum, Count, Avg
 from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
 from django.contrib.auth import login as auth_login, logout as auth_logout
 from django.contrib.auth.forms import AuthenticationForm
@@ -27,8 +27,9 @@ from django.contrib.auth import update_session_auth_hash
 
 
 # Local imports
-from .models import Customer, Order, OrderItem, UserProfile
-from .forms import CustomerForm, OrderForm, OrderItemForm, UserEditForm, UserCreateForm, ProfileEditForm
+from .models import Customer, Order, OrderItem, UserProfile,ExpenseField, ExpenseRecord
+from .forms import CustomerForm, OrderForm, OrderItemForm, UserEditForm, UserCreateForm, ProfileEditForm,ExpenseFieldForm, ExpenseRecordForm
+
 from .resource import OrderResource
 from .analytics import DashboardAnalytics
 
@@ -1200,6 +1201,8 @@ def user_delete(request, pk):
     
     return render(request, 'Admin/user_confirm_delete.html', context)
 
+
+
 @login_required
 @admin_required
 def user_profile(request, pk):
@@ -1430,3 +1433,94 @@ def customer_orders(request, pk):
     }
     
     return render(request, 'Admin/customer_orders.html', context) 
+
+@login_required
+def create_expense_field(request):
+    if request.method == "POST":
+        form = ExpenseFieldForm(request.POST)
+        if form.is_valid():
+            form.save()
+            messages.success(request, "Expense field created successfully!")
+            return redirect("expense_field_list")
+    else:
+        form = ExpenseFieldForm()
+    return render(request, "expenses/create_expense_field.html", {"form": form})
+
+@login_required
+def expense_field_list(request):
+    fields = ExpenseField.objects.all()
+    return render(request, "expenses/expense_field_list.html", {"fields": fields})
+
+@login_required
+def edit_expense_field(request, field_id):
+    field = get_object_or_404(ExpenseField, id=field_id)
+    if request.method == "POST":
+        form = ExpenseFieldForm(request.POST, instance=field)
+        if form.is_valid():
+            form.save()
+            messages.success(request, "Expense field updated successfully!")
+            return redirect("expense_field_list")
+    else:
+        form = ExpenseFieldForm(instance=field)
+    return render(request, "expenses/edit_expense_field.html", {"form": form, "field": field})
+
+@login_required
+def delete_expense_field(request, field_id):
+    field = get_object_or_404(ExpenseField, id=field_id)
+    if request.method == "POST":
+        field.delete()
+        messages.success(request, "Expense field deleted successfully!")
+        return redirect("expense_field_list")
+    return render(request, "expenses/delete_expense_field.html", {"field": field})
+
+@login_required
+def expense_form(request):
+    if request.method == "POST":
+        form = ExpenseRecordForm(request.POST)
+        if form.is_valid():
+            expense_record = form.save(commit=False)
+            expense_record.save()
+            messages.success(request, "Expense recorded successfully!")
+            return redirect("expense_list")
+    else:
+        form = ExpenseRecordForm()
+    return render(request, "expenses/expense_form.html", {"form": form})
+
+@login_required
+def expense_list(request):
+    records = ExpenseRecord.objects.select_related("field").order_by("-date")
+    
+    # Calculate stats for the cards
+    total_amount = records.aggregate(Sum('amount'))['amount__sum'] or 0
+    record_count = records.count()
+    average_expense = records.aggregate(Avg('amount'))['amount__avg'] or 0
+    
+    context = {
+        "records": records,
+        "total_amount": total_amount,
+        "record_count": record_count,
+        "average_expense": round(average_expense, 2),
+    }
+    return render(request, "expenses/expense_list.html", context)
+
+@login_required
+def edit_expense_record(request, record_id):
+    record = get_object_or_404(ExpenseRecord, id=record_id)
+    if request.method == "POST":
+        form = ExpenseRecordForm(request.POST, instance=record)
+        if form.is_valid():
+            form.save()
+            messages.success(request, "Expense record updated successfully!")
+            return redirect("expense_list")
+    else:
+        form = ExpenseRecordForm(instance=record)
+    return render(request, "expenses/edit_expense_record.html", {"form": form, "record": record})
+
+@login_required
+def delete_expense_record(request, record_id):
+    record = get_object_or_404(ExpenseRecord, id=record_id)
+    if request.method == "POST":
+        record.delete()
+        messages.success(request, "Expense record deleted successfully!")
+        return redirect("expense_list")
+    return render(request, "expenses/delete_expense_record.html", {"record": record})

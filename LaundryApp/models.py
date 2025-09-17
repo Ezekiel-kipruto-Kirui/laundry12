@@ -257,6 +257,22 @@ class OrderItem(models.Model):
             return f"{self.quantity} x {', '.join(items[:3])}... ({self.servicetype})"
         return f"{self.quantity} x {', '.join(items)} ({self.servicetype})"
 
+class ExpenseField(models.Model):
+    label = models.CharField(max_length=100) 
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return self.label
+
+
+class ExpenseRecord(models.Model):
+    field = models.ForeignKey(ExpenseField, on_delete=models.CASCADE)
+    amount = models.DecimalField(max_digits=10, decimal_places=2)
+    date = models.DateField(auto_now_add=True)
+
+    def __str__(self):
+        return f"{self.field.label}: {self.amount}"
+
 
 class Payment(models.Model):
     order = models.OneToOneField(Order, on_delete=models.CASCADE, related_name='payment')
