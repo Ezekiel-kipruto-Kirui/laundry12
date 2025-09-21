@@ -46,28 +46,26 @@ class FoodItem(models.Model):
 
 
 class Order(models.Model):
-    created_by =  models.ForeignKey(
+    created_by = models.ForeignKey(
         settings.AUTH_USER_MODEL,
-        on_delete=models.CASCADE)
+        on_delete=models.CASCADE
+    )
     STATUS_CHOICE = [
-        ('Served','Served'),
-        ('In Progress','In Progress'),
+        ('Served', 'Served'),
+        ('In Progress', 'In Progress'),
     ]
-    order_status = models.CharField(choices=STATUS_CHOICE,default='In progress',db_index=True)
+    order_status = models.CharField(
+        choices=STATUS_CHOICE,
+        default='In Progress',   # ✅ fixed mismatch
+        db_index=True
+    )
     created_at = models.DateTimeField(auto_now_add=True, db_index=True)
 
     def __str__(self):
-        return f"Order {self.id} by {self.user.username}"
+        return f"Order {self.id} by {self.created_by.username}"   # ✅ fixed
+
     def get_total(self):
-        """Calculate total order amount"""
-        total = 0
-        for item in self.order_items.all():
-            total += item.quantity * item.food_item.price
-        return total
-    
-    def get_order_status_display(self):
-        """Get human-readable status"""
-        return dict(self.STATUS_CHOICE).get(self.order_status, self.order_status)
+        return sum(item.quantity * item.food_item.price for item in self.order_items.all())
 
 
 class OrderItem(models.Model):

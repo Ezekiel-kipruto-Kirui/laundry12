@@ -164,9 +164,9 @@
                     <div class="w-6 h-6 bg-blue-500 rounded-lg flex items-center justify-center">
                         {% if user.is_authenticated and user.is_superuser %}
                         <i class="fas fa-cog text-white text-sm"></i>
-                        {% elif user.is_authenticated and user.groups.all.0.name == 'Hotel Staff' %}
+                        {% elif app_type == 'hotel' %}
                         <i class="fas fa-utensils text-white text-sm"></i>
-                        {% elif user.is_authenticated and user.groups.all.0.name == 'Laundry Staff' %}
+                        {% elif app_type == 'laundry' %}
                         <i class="fas fa-shirt text-white text-sm"></i>
                         {% else %}
                         <i class="fas fa-building text-white text-sm"></i>
@@ -175,16 +175,16 @@
                     <span class="text-white text-sm font-medium sidebar-header-text">
                         {% if user.is_authenticated and user.is_superuser %}
                         Admin Panel
-                        {% elif user.is_authenticated and user.groups.all.0.name == 'Hotel Staff' %}
+                        {% elif app_type == 'hotel' %}
                         Hotel Management
-                        {% elif user.is_authenticated and user.groups.all.0.name == 'Laundry Staff' %}
+                        {% elif app_type == 'laundry' %}
                         Laundry Management
                         {% else %}
                         Welcome
                         {% endif %}
                     </span>
                 </div>
-                {% if user.is_superuser %}
+                {% if user.is_superuser or app_type == 'hotel' or app_type == 'laundry' %}
                 <button id="sidebar-toggle" class="sidebar-toggle-btn text-gray-400 hover:text-white lg:flex hidden">
                     <i class="fas fa-chevron-left"></i>
                 </button>
@@ -304,27 +304,18 @@
                     <i class="fas fa-cog w-5 text-center"></i>
                     <span class="sidebar-text">Site Management</span>
                 </a>
-                {% endif %}
 
-                <!-- Hotel Navigation (shown to hotel staff and regular users) -->
-                {% if user.is_authenticated and not user.is_superuser and not user.groups.all.0.name == 'Laundry Staff' or not user.is_authenticated %}
-                <!-- Dashboard for hotel users -->
-                <a href="{% url 'laundry:dashboard' %}"
+                <!-- Hotel App Navigation -->
+                {% elif user.app_type == 'hotel' %}
+                <!-- Dashboard -->
+                <a href="{% url 'hotel:category_list' %}"
                     class="flex items-center space-x-3 px-3 py-2 lg:px-4 lg:py-3 text-gray-300 hover:bg-gray-700 hover:text-white rounded-lg transition-colors group"
                     title="Dashboard">
                     <i class="fas fa-tachometer-alt w-5 text-center"></i>
                     <span class="sidebar-text">Dashboard</span>
                 </a>
 
-                <!-- Menu -->
-                <a href="{% url 'hotel:menu' %}"
-                    class="flex items-center space-x-3 px-3 py-2 lg:px-4 lg:py-3 text-gray-300 hover:bg-gray-700 hover:text-white rounded-lg transition-colors group"
-                    title="Menu">
-                    <i class="fas fa-utensils w-5 text-center"></i>
-                    <span class="sidebar-text">Menu</span>
-                </a>
-
-                <!-- Categories (for hotel staff and regular users) -->
+                <!-- Categories -->
                 <a href="{% url 'hotel:category_list' %}"
                     class="flex items-center space-x-3 px-3 py-2 lg:px-4 lg:py-3 text-gray-300 hover:bg-gray-700 hover:text-white rounded-lg transition-colors group"
                     title="Categories">
@@ -332,7 +323,7 @@
                     <span class="sidebar-text">Categories</span>
                 </a>
 
-                <!-- Food Items (for hotel staff and regular users) -->
+                <!-- Food Items -->
                 <a href="{% url 'hotel:food_item_list' %}"
                     class="flex items-center space-x-3 px-3 py-2 lg:px-4 lg:py-3 text-gray-300 hover:bg-gray-700 hover:text-white rounded-lg transition-colors group"
                     title="Food Items">
@@ -355,10 +346,9 @@
                     <i class="fas fa-receipt w-5 text-center"></i>
                     <span class="sidebar-text">Orders</span>
                 </a>
-                {% endif %}
 
-                <!-- Laundry Navigation (shown to laundry staff only) -->
-                {% if user.is_authenticated and user.groups.all.0.name == 'Laundry Staff' %}
+                <!-- Laundry App Navigation -->
+                {% elif user.app_type == 'laundry' %}
                 <!-- Dashboard -->
                 <a href="{% url 'laundry:dashboard' %}"
                     class="flex items-center space-x-3 px-3 py-2 lg:px-4 lg:py-3 text-gray-300 hover:bg-gray-700 hover:text-white rounded-lg transition-colors group"
@@ -390,15 +380,48 @@
                     <i class="fas fa-users w-5 text-center"></i>
                     <span class="sidebar-text">Customers</span>
                 </a>
-                {% endif %}
+
+                <!-- Regular Users (Customers) -->
+                {% elif user.is_authenticated %}
+                <!-- Categories -->
+                <a href="{% url 'hotel:category_list' %}"
+                    class="flex items-center space-x-3 px-3 py-2 lg:px-4 lg:py-3 text-gray-300 hover:bg-gray-700 hover:text-white rounded-lg transition-colors group"
+                    title="Categories">
+                    <i class="fas fa-folder w-5 text-center"></i>
+                    <span class="sidebar-text">Categories</span>
+                </a>
+
+                <!-- Food Items -->
+                <a href="{% url 'hotel:food_item_list' %}"
+                    class="flex items-center space-x-3 px-3 py-2 lg:px-4 lg:py-3 text-gray-300 hover:bg-gray-700 hover:text-white rounded-lg transition-colors group"
+                    title="Food Items">
+                    <i class="fas fa-hamburger w-5 text-center"></i>
+                    <span class="sidebar-text">Food Items</span>
+                </a>
+
+                <!-- Create Order -->
+                <a href="{% url 'hotel:create_order' %}"
+                    class="flex items-center space-x-3 px-3 py-2 lg:px-4 lg:py-3 text-gray-300 hover:bg-gray-700 hover:text-white rounded-lg transition-colors group"
+                    title="Create Order">
+                    <i class="fas fa-plus-circle w-5 text-center"></i>
+                    <span class="sidebar-text">Create Order</span>
+                </a>
+
+                <!-- Orders -->
+                <a href="{% url 'hotel:order_list' %}"
+                    class="flex items-center space-x-3 px-3 py-2 lg:px-4 lg:py-3 text-gray-300 hover:bg-gray-700 hover:text-white rounded-lg transition-colors group"
+                    title="Orders">
+                    <i class="fas fa-receipt w-5 text-center"></i>
+                    <span class="sidebar-text">Orders</span>
+                </a>
 
                 <!-- For unauthenticated users -->
-                {% if not user.is_authenticated %}
-                <a href="{% url 'hotel:menu' %}"
+                {% else %}
+                <a href="{% url 'login' %}"
                     class="flex items-center space-x-3 px-3 py-2 lg:px-4 lg:py-3 text-gray-300 hover:bg-gray-700 hover:text-white rounded-lg transition-colors group"
-                    title="Menu">
-                    <i class="fas fa-utensils w-5 text-center"></i>
-                    <span class="sidebar-text">Menu</span>
+                    title="Login">
+                    <i class="fas fa-sign-in-alt w-5 text-center"></i>
+                    <span class="sidebar-text">Login</span>
                 </a>
                 {% endif %}
             </nav>
@@ -407,7 +430,7 @@
 
     <!-- Main Content -->
     <div id="main-content"
-        class="content-transition min-h-screen content-mobile-full {% if not user.is_superuser %}lg:ml-64{% endif %}">
+        class="content-transition min-h-screen content-mobile-full {% if user.is_authenticated %}lg:ml-64{% endif %}">
         <!-- Header -->
         <header class="bg-white shadow-sm border-b border-gray-200">
             <div class="flex items-center justify-between px-4 py-3 lg:px-6 lg:py-4">
@@ -431,9 +454,9 @@
                             <p class="text-gray-600 text-xs">
                                 {% if user.is_superuser %}
                                 Administrator
-                                {% elif user.groups.all.0.name == 'Hotel Staff' %}
+                                {% elif app_type == 'hotel' %}
                                 Hotel Staff
-                                {% elif user.groups.all.0.name == 'Laundry Staff' %}
+                                {% elif app_type == 'laundry' %}
                                 Laundry Staff
                                 {% else %}
                                 Customer
@@ -496,12 +519,12 @@
         const mobileCloseSidebar = document.getElementById('mobile-close-sidebar');
         const mobileOverlay = document.getElementById('mobile-overlay');
 
-        // Only enable sidebar collapse for superusers
-        const isSuperuser = '{% if user.is_superuser %}true{% else %} false{% endif %}';
+        // Check if user is staff (superuser, hotel, or laundry app)
+        const isStaff = '{% if user.is_superuser or app_type == "hotel" or app_type == "laundry" %}true{% else %}false{% endif %}';
 
-        // Check if sidebar state is stored in localStorage (only for superusers)
+        // Check if sidebar state is stored in localStorage (only for staff)
         let isSidebarCollapsed = false;
-        if (isSuperuser) {
+        if (isStaff) {
             isSidebarCollapsed = localStorage.getItem('sidebarCollapsed') === 'true';
         }
 
@@ -510,8 +533,8 @@
             collapseSidebar();
         }
 
-        // Toggle sidebar on desktop (collapse/expand) - only for superusers
-        if (sidebarToggle && isSuperuser) {
+        // Toggle sidebar on desktop (collapse/expand) - only for staff
+        if (sidebarToggle && isStaff) {
             sidebarToggle.addEventListener('click', () => {
                 if (sidebar.classList.contains('sidebar-collapsed')) {
                     expandSidebar();
@@ -572,9 +595,9 @@
             }
         }
 
-        // Collapse sidebar function (like Django Unfold) - only for superusers
+        // Collapse sidebar function (like Django Unfold) - only for staff
         function collapseSidebar() {
-            if (!isSuperuser) return;
+            if (!isStaff) return;
 
             sidebar.classList.add('sidebar-collapsed');
             mainContent.classList.add('content-expanded');
@@ -586,9 +609,9 @@
             localStorage.setItem('sidebarCollapsed', 'true');
         }
 
-        // Expand sidebar function - only for superusers
+        // Expand sidebar function - only for staff
         function expandSidebar() {
-            if (!isSuperuser) return;
+            if (!isStaff) return;
 
             sidebar.classList.remove('sidebar-collapsed');
             mainContent.classList.remove('content-expanded');
@@ -614,20 +637,20 @@
                 sidebar.classList.remove('sidebar-collapsed');
                 mainContent.classList.remove('content-expanded');
             } else {
-                // On desktop, respect the collapsed state (only for superusers)
+                // On desktop, respect the collapsed state (only for staff)
                 sidebar.classList.remove('sidebar-mobile-hidden');
                 sidebar.classList.add('sidebar-mobile-visible');
                 mainContent.classList.remove('content-mobile-full');
                 mobileOverlay.classList.add('hidden');
 
-                if (isSuperuser) {
+                if (isStaff) {
                     if (localStorage.getItem('sidebarCollapsed') === 'true') {
                         collapseSidebar();
                     } else {
                         expandSidebar();
                     }
                 } else {
-                    // For non-superusers, always show expanded sidebar
+                    // For non-staff users, always show expanded sidebar
                     sidebar.classList.remove('sidebar-collapsed');
                     mainContent.classList.remove('content-expanded');
                     mainContent.classList.add('ml-64');
@@ -642,8 +665,8 @@
         });
         window.addEventListener('resize', handleResize);
 
-        // Keyboard shortcuts (Ctrl+B to toggle sidebar like Django Unfold) - only for superusers
-        if (isSuperuser) {
+        // Keyboard shortcuts (Ctrl+B to toggle sidebar like Django Unfold) - only for staff
+        if (isStaff) {
             document.addEventListener('keydown', (e) => {
                 if (e.ctrlKey && e.key === 'b') {
                     e.preventDefault();

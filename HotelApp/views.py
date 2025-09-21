@@ -244,59 +244,66 @@ def create_order(request):
         OrderItem,
         form=OrderItemForm,
         extra=1,
-        can_delete=False
+        can_delete=False,
+        fields=['food_item', 'quantity']
     )
 
     if request.method == 'POST':
-        order = Order(created_by=request.user)  # dummy instance
-
-        # bind both forms to the SAME instance
+        # Create order instance but don't save yet
+        order = Order(created_by=request.user)
+        
+        # Bind forms to the same instance
         order_form = OrderForm(request.POST, instance=order)
         item_formset = OrderItemFormSet(request.POST, instance=order, prefix="items")
 
         if order_form.is_valid() and item_formset.is_valid():
             with transaction.atomic():
+                # Save the order first
                 order = order_form.save(commit=False)
                 order.created_by = request.user
                 order.save()
 
-                item_formset.instance = order
-                item_formset.save()
+                # Now save the formset with the order instance
+                instances = item_formset.save(commit=False)
+                for instance in instances:
+                    instance.order = order
+                    instance.save()
 
                 messages.success(request, 'Order placed successfully!')
                 return redirect('hotel:order_detail', pk=order.pk)
         else:
+            # Print form errors for debugging
             print("Order form errors:", order_form.errors)
-            for form in item_formset:
-                print("Item form errors:", form.errors)
+            print("Item formset errors:", item_formset.errors)
             messages.error(request, 'There was an error with your order. Please check the form.')
     else:
-        order = Order(created_by=request.user)  # empty instance for GET
-        order_form = OrderForm(instance=order)
-        item_formset = OrderItemFormSet(instance=order, queryset=OrderItem.objects.none(), prefix="items")
+        # GET request - create empty forms
+        order_form = OrderForm()
+        item_formset = OrderItemFormSet(queryset=OrderItem.objects.none(), prefix="items")
 
     return render(request, 'food/create_order.html', {
         'order_form': order_form,
         'item_formset': item_formset,
     })
-
 @login_required
 def order_list(request):
-    # Get filter parameter
-    status_filter = request.GET.get('order_status', '')
+    # Get filter parameter (default to 'In Progress' if not specified)
+    status_filter = request.GET.get('order_status', 'In Progress')
     
-    # Base queryset
+    # Base queryset - only show orders that match the filter
     orders = Order.objects.all().prefetch_related('order_items')
     
-    # Apply status filter if provided
+    # Apply status filter
     if status_filter:
         orders = orders.filter(order_status=status_filter)
     
-    # Calculate totals for each order
+    # Calculate totals for each order (fixed the calculation)
     for order in orders:
-        order.total_amount = order.order_items.aggregate(
-            total=Sum('quantity') * Sum('food_item__price')
-        )['total'] or 0
+        # This is the correct way to calculate the total
+        total = 0
+        for item in order.order_items.all():
+            total += item.quantity * item.food_item.price
+        order.total_amount = total
     
     return render(request, 'food/order_list.html', {
         'orders': orders,
@@ -331,49 +338,72 @@ def order_edit(request, pk):
         OrderItem, 
         form=OrderItemForm, 
         extra=1, 
-        can_delete=True
+        can_delete=True,
+        fields=['food_item', 'quantity']  # Explicitly specify fields
     )
     
     if request.method == 'POST':
         form = OrderForm(request.POST, instance=order)
-        formset = OrderItemFormSet(request.POST, instance=order)
+        formset = OrderItemFormSet(request.POST, instance=order, prefix="order_items")
         
         if form.is_valid() and formset.is_valid():
             with transaction.atomic():
                 form.save()
-                formset.save()
+                instances = formset.save(commit=False)
                 
-                # Update stock for changed quantities
+                # Handle deleted items first
+                for obj in formset.deleted_objects:
+                    # Restore stock for deleted items
+                    obj.food_item.quantity += obj.quantity
+                    obj.food_item.is_available = True
+                    obj.food_item.save()
+                    obj.delete()
+                
+                # Handle changed quantities for existing items
                 for form in formset:
-                    if form.has_changed() and 'quantity' in form.changed_data:
+                    if form.has_changed() and 'quantity' in form.changed_data and form.instance.pk:
                         order_item = form.instance
-                        if order_item.pk:  # Existing item
-                            # Calculate quantity difference and update stock
-                            original_qty = OrderItem.objects.get(pk=order_item.pk).quantity
-                            quantity_diff = order_item.quantity - original_qty
-                            if quantity_diff != 0:
-                                if quantity_diff > 0:
-                                    # Reduce stock for increased quantity
+                        original_qty = OrderItem.objects.get(pk=order_item.pk).quantity
+                        quantity_diff = order_item.quantity - original_qty
+                        
+                        if quantity_diff != 0:
+                            if quantity_diff > 0:
+                                # Reduce stock for increased quantity
+                                if order_item.food_item.quantity >= quantity_diff:
                                     order_item.food_item.sell(quantity_diff)
                                 else:
-                                    # Add back stock for decreased quantity
-                                    order_item.food_item.quantity += abs(quantity_diff)
-                                    order_item.food_item.is_available = True
-                                    order_item.food_item.save()
+                                    messages.error(request, f"Not enough stock for {order_item.food_item.name}")
+                                    return redirect('hotel:order_edit', pk=order.pk)
+                            else:
+                                # Add back stock for decreased quantity
+                                order_item.food_item.quantity += abs(quantity_diff)
+                                order_item.food_item.is_available = True
+                                order_item.food_item.save()
+                
+                # Save all instances
+                for instance in instances:
+                    instance.save()
                 
                 messages.success(request, f'Order #{order.id} updated successfully!')
                 return redirect('hotel:order_detail', pk=order.pk)
+        else:
+            # Print form errors for debugging
+            print("Form errors:", form.errors)
+            print("Formset errors:", formset.errors)
     else:
         form = OrderForm(instance=order)
-        formset = OrderItemFormSet(instance=order)
+        formset = OrderItemFormSet(instance=order, prefix="order_items")
+    
+    # Get available food items for the template
+    available_food_items = FoodItem.objects.filter(is_available=True)
     
     return render(request, 'food/order_edit.html', {
         'form': form,
         'formset': formset,
         'order': order,
+        'available_food_items': available_food_items,
         'title': f'Edit Order #{order.id}'
     })
-
 @login_required
 def order_item_delete(request, order_pk, item_pk):
     order = get_object_or_404(Order, pk=order_pk)

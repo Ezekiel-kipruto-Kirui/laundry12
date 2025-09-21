@@ -114,8 +114,11 @@ class OrderItemForm(forms.ModelForm):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        # Only show available food items
-        self.fields['food_item'].queryset = FoodItem.objects.filter(is_available=True)
+        # Only show available food items with stock > 0
+        self.fields['food_item'].queryset = FoodItem.objects.filter(
+            is_available=True, 
+            quantity__gt=0  # This ensures only items with stock are shown
+        )
 
     def clean_quantity(self):
         quantity = self.cleaned_data.get('quantity')
@@ -135,11 +138,10 @@ class OrderItemForm(forms.ModelForm):
                 )
         return cleaned_data
 
-
 class BulkOrderForm(forms.Form):
     """Form for creating multiple order items at once"""
     items = forms.ModelMultipleChoiceField(
-        queryset=FoodItem.objects.filter(is_available=True),
+        queryset=FoodItem.objects.filter(is_available=True, quantity__gt=0),  # Add quantity filter
         widget=forms.CheckboxSelectMultiple,
         label="Select food items"
     )

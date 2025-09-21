@@ -60,6 +60,9 @@
                                     Food Item
                                 </label>
                                 {{ item_form.food_item }}
+                                {% if item_form.food_item.errors %}
+                                <p class="mt-1 text-sm text-red-600">{{ item_form.food_item.errors.0 }}</p>
+                                {% endif %}
                             </div>
 
                             <!-- Quantity -->
@@ -68,6 +71,9 @@
                                     Quantity
                                 </label>
                                 {{ item_form.quantity }}
+                                {% if item_form.quantity.errors %}
+                                <p class="mt-1 text-sm text-red-600">{{ item_form.quantity.errors.0 }}</p>
+                                {% endif %}
                             </div>
 
                             <!-- Price (display only) -->
@@ -77,9 +83,9 @@
                                 </label>
                                 <div class="price-display p-2 bg-gray-50 rounded text-sm">
                                     {% if item_form.instance.food_item %}
-                                    Ksh{{ item_form.instance.food_item.price }}
+                                    Ksh{{ item_form.instance.food_item.price|floatformat:2 }}
                                     {% else %}
-                                    Ksh 0.00
+                                    Ksh0.00
                                     {% endif %}
                                 </div>
                             </div>
@@ -107,14 +113,6 @@
                                 {{ item_form.id }}
                             </div>
                         </div>
-
-                        {% if item_form.errors %}
-                        <div class="mt-2 p-2 bg-red-50 rounded-lg">
-                            {% for error in item_form.errors %}
-                            <p class="text-sm text-red-600">{{ error }}</p>
-                            {% endfor %}
-                        </div>
-                        {% endif %}
                     </div>
                     {% endfor %}
                 </div>
@@ -160,20 +158,20 @@
 </div>
 
 <!-- Empty form template for new items (hidden) -->
-<div id="empty-form" class="hidden">
+<template id="empty-form-template">
     <div class="order-item border border-gray-200 rounded-lg p-4">
-        <div class="grid grid-cols-1 md:grid-cols-1 gap-4 items-end">
+        <div class="grid grid-cols-1 md:grid-cols-12 gap-4 items-end">
             <!-- Food Item -->
             <div class="md:col-span-5">
                 <label class="block text-sm font-medium text-gray-700 mb-2">
                     Food Item
                 </label>
                 <select name="order_items-__prefix__-food_item"
-                    class="food-item-select w-full p-2 border border-gray-300 rounded">
+                    class="food-item-select w-full p-3 border border-gray-300 rounded-lg">
                     <option value="">Select a food item</option>
                     {% for food in available_food_items %}
-                    <option value="{{ food.id }}" data-price="{{ food.price }}">{{ food.name }} - Ksh{{ food.price }}
-                    </option>
+                    <option value="{{ food.id }}" data-price="{{ food.price }}">{{ food.name }} - Ksh{{
+                        food.price|floatformat:2 }}</option>
                     {% endfor %}
                 </select>
             </div>
@@ -184,7 +182,7 @@
                     Quantity
                 </label>
                 <input type="number" name="order_items-__prefix__-quantity" value="1" min="1"
-                    class="quantity-input w-full p-2 border border-gray-300 rounded">
+                    class="quantity-input w-full p-3 border border-gray-300 rounded-lg">
             </div>
 
             <!-- Price (display only) -->
@@ -205,7 +203,7 @@
             </div>
         </div>
     </div>
-</div>
+</template>
 
 <style>
     select,
@@ -224,19 +222,8 @@
         box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
     }
 
-    /* Checkbox styling */
-    input[type="checkbox"] {
-        width: auto;
-        margin-right: 0.5rem;
-    }
-
     .order-item {
         transition: all 0.3s ease;
-    }
-
-    .order-item-removing {
-        opacity: 0.5;
-        background-color: #f9fafb;
     }
 </style>
 
@@ -245,21 +232,23 @@
         const addItemBtn = document.getElementById('add-item-btn');
         const container = document.getElementById('order-items-container');
         const totalForms = document.getElementById('id_order_items-TOTAL_FORMS');
-        const emptyForm = document.getElementById('empty-form').innerHTML;
+        const emptyFormTemplate = document.getElementById('empty-form-template');
 
         // Add new item form
         addItemBtn.addEventListener('click', function () {
             const formNum = parseInt(totalForms.value);
-            const newForm = emptyForm.replace(/__prefix__/g, formNum);
+            const newFormHTML = emptyFormTemplate.innerHTML.replace(/__prefix__/g, formNum);
 
-            const div = document.createElement('div');
-            div.innerHTML = newForm;
-            container.appendChild(div.firstElementChild);
+            const tempDiv = document.createElement('div');
+            tempDiv.innerHTML = newFormHTML;
+            const newForm = tempDiv.firstElementChild;
 
+            container.appendChild(newForm);
             totalForms.value = formNum + 1;
 
             // Add event listeners to the new form
-            initFormEvents(div.firstElementChild);
+            initFormEvents(newForm);
+            updateOrderTotal();
         });
 
         // Initialize events for existing forms
@@ -271,22 +260,22 @@
         document.addEventListener('click', function (e) {
             if (e.target.classList.contains('remove-item-btn')) {
                 const item = e.target.closest('.order-item');
-                item.classList.add('order-item-removing');
 
                 // If it's a new item (not saved to DB), remove it completely
-                if (!item.querySelector('input[name$="-id"]') || !item.querySelector('input[name$="-id"]').value) {
-                    setTimeout(() => {
-                        item.remove();
-                        updateOrderTotal();
-                    }, 300);
+                const idInput = item.querySelector('input[name$="-id"]');
+                if (!idInput || !idInput.value) {
+                    item.remove();
+                    updateFormIndices();
                 } else {
-                    // For existing items, mark as deleted
-                    const deleteCheckbox = item.querySelector('input[type="checkbox"][name$="-DELETE"]');
+                    // For existing items, find the DELETE checkbox and check it
+                    const deleteCheckbox = item.querySelector('input[name$="-DELETE"]');
                     if (deleteCheckbox) {
                         deleteCheckbox.checked = true;
-                        updateOrderTotal();
+                        item.style.opacity = '0.5';
+                        item.style.backgroundColor = '#f9fafb';
                     }
                 }
+                updateOrderTotal();
             }
         });
 
@@ -299,8 +288,8 @@
             if (foodSelect) {
                 foodSelect.addEventListener('change', function () {
                     const selectedOption = this.options[this.selectedIndex];
-                    const price = selectedOption.getAttribute('data-price') || '0.00';
-                    priceDisplay.textContent = '$' + parseFloat(price).toFixed(2);
+                    const price = selectedOption ? parseFloat(selectedOption.getAttribute('data-price') || 0) : 0;
+                    priceDisplay.textContent = 'Ksh' + price.toFixed(2);
                     updateOrderTotal();
                 });
             }
@@ -310,19 +299,35 @@
             }
         }
 
+        // Update form indices after removal
+        function updateFormIndices() {
+            const items = container.querySelectorAll('.order-item');
+            totalForms.value = items.length;
+
+            items.forEach((item, index) => {
+                item.querySelectorAll('input, select').forEach(input => {
+                    const name = input.getAttribute('name');
+                    if (name && name.includes('order_items-')) {
+                        input.setAttribute('name', name.replace(/order_items-\d+-/, `order_items-${index}-`));
+                        input.setAttribute('id', `id_order_items-${index}-${input.name.split('-').pop()}`);
+                    }
+                });
+            });
+        }
+
         // Update order total
         function updateOrderTotal() {
             let subtotal = 0;
 
             document.querySelectorAll('.order-item').forEach(item => {
                 // Skip items marked for deletion
-                const deleteCheckbox = item.querySelector('input[type="checkbox"][name$="-DELETE"]');
+                const deleteCheckbox = item.querySelector('input[name$="-DELETE"]');
                 if (deleteCheckbox && deleteCheckbox.checked) return;
 
-                const foodSelect = item.querySelector('.food-item-select');
-                const quantityInput = item.querySelector('.quantity-input');
+                const foodSelect = item.querySelector('select[name$="-food_item"]');
+                const quantityInput = item.querySelector('input[name$="-quantity"]');
 
-                if (foodSelect && quantityInput) {
+                if (foodSelect && quantityInput && foodSelect.value) {
                     const selectedOption = foodSelect.options[foodSelect.selectedIndex];
                     const price = selectedOption ? parseFloat(selectedOption.getAttribute('data-price') || 0) : 0;
                     const quantity = parseInt(quantityInput.value) || 0;
@@ -331,8 +336,8 @@
                 }
             });
 
-            document.getElementById('subtotal').textContent = '$' + subtotal.toFixed(2);
-            document.getElementById('total').textContent = '$' + subtotal.toFixed(2);
+            document.getElementById('subtotal').textContent = 'Ksh' + subtotal.toFixed(2);
+            document.getElementById('total').textContent = 'Ksh' + subtotal.toFixed(2);
         }
 
         // Initial calculation
