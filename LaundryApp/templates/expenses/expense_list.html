@@ -9,7 +9,7 @@
         <h1 class="text-2xl sm:text-3xl font-bold text-gray-900 mb-4 sm:mb-0">Expense Records</h1>
 
         <div class="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-3">
-            <a href="{% url 'expense_field_list' %}"
+            <a href="{% url 'laundry:expense_field_list' %}"
                 class="inline-flex items-center justify-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
                 <svg class="-ml-1 mr-2 h-5 w-5 text-gray-500" xmlns="http://www.w3.org/2000/svg" fill="none"
                     viewBox="0 0 24 24" stroke="currentColor">
@@ -20,7 +20,7 @@
                 <span class="xs:hidden">Fields</span>
             </a>
             <div class="flex space-x-2 sm:space-x-3">
-                <a href="{% url 'expense_form' %}"
+                <a href="{% url 'laundry:expense_form' %}"
                     class="flex-1 inline-flex items-center justify-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
                     <svg class="-ml-1 mr-2 h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20"
                         fill="currentColor">
@@ -31,7 +31,7 @@
                     <span class="hidden xs:inline">Add Expense</span>
                     <span class="xs:hidden">Expense</span>
                 </a>
-                <a href="{% url 'create_expense_field' %}"
+                <a href="{% url 'laundry:create_expense_field' %}"
                     class="flex-1 inline-flex items-center justify-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
                     <svg class="-ml-1 mr-2 h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20"
                         fill="currentColor">
@@ -147,7 +147,7 @@
                                 <div class="ml-2 sm:ml-4">
                                     <div class="text-sm font-medium text-gray-900">{{ record.field.label }}</div>
                                     <div class="text-xs text-gray-500 hidden md:block">
-                                        <a href="{% url 'edit_expense_field' record.field.id %}"
+                                        <a href="{% url 'laundry:edit_expense_field' record.field.id %}"
                                             class="text-blue-600 hover:text-blue-800">
                                             Edit Category
                                         </a>
@@ -156,14 +156,14 @@
                             </div>
                         </td>
                         <td class="px-4 py-4 whitespace-nowrap">
-                            <div class="text-sm font-semibold text-blue-700">${{ record.amount }}</div>
+                            <div class="text-sm font-semibold text-blue-700">Ksh {{ record.amount }}</div>
                         </td>
                         <td class="px-4 py-4 hidden md:table-cell">
                             <div class="text-sm text-gray-500 max-w-xs truncate">{{ record.notes|default:"-" }}</div>
                         </td>
                         <td class="px-4 py-4 whitespace-nowrap text-right text-sm font-medium">
                             <div class="flex justify-center space-x-2">
-                                <a href="{% url 'edit_expense_record' record.id %}"
+                                <a href="{% url 'laundry:edit_expense_record' record.id %}"
                                     class="text-blue-600 hover:text-blue-800 p-1 rounded-full hover:bg-blue-100 transition-colors duration-150"
                                     title="Edit">
                                     <svg class="w-4 h-4 sm:w-5 sm:h-5" fill="none" stroke="currentColor"
@@ -173,7 +173,7 @@
                                         </path>
                                     </svg>
                                 </a>
-                                <a href="{% url 'delete_expense_record' record.id %}"
+                                <a href="{% url 'laundry:delete_expense_record' record.id %}"
                                     class="text-red-600 hover:text-red-800 p-1 rounded-full hover:bg-red-100 transition-colors duration-150"
                                     title="Delete">
                                     <svg class="w-4 h-4 sm:w-5 sm:h-5" fill="none" stroke="currentColor"
@@ -217,7 +217,7 @@
             <p class="mt-1 text-sm text-gray-500 hidden sm:block">Get started by creating expense categories and
                 recording your first expense.</p>
             <div class="mt-6 space-y-2 sm:space-y-0 sm:space-x-3 sm:flex sm:justify-center">
-                <a href="{% url 'create_expense_field' %}"
+                <a href="{% url 'laundry:create_expense_field' %}"
                     class="w-full sm:w-auto inline-flex items-center justify-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
                     <svg class="-ml-1 mr-2 h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
                         stroke="currentColor">
@@ -226,7 +226,7 @@
                     </svg>
                     Create Category
                 </a>
-                <a href="{% url 'expense_form' %}"
+                <a href="{% url 'laundry:expense_form' %}"
                     class="w-full sm:w-auto inline-flex items-center justify-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
                     <svg class="-ml-1 mr-2 h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20"
                         fill="currentColor">

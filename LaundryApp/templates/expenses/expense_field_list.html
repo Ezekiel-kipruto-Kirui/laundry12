@@ -11,7 +11,7 @@
                 <h1 class="text-3xl font-bold text-gray-900">Expense Fields</h1>
                 <p class=" text-sm text-gray-600">Manage custom fields for your expense tracking</p>
             </div>
-            <a href="{% url 'create_expense_field' %}"
+            <a href="{% url 'laundry:create_expense_field' %}"
                 class="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-500 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
                 <svg class="-ml-1 mr-2 h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20"
                     fill="currentColor" aria-hidden="true">
@@ -102,9 +102,9 @@
                             <div class="flex space-x-3">
                                 
                                 <div class="flex-shrink-0">
-                                    <a href="{% url 'edit_expense_field' field.id %}"
+                                    <a href="{% url 'laundry:edit_expense_field' field.id %}"
                                         class="font-medium text-indigo-600 hover:text-indigo-900 mr-4">Edit</a>
-                                    <a href="{% url 'delete_expense_field' field.id %}"
+                                    <a href="{% url 'laundry:delete_expense_field' field.id %}"
                                         class="font-medium text-red-600 hover:text-red-900">Delete</a>
                                 </div>
                             </div>
@@ -126,7 +126,7 @@
                     <h3 class="mt-2 text-sm font-medium text-gray-900">No expense fields</h3>
                     <p class="mt-1 text-sm text-gray-500">Get started by creating a new expense field.</p>
                     <div class="mt-6">
-                        <a href="{% url 'create_expense_field' %}"
+                        <a href="{% url 'laundry:create_expense_field' %}"
                             class="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
                             <svg class="-ml-1 mr-2 h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20"
                                 fill="currentColor" aria-hidden="true">

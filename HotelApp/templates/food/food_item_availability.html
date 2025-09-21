@@ -1,0 +1,62 @@
+{% extends 'home.html' %}
+{% load static %}
+
+{% block content %}
+<div class="max-w-md mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <div class="bg-white rounded-xl shadow-md p-6">
+        <div class="text-center mb-6">
+            {% if food_item.image %}
+            <img src="{{ food_item.image.url }}" alt="{{ food_item.name }}"
+                class="w-32 h-32 object-cover rounded-lg mx-auto mb-4">
+            {% endif %}
+            <h2 class="text-xl font-bold text-gray-900">Update Availability</h2>
+            <p class="text-gray-600">{{ food_item.name }}</p>
+        </div>
+
+        <form method="post" class="space-y-6">
+            {% csrf_token %}
+
+            <div class="text-center">
+                <label class="flex items-center justify-center space-x-3 cursor-pointer">
+                    {{ form.is_available }}
+                    <span class="text-lg font-medium text-gray-700">Available</span>
+                    <div class="relative">
+                        <div class="w-14 h-7 bg-gray-400 rounded-full transition duration-200 ease-in-out"></div>
+                        <div
+                            class="absolute left-1 top-1 bg-white w-5 h-5 rounded-full transition-transform duration-200 ease-in-out transform translate-x-0">
+                        </div>
+                    </div>
+                </label>
+                {% if form.is_available.errors %}
+                <p class="mt-1 text-sm text-red-600">{{ form.is_available.errors.0 }}</p>
+                {% endif %}
+            </div>
+
+            <div class="flex space-x-4 pt-4">
+                <button type="submit"
+                    class="flex-1 bg-primary hover:bg-primary-dark text-white py-2 px-4 rounded-lg font-semibold transition duration-200">
+                    Update Availability
+                </button>
+                <a href="{% url 'hotel:food_item_list' %}"
+                    class="flex-1 bg-gray-300 hover:bg-gray-400 text-gray-800 py-2 px-4 rounded-lg font-semibold text-center transition duration-200">
+                    Cancel
+                </a>
+            </div>
+        </form>
+    </div>
+</div>
+
+<style>
+    input[type="checkbox"] {
+        display: none;
+    }
+
+    input[type="checkbox"]:checked+span+div {
+        background-color: #10B981;
+    }
+
+    input[type="checkbox"]:checked+span+div>div {
+        transform: translateX(7px);
+    }
+</style>
+{% endblock %}

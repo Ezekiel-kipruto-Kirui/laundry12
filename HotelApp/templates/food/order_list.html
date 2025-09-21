@@ -1,0 +1,331 @@
+{% extends 'home.html' %}
+
+{% block title %}Order Management - FoodOrder{% endblock %}
+
+{% block content %}
+<div class="w-full px-4 sm:px-6 lg:px-8 py-8">
+    <!-- Header Section -->
+    <div class="flex flex-col lg:flex-row justify-between items-start lg:items-center mb-8 gap-4">
+        <div>
+            <h1 class="text-3xl font-bold text-gray-900 flex items-center">
+                <i class="fas fa-receipt text-blue-600 mr-3 bg-blue-100 p-3 rounded-xl"></i>
+                Order Management
+            </h1>
+            <p class="text-gray-600 mt-2">Manage and track all customer orders</p>
+        </div>
+
+        <!-- Status Filter -->
+        <div class="flex flex-col sm:flex-row gap-3">
+            <span class="text-sm font-semibold text-gray-700 self-center">Filter by status:</span>
+            <div class="flex bg-gray-100 rounded-xl p-1.5 shadow-inner">
+                <a href="{% url 'hotel:order_list' %}"
+                    class="px-4 py-2 text-sm font-medium rounded-xl transition-all duration-200 
+                          {% if not status_filter %}bg-white text-blue-600 shadow-lg border border-blue-200{% else %}text-gray-600 hover:text-gray-800 hover:bg-gray-200{% endif %}">
+                    <i class="fas fa-list mr-1"></i> All
+                </a>
+                <a href="{% url 'hotel:order_list' %}?order_status=Served"
+                    class="px-4 py-2 text-sm font-medium rounded-xl transition-all duration-200 
+                          {% if status_filter == 'Served' %}bg-white text-green-600 shadow-lg border border-green-200{% else %}text-gray-600 hover:text-gray-800 hover:bg-gray-200{% endif %}">
+                    <i class="fas fa-check-circle mr-1"></i> Served
+                </a>
+                <a href="{% url 'hotel:order_list' %}?order_status=In Progress"
+                    class="px-4 py-2 text-sm font-medium rounded-xl transition-all duration-200 
+                          {% if status_filter == 'In Progress' %}bg-white text-yellow-600 shadow-lg border border-yellow-200{% else %}text-gray-600 hover:text-gray-800 hover:bg-gray-200{% endif %}">
+                    <i class="fas fa-clock mr-1"></i> In Progress
+                </a>
+            </div>
+        </div>
+    </div>
+
+    {% if orders %}
+    <!-- Orders Table -->
+    <div class="bg-white rounded-2xl shadow-lg border border-gray-100 overflow-hidden p-4">
+        <div class="overflow-x-auto">
+            <table class="w-full">
+                <thead class="bg-gray-50">
+                    <tr>
+                        <th class="pl-6 pr-4 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            Order Details</th>
+                        <th class="px-4 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            Customer</th>
+                        <th class="px-4 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Items
+                        </th>
+                        <th class="px-4 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Total
+                        </th>
+                        <th class="px-4 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            Status</th>
+                        <th class="pr-6 pl-4 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            Actions</th>
+                    </tr>
+                </thead>
+                <tbody class="bg-white divide-y divide-gray-100">
+                    {% for order in orders %}
+                    <tr class="hover:bg-gray-50 transition-colors">
+                        <!-- Order Details -->
+                        <td class="pl-6 pr-4 py-4 whitespace-nowrap h-32">
+                            <div>
+                                <div class="text-sm font-bold text-gray-900">{{ order.id }}</div>
+                                <div class="text-xs text-gray-500">{{ order.created_at|date:"M d, Y • H:i" }}</div>
+                            </div>
+                        </td>
+
+                        <!-- Customer -->
+                        <td class="px-4 py-4 whitespace-nowrap">
+                            <div class="text-sm text-gray-900">{{ order.customer.username }}</div>
+                            <div class="text-xs text-gray-500">{{ order.customer.email }}</div>
+                        </td>
+
+                        <!-- Items -->
+                        <td class="px-4 py-4">
+                            <div class="text-sm text-gray-900">
+                                {% for order_item in order.order_items.all|slice:":2" %}
+                                {{ order_item.food_item.name }} ×{{ order_item.quantity }}{% if not forloop.last %}, {% endif %}
+                                {% endfor %}
+                                {% if order.order_items.all|length > 2 %}
+                                <span class="text-xs text-gray-500">+{{ order.order_items.all|length|add:"-2" }}
+                                    more</span>
+                                {% endif %}
+                            </div>
+                        </td>
+
+                        <!-- Total -->
+                        <td class="px-4 py-4 whitespace-nowrap text-sm font-bold text-blue-600">
+                            Ksh {{ order.total_amount|floatformat:2 }}
+                        </td>
+
+                        <!-- Status -->
+                        <td class="px-4 py-4 whitespace-nowrap">
+                            {% if order.order_status == 'Served' %}
+                            <span
+                                class="px-3 py-1.5 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">
+                                <i class="fas fa-check-circle mr-1"></i> Served
+                            </span>
+                            {% elif order.order_status == 'In Progress' %}
+                            <span
+                                class="px-3 py-1.5 inline-flex text-xs leading-5 font-semibold rounded-full bg-yellow-100 text-yellow-800">
+                                <i class="fas fa-clock mr-1"></i> In Progress
+                            </span>
+                            {% else %}
+                            <span
+                                class="px-3 py-1.5 inline-flex text-xs leading-5 font-semibold rounded-full bg-gray-100 text-gray-800">
+                                <i class="fas fa-hourglass-half mr-1"></i> {{ order.get_order_status_display }}
+                            </span>
+                            {% endif %}
+                        </td>
+
+                        <!-- Actions -->
+                        <td class="pr-6 pl-4 py-4 whitespace-nowrap">
+                            <div class="flex items-center space-x-2">
+                                <!-- View Button -->
+                                <a href="{% url 'hotel:order_detail' order.pk %}"
+                                    class="p-2 text-blue-600 hover:text-blue-800 hover:bg-blue-50 rounded-lg transition-colors"
+                                    title="View Order">
+                                    <i class="fas fa-eye"></i>
+                                </a>
+
+                                <!-- Edit Button -->
+                                <a href="{% url 'hotel:order_edit' order.pk %}"
+                                    class="p-2 text-green-600 hover:text-green-800 hover:bg-green-50 rounded-lg transition-colors"
+                                    title="Edit Order">
+                                    <i class="fas fa-edit"></i>
+                                </a>
+
+                                <!-- Status Dropdown -->
+                                <div class="relative">
+                                    <button
+                                        class="p-2 text-purple-600 hover:text-purple-800 hover:bg-purple-50 rounded-lg transition-colors"
+                                        onclick="toggleDropdown('status-dropdown-{{ order.id }}')"
+                                        title="Change Status">
+                                        <i class="fas fa-cog"></i>
+                                    </button>
+                                    <div id="status-dropdown-{{ order.id }}"
+                                        class="absolute right-0 mt-2 w-40 bg-white border border-gray-200 rounded-xl shadow-lg py-1 z-10 hidden">
+                                        <form method="post" action="{% url 'hotel:order_edit' order.pk %}">
+                                            {% csrf_token %}
+                                            <button type="submit" name="order_status" value="In Progress"
+                                                class="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-700 transition-colors flex items-center gap-2 {% if order.order_status == 'In Progress' %}bg-blue-50 text-blue-700{% endif %}">
+                                                <i class="fas fa-clock text-yellow-500"></i>
+                                                In Progress
+                                            </button>
+                                            <button type="submit" name="order_status" value="Served"
+                                                class="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-green-50 hover:text-green-700 transition-colors flex items-center gap-2 {% if order.order_status == 'Served' %}bg-green-50 text-green-700{% endif %}">
+                                                <i class="fas fa-check-circle text-green-500"></i>
+                                                Mark Served
+                                            </button>
+                                        </form>
+                                    </div>
+                                </div>
+
+                                <!-- Delete Button -->
+                                <button onclick="confirmDelete('{{ order.id }}')"
+                                    class="p-2 text-red-600 hover:text-red-800 hover:bg-red-50 rounded-lg transition-colors"
+                                    title="Delete Order">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    {% else %}
+    <!-- No Orders State -->
+    <div
+        class="bg-gradient-to-br from-blue-50 to-indigo-50 border-2 border-dashed border-blue-200 rounded-2xl p-12 text-center">
+        <div class="max-w-md mx-auto">
+            <div class="w-20 h-20 bg-blue-100 rounded-2xl flex items-center justify-center mx-auto mb-6">
+                <i class="fas fa-receipt text-blue-600 text-3xl"></i>
+            </div>
+            <h3 class="text-2xl font-bold text-gray-900 mb-2">No Orders Found</h3>
+            <p class="text-gray-600 mb-6">
+                {% if status_filter %}
+                No orders match the "{{ status_filter }}" status filter.
+                {% else %}
+                You haven't received any orders yet. Orders will appear here once customers start ordering.
+                {% endif %}
+            </p>
+        </div>
+    </div>
+    {% endif %}
+</div>
+
+<!-- Delete Confirmation Modal -->
+<div id="deleteModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 hidden">
+    <div class="bg-white rounded-2xl p-6 max-w-md w-full mx-4 shadow-2xl transform transition-all duration-300 scale-95"
+        id="modalContent">
+        <div class="text-center mb-4">
+            <div class="w-16 h-16 bg-red-100 rounded-2xl flex items-center justify-center mx-auto mb-4">
+                <i class="fas fa-exclamation-triangle text-red-600 text-2xl"></i>
+            </div>
+            <h3 class="text-xl font-bold text-gray-900 mb-2">Confirm Deletion</h3>
+            <p class="text-gray-600">Are you sure you want to delete this order? This action cannot be undone.</p>
+        </div>
+        <div class="flex justify-center space-x-4">
+            <button onclick="closeModal()"
+                class="px-6 py-2.5 bg-gray-300 hover:bg-gray-400 text-gray-800 font-semibold rounded-xl transition-all duration-200">
+                Cancel
+            </button>
+            <form id="deleteForm" method="post" class="inline">
+                {% csrf_token %}
+                <button type="submit"
+                    class="px-6 py-2.5 bg-red-600 hover:bg-red-700 text-white font-semibold rounded-xl transition-all duration-200">
+                    Delete Order
+                </button>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+    function toggleDropdown(dropdownId) {
+        const dropdown = document.getElementById(dropdownId);
+        dropdown.classList.toggle('hidden');
+
+        // Close other dropdowns
+        document.querySelectorAll('.absolute > div').forEach(item => {
+            if (item.id !== dropdownId && !item.classList.contains('hidden')) {
+                item.classList.add('hidden');
+            }
+        });
+    }
+
+    function confirmDelete(orderId) {
+        const form = document.getElementById('deleteForm');
+        form.action = "{% url 'hotel:order_delete' 0 %}".replace('0', orderId);
+
+        const modal = document.getElementById('deleteModal');
+        const modalContent = document.getElementById('modalContent');
+
+        modal.classList.remove('hidden');
+        setTimeout(() => {
+            modalContent.classList.remove('scale-95');
+            modalContent.classList.add('scale-100');
+        }, 10);
+    }
+
+    function closeModal() {
+        const modal = document.getElementById('deleteModal');
+        const modalContent = document.getElementById('modalContent');
+
+        modalContent.classList.remove('scale-100');
+        modalContent.classList.add('scale-95');
+
+        setTimeout(() => {
+            modal.classList.add('hidden');
+        }, 200);
+    }
+
+    // Close dropdowns when clicking outside
+    document.addEventListener('click', function (event) {
+        if (!event.target.closest('.relative')) {
+            document.querySelectorAll('.absolute > div').forEach(dropdown => {
+                dropdown.classList.add('hidden');
+            });
+        }
+    });
+
+    // Close modal with Escape key
+    document.addEventListener('keydown', function (event) {
+        if (event.key === 'Escape') {
+            closeModal();
+        }
+    });
+</script>
+
+<style>
+    /* Custom animations */
+    @keyframes fadeInUp {
+        from {
+            opacity: 0;
+            transform: translateY(20px);
+        }
+
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+
+    .animate-fade-in-up {
+        animation: fadeInUp 0.6s ease-out forwards;
+    }
+
+    /* Hover effects for table rows */
+    tr {
+        transition: all 0.2s ease;
+    }
+
+    /* Custom scrollbar for the table */
+    .overflow-x-auto::-webkit-scrollbar {
+        height: 8px;
+    }
+
+    .overflow-x-auto::-webkit-scrollbar-track {
+        background: #f1f5f9;
+        border-radius: 4px;
+    }
+
+    .overflow-x-auto::-webkit-scrollbar-thumb {
+        background: #cbd5e1;
+        border-radius: 4px;
+    }
+
+    .overflow-x-auto::-webkit-scrollbar-thumb:hover {
+        background: #94a3b8;
+    }
+
+    /* Focus states for accessibility */
+    button:focus,
+    a:focus {
+        outline: 2px solid #3b82f6;
+        outline-offset: 2px;
+    }
+
+    /* Smooth transitions for modal */
+    #modalContent {
+        transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+</style>
+{% endblock %}

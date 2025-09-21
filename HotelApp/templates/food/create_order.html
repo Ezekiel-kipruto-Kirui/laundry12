@@ -1,0 +1,186 @@
+{% extends 'home.html' %}
+{% load static %}
+
+{% block content %}
+<div class="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
+    <h1 class="text-3xl font-bold text-gray-900 mb-8 flex items-center">
+        <i class="fas fa-receipt text-blue-600 mr-3"></i> Place Your Order
+    </h1>
+
+    <div class="bg-white p-4 rounded-2xl shadow-lg p-8">
+        <form method="post" id="orderForm" class="space-y-8">
+            {% csrf_token %}
+
+            <!-- Order Details -->
+            <div>
+                <h2 class="text-xl font-semibold text-gray-800 mb-4 flex items-center">
+                    <i class="fas fa-info-circle text-blue-500 mr-2"></i> Order Details
+                </h2>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    {% for field in order_form %}
+                    <div>
+                        <label for="{{ field.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-2">
+                            {{ field.label }}
+                        </label>
+                        {{ field }}
+                        {% if field.errors %}
+                        <p class="mt-1 text-sm text-red-600">{{ field.errors.0 }}</p>
+                        {% endif %}
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+
+            <!-- Order Items -->
+            <div>
+                <h2 class="text-xl font-semibold text-gray-800 mb-4 flex items-center">
+                    <i class="fas fa-utensils text-blue-500 mr-2"></i> Order Items
+                </h2>
+
+                <div id="items-container" class="space-y-4">
+                    {{ item_formset.management_form }}
+
+                    {% for form in item_formset %}
+                    <div
+                        class="item-row grid grid-cols-1 md:grid-cols-3 gap-4 p-4 border border-gray-200 rounded-lg relative">
+                        {% for field in form %}
+                        <div>
+                            <label for="{{ field.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-2">
+                                {{ field.label }}
+                            </label>
+                            {{ field }}
+                            {% if field.errors %}
+                            <p class="mt-1 text-sm text-red-600">{{ field.errors.0 }}</p>
+                            {% endif %}
+                        </div>
+                        {% endfor %}
+                        {% if forloop.counter0 > 0 %}
+                        <button type="button" onclick="removeItem(this)"
+                            class="absolute top-2 right-2 text-red-500 hover:text-red-700 transition">
+                            <i class="fas fa-times-circle text-lg"></i>
+                        </button>
+                        {% endif %}
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+
+            <!-- Buttons -->
+            <div class="flex flex-row mr-4 gap-4 justify-between items-center">
+                <div class="pt-4">
+                    <button type="button" onclick="addItem()"
+                        class="inline-flex items-center px-4 py-2 bg-green-600 hover:bg-green-700 text-white text-sm font-medium rounded-lg shadow-md transition">
+                        <i class="fas fa-plus mr-2"></i> Add Another Item
+                    </button>
+                </div>
+
+                <div class="flex justify-end pt-6">
+                    <button type="submit"
+                        class="bg-blue-600 hover:bg-blue-700 text-white p-2 rounded-lg font-semibold shadow-md transition duration-200">
+                        <i class="fas fa-paper-plane mr-2"></i> Place Order
+                    </button>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Tailwind + JS -->
+<style>
+    input,
+    select,
+    textarea {
+        width: 100%;
+        padding: 0.75rem;
+        border: 1px solid #D1D5DB;
+        border-radius: 0.5rem;
+        transition: border-color 0.2s, box-shadow 0.2s;
+    }
+
+    input:focus,
+    select:focus,
+    textarea:focus {
+        outline: none;
+        border-color: #3B82F6;
+        box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+    }
+</style>
+
+<script>
+    function updateFormCount() {
+        const totalForms = document.getElementById('id_items-TOTAL_FORMS');
+        const itemRows = document.querySelectorAll('.item-row');
+        totalForms.value = itemRows.length;
+    }
+
+    function addItem() {
+        const container = document.getElementById("items-container");
+        const totalForms = document.getElementById('id_items-TOTAL_FORMS');
+        const formIdx = parseInt(totalForms.value);
+
+        const firstRow = container.querySelector(".item-row");
+        const newRow = firstRow.cloneNode(true);
+
+        newRow.querySelectorAll('input, select, textarea').forEach(input => {
+            if (input.name && input.name.includes('items-')) {
+                input.name = input.name.replace(/items-\d+-/, `items-${formIdx}-`);
+                input.id = input.id.replace(/id_items-\d+-/, `id_items-${formIdx}-`);
+
+                if (input.type === 'select-one') {
+                    input.selectedIndex = 0;
+                } else if (input.type === 'number') {
+                    input.value = '1';
+                } else if (input.type !== 'hidden') {
+                    input.value = '';
+                }
+            }
+        });
+
+        if (!newRow.querySelector('.remove-btn')) {
+            const removeBtn = document.createElement('button');
+            removeBtn.type = 'button';
+            removeBtn.onclick = function () { removeItem(this); };
+            removeBtn.className = 'remove-btn absolute top-2 right-2 text-red-500 hover:text-red-700 transition';
+            removeBtn.innerHTML = '<i class="fas fa-times-circle text-lg"></i>';
+            newRow.appendChild(removeBtn);
+        }
+
+        container.appendChild(newRow);
+        totalForms.value = formIdx + 1;
+    }
+
+    function removeItem(button) {
+        const row = button.closest(".item-row");
+        const container = document.getElementById("items-container");
+        const itemRows = container.querySelectorAll(".item-row");
+
+        if (itemRows.length > 1) {
+            row.remove();
+            updateFormIndices();
+        } else {
+            alert("You must have at least one item in the order.");
+        }
+    }
+
+    function updateFormIndices() {
+        const container = document.getElementById("items-container");
+        const rows = container.querySelectorAll(".item-row");
+        const totalForms = document.getElementById('id_items-TOTAL_FORMS');
+
+        totalForms.value = rows.length;
+
+        rows.forEach((row, index) => {
+            row.querySelectorAll('input, select, textarea').forEach(input => {
+                if (input.name && input.name.includes('items-')) {
+                    input.name = input.name.replace(/items-\d+-/, `items-${index}-`);
+                    input.id = input.id.replace(/id_items-\d+-/, `id_items-${index}-`);
+                }
+            });
+        });
+    }
+
+    document.addEventListener('DOMContentLoaded', function () {
+        updateFormCount();
+    });
+</script>
+{% endblock %}

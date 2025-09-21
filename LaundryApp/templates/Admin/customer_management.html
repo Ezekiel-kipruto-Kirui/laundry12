@@ -15,8 +15,8 @@
 
         <!-- Search Section -->
         <div class="bg-white flex flex-md-row justify-between rounded-2xl shadow-sm border border-gray-200 p-6 mb-8">
-            
-            <a href="{% url 'customer_add' %}"
+
+            <a href="{% url 'laundry:customer_add' %}"
                 class="inline-flex items-center px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg transition-colors duration-200 shadow-sm">
                 <i class="fas fa-plus-circle mr-2"></i>
                 Add New Customer
@@ -162,7 +162,7 @@
                             <td class="px-6 py-4 whitespace-nowrap">
                                 <div class="flex items-center space-x-2">
                                     <!-- View Orders -->
-                                    <a href="{% url 'customer_orders' customer.pk %}"
+                                    <a href="{% url 'laundry:customer_orders' customer.pk %}"
                                         class="inline-flex items-center p-2 bg-blue-100 hover:bg-blue-200 text-blue-700 rounded-lg transition-colors duration-200 group"
                                         title="View Orders">
                                         <i
@@ -170,7 +170,7 @@
                                     </a>
 
                                     <!-- Edit -->
-                                    <a href="{% url 'customer_edit' customer.pk %}"
+                                    <a href="{% url 'laundry:customer_edit' customer.pk %}"
                                         class="inline-flex items-center p-2 bg-amber-100 hover:bg-amber-200 text-amber-700 rounded-lg transition-colors duration-200 group"
                                         title="Edit Customer">
                                         <i
@@ -178,7 +178,7 @@
                                     </a>
 
                                     <!-- Delete -->
-                                    <a href="{% url 'customer_delete' customer.pk %}"
+                                    <a href="{% url 'laundry:customer_delete' customer.pk %}"
                                         class="inline-flex items-center p-2 bg-red-100 hover:bg-red-200 text-red-700 rounded-lg transition-colors duration-200 group"
                                         title="Delete Customer">
                                         <i
@@ -196,7 +196,7 @@
                                 <p class="text-gray-500 text-lg">No customers found</p>
                                 <p class="text-gray-400 text-sm mt-2">Try adjusting your search criteria or add a new
                                     customer</p>
-                                <a href="{% url 'customer_add' %}"
+                                <a href="{% url 'laundry:customer_add' %}"
                                     class="inline-block mt-4 px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors duration-200">
                                     Add First Customer
                                 </a>

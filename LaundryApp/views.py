@@ -20,48 +20,128 @@ from django.db.models import Q, Prefetch, Sum, Count, Avg
 from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
 from django.contrib.auth import login as auth_login, logout as auth_logout
 from django.contrib.auth.forms import AuthenticationForm
-from django.contrib.auth.models import User
+
 from django.db import IntegrityError
 from django.contrib.auth.forms import PasswordChangeForm
 from django.contrib.auth import update_session_auth_hash
+from django.contrib.auth import get_user_model
 
+from django.db import transaction
 
 # Local imports
-from .models import Customer, Order, OrderItem, UserProfile,ExpenseField, ExpenseRecord
-from .forms import CustomerForm, OrderForm, OrderItemForm, UserEditForm, UserCreateForm, ProfileEditForm,ExpenseFieldForm, ExpenseRecordForm
+from .models import Customer, Order, OrderItem, UserProfile, ExpenseField, ExpenseRecord, LaundryProfile
+from .forms import ( 
+    CustomerForm, 
+    OrderForm,
+    OrderItemForm, 
+    UserEditForm,
+    UserCreateForm,
+    ProfileEditForm, 
+    ExpenseFieldForm,
+    ExpenseRecordForm,
+    LaundryProfileForm 
+)
 
 from .resource import OrderResource
 from .analytics import DashboardAnalytics
 
 # Setup logger
 logger = logging.getLogger(__name__)
-
-# Constants
-SHOP_A = 'Shop A'
-SHOP_B = 'Shop B'
+User = get_user_model()
 
 # Cached functions and reusable queries
+
 def get_user_shops(request):
     """Get the shops associated with the current user based on profile"""
     if request.user.is_superuser:
         return None  # Superusers can access all shops
     
     try:
-        profile = request.user.profile
-        if profile.shop:
-            return [profile.shop]
-    except UserProfile.DoesNotExist:
-        pass
+        # Check if user has a laundry profile with shop assignment
+        if hasattr(request.user, 'laundry_profile') and request.user.laundry_profile.shop:
+            # Return the shop as a list to maintain compatibility
+            return [request.user.laundry_profile.shop.title()]
+        else:
+            # If no shop is assigned, return empty list
+            return []
+    except Exception:
+        # If any error occurs, return empty list
+        return []
+
+def apply_order_permissions(queryset, request):
+    """Apply permission-based filtering to order queryset"""
+    user_shops = get_user_shops(request)
     
-    return []
+    if user_shops is not None:  # Not superuser
+        if user_shops:  # User has shop assignments
+            # Use exact match since we normalized to title case
+            queryset = queryset.filter(shop__in=user_shops)
+        else:  # User has no shop assignments
+            queryset = queryset.none()
+    
+    return queryset
+
+def apply_customer_permissions(queryset, request):
+    """Apply permission-based filtering to customer queryset"""
+    user_shops = get_user_shops(request)
+    
+    if user_shops is not None:  # Not superuser
+        if user_shops:  # User has shop assignments
+            # Get customers who have orders in the user's shops
+            customer_ids = Order.objects.filter(
+                shop__in=user_shops
+            ).values_list('customer_id', flat=True).distinct()
+            queryset = queryset.filter(id__in=customer_ids)
+        else:  # User has no shop assignments
+            queryset = queryset.none()
+    
+    return queryset
+
+@login_required
+def debug_user_info(request):
+    """Debug view to check user shop assignments"""
+    user_shops = get_user_shops(request)
+    laundry_profile = getattr(request.user, 'laundry_profile', None)
+    
+    debug_info = {
+        'username': request.user.username,
+        'is_superuser': request.user.is_superuser,
+        'is_staff': request.user.is_staff,
+        'user_shops': user_shops,
+        'laundry_profile_exists': laundry_profile is not None,
+        'laundry_profile_shop': laundry_profile.shop if laundry_profile else None,
+        'user_type': getattr(request.user, 'user_type', None),
+        'app_type': getattr(request.user, 'app_type', None),
+    }
+    
+    return JsonResponse(debug_info)
+
+@login_required
+def debug_shop_values(request):
+    """Debug view to check all shop values in the database"""
+    # Get unique shop values from orders
+    order_shops = Order.objects.values_list('shop', flat=True).distinct()
+    order_shops = [shop for shop in order_shops if shop]  # Remove None values
+    
+    # Get unique shop values from laundry profiles
+    laundry_shops = LaundryProfile.objects.values_list('shop', flat=True).distinct()
+    laundry_shops = [shop for shop in laundry_shops if shop]  # Remove None values
+    
+    debug_info = {
+        'order_shops': list(order_shops),
+        'laundry_shops': list(laundry_shops),
+        'current_user_shops': get_user_shops(request),
+    }
+    
+    return JsonResponse(debug_info)
 
 def is_admin(user):
     return (user.is_superuser or 
-            (hasattr(user, 'profile') and user.profile.user_type == 'admin'))
+            getattr(user, 'user_type', None) == 'admin')
 
 def is_staff(user):
     return (user.is_staff or 
-            (hasattr(user, 'profile') and user.profile.user_type in ['admin', 'staff']))
+            getattr(user, 'user_type', None) in ['admin', 'staff'])
 
 # Decorators for permission checking
 def shop_required(view_func):
@@ -108,23 +188,30 @@ def get_base_order_queryset():
         'customer__name', 'customer__phone', 'customer__address', 'addressdetails'
     )
 
-def apply_order_permissions(queryset, request):
-    """Apply permission-based filtering to order queryset"""
+def check_order_permission(request, order):
+    """Check if user has permission to access this order"""
     user_shops = get_user_shops(request)
     
-    if user_shops is not None:  # Not superuser
-        if user_shops:  # User has shop assignments
-            queryset = queryset.filter(shop__in=user_shops)
-        else:  # User has no shop assignments
-            queryset = queryset.none()
+    if user_shops is not None and user_shops:  # Not superuser
+        if order.shop not in user_shops:
+            return False
     
-    # For staff users, only show orders they created
-    if (hasattr(request.user, 'profile') and 
-        request.user.profile.user_type == 'staff' and 
-        not request.user.is_superuser):
-        queryset = queryset.filter(created_by=request.user)
+    return True
+
+def check_customer_permission(request, customer):
+    """Check if user has permission to access this customer"""
+    user_shops = get_user_shops(request)
     
-    return queryset
+    if user_shops is not None and user_shops:  # Not superuser
+        # Check if customer has orders in user's shops
+        customer_shop_orders = Order.objects.filter(
+            customer=customer,
+            shop__in=user_shops
+        ).exists()
+        if not customer_shop_orders:
+            return False
+    
+    return True
 
 # Views
 @login_required
@@ -173,9 +260,9 @@ def dashboard_view(request):
 @login_required
 @shop_required
 def customordertable(request):
-    # Start with base queryset - exclude delivered orders from the main query
-    orders = get_base_order_queryset().exclude(order_status='delivered')
-
+    # Start with base queryset - include ALL orders (including delivered)
+    orders = get_base_order_queryset()
+    orders = orders.exclude(order_status__in=['Delivered_picked'])
     # Make sure we're not including orders without uniquecode
     orders = orders.exclude(uniquecode__isnull=True).exclude(uniquecode='')
 
@@ -183,12 +270,12 @@ def customordertable(request):
     orders = apply_order_permissions(orders, request)
 
     # Apply status filters
-    status_filter = request.GET.get('status', '')
+    status_filter = request.GET.get('order_status', '')
     if status_filter:
         orders = orders.filter(order_status=status_filter)
         
     # Apply payment status filters
-    payment_filter = request.GET.get('payment', '')
+    payment_filter = request.GET.get('payment_status', '')
     if payment_filter:
         orders = orders.filter(payment_status=payment_filter)
 
@@ -240,10 +327,12 @@ def customordertable(request):
     except EmptyPage:
         page_obj = paginator.page(paginator.num_pages)
 
-    # Get counts for stats cards - exclude delivered orders from all counts
+    # Get counts for stats cards - include ALL orders (including delivered)
     total_orders = orders.count()
     pending_orders = orders.filter(order_status='pending').count()
     completed_orders = orders.filter(order_status='Completed').count()
+    delivered_orders = orders.filter(order_status='delivered').count()
+    in_progress_orders = orders.filter(order_status='in_progress').count()
 
     # Get status choices for filters
     order_status_choices = Order.ORDER_STATUS_CHOICES
@@ -254,9 +343,14 @@ def customordertable(request):
         'total_orders': total_orders,
         'pending_orders': pending_orders,
         'completed_orders': completed_orders,
+        'delivered_orders': delivered_orders,
+        'in_progress_orders': in_progress_orders,
         'order_status_choices': order_status_choices,
         'payment_status_choices': payment_status_choices,
         'today': timezone.now().date(),
+        'current_status_filter': status_filter,
+        'current_payment_filter': payment_filter,
+        'search_query': search_query,
     }
     return render(request, 'Admin/orders_table.html', context)
 
@@ -268,16 +362,7 @@ def order_detail(request, order_code):
         order = get_base_order_queryset().get(uniquecode=order_code)
         
         # Check if user has permission to view this order
-        user_shops = get_user_shops(request)
-        if user_shops is not None and user_shops:  # Not superuser
-            if order.shop not in user_shops:
-                raise Http404("You don't have permission to view this order.")
-        
-        # For staff users, check if they created this order
-        if (hasattr(request.user, 'profile') and 
-            request.user.profile.user_type == 'staff' and 
-            not request.user.is_superuser and
-            order.created_by != request.user):
+        if not check_order_permission(request, order):
             raise Http404("You don't have permission to view this order.")
             
         context = {
@@ -297,19 +382,12 @@ def order_edit(request, order_code):
         order = get_base_order_queryset().get(uniquecode=order_code)
         
         # Check if user has permission to edit this order
-        user_shops = get_user_shops(request)
-        if user_shops is not None and user_shops:  # Not superuser
-            if order.shop not in user_shops:
-                messages.error(request, "You don't have permission to edit this order.")
-                return redirect('customordertable')
-        
-        # For staff users, check if they created this order
-        if (hasattr(request.user, 'profile') and 
-            request.user.profile.user_type == 'staff' and 
-            not request.user.is_superuser and
-            order.created_by != request.user):
+        if not check_order_permission(request, order):
             messages.error(request, "You don't have permission to edit this order.")
-            return redirect('customordertable')
+            return redirect('laundry:customordertable')
+        
+        # Get user shops here so it's available for both GET and POST requests
+        user_shops = get_user_shops(request)
         
         if request.method == 'POST':
             # Create a mutable copy of the POST data
@@ -348,11 +426,10 @@ def order_edit(request, order_code):
                             order_item.save()
                     
                     # Recalculate total price
-                    #updated_order.calculate_total_price()
                     updated_order.save()
                     
                     messages.success(request, f'Order {order.uniquecode} updated successfully!')
-                    return redirect('customordertable')
+                    return redirect('laundry:customordertable')
                     
                 except Exception as e:
                     messages.error(request, f'Error updating order: {str(e)}')
@@ -422,25 +499,15 @@ def order_delete(request, order_code):
         order = Order.objects.only('uniquecode', 'shop', 'created_by').get(uniquecode=order_code)
         
         # Check if user has permission to delete this order
-        user_shops = get_user_shops(request)
-        if user_shops is not None and user_shops:  # Not superuser
-            if order.shop not in user_shops:
-                messages.error(request, "You don't have permission to delete this order.")
-                return redirect('customordertable')
-        
-        # For staff users, check if they created this order
-        if (hasattr(request.user, 'profile') and 
-            request.user.profile.user_type == 'staff' and 
-            not request.user.is_superuser and
-            order.created_by != request.user):
+        if not check_order_permission(request, order):
             messages.error(request, "You don't have permission to delete this order.")
-            return redirect('customordertable')
+            return redirect('laundry:customordertable')
         
         if request.method == 'POST':
             order_code = order.uniquecode
             order.delete()
             messages.success(request, f'Order {order_code} deleted successfully!')
-            return redirect('customordertable')
+            return redirect('laundry:customordertable')
         
         context = {
             'order': order,
@@ -453,47 +520,43 @@ def order_delete(request, order_code):
 @login_required
 @shop_required
 @require_POST
-def mark_order_completed(request, order_code):
-    """Optimized mark order as completed"""
+def update_order_status(request, order_code, status):
     order = get_object_or_404(Order, uniquecode=order_code)
-    
-    # Check permission
-    user_shops = get_user_shops(request)
-    if user_shops is not None and user_shops and order.shop not in user_shops:
-        return JsonResponse({
-            'success': False,
-            'message': "You don't have permission to update this order."
-        })
-    
-    # For staff users, check if they created this order
-    if (hasattr(request.user, 'profile') and 
-        request.user.profile.user_type == 'staff' and 
-        not request.user.is_superuser and
-        order.created_by != request.user):
-        return JsonResponse({
-            'success': False,
-            'message': "You don't have permission to update this order."
-        })
-    
-    # Ensure values are proper decimals before saving
-    try:
-        # Convert to Decimal if they are strings or other types
-        if isinstance(order.total_price, str):
-            order.total_price = Decimal(order.total_price)
-        if isinstance(order.amount_paid, str):
-            order.amount_paid = Decimal(order.amount_paid)
-    except (TypeError, ValueError):
-        # Handle conversion errors
-        order.total_price = Decimal('0.00')
-        order.amount_paid = Decimal('0.00')
-    
-    order.order_status = 'Completed'
+
+    # Permission check
+    if not check_order_permission(request, order):
+        message = "You don't have permission to update this order."
+        if request.headers.get("x-requested-with") == "XMLHttpRequest":
+            return JsonResponse({"success": False, "message": message}, status=403)
+        messages.error(request, message)
+        return redirect('laundry:customordertable')
+
+    # Validate status
+    valid_statuses = dict(Order.ORDER_STATUS_CHOICES).keys()
+    if status not in valid_statuses:
+        message = f"Invalid status: {status}"
+        if request.headers.get("x-requested-with") == "XMLHttpRequest":
+            return JsonResponse({"success": False, "message": message}, status=400)
+        messages.error(request, message)
+        return redirect('laundry:customordertable')
+
+    # Update order
+    order.order_status = status
     order.save()
-    
-    return JsonResponse({
-        'success': True,
-        'message': f'Order {order_code} marked as completed!'
-    })
+
+    message = f"Order {order_code} has been marked as {order.get_order_status_display()}."
+
+    if request.headers.get("x-requested-with") == "XMLHttpRequest":
+        return JsonResponse({
+            "success": True,
+            "message": message,
+            "new_status": status,
+            "status_display": order.get_order_status_display()
+        })
+
+    # fallback for normal POST (non-AJAX)
+    messages.success(request, message)
+    return redirect(request.META.get('HTTP_REFERER', 'laundry:customordertable'))
 
 @login_required
 @shop_required
@@ -503,19 +566,7 @@ def update_payment_status(request, order_code):
         order = Order.objects.only('uniquecode', 'shop', 'created_by', 'total_price').get(uniquecode=order_code)
         
         # Check if user has permission to update this order
-        user_shops = get_user_shops(request)
-        if user_shops is not None and user_shops:  # Not superuser
-            if order.shop not in user_shops:
-                return JsonResponse({
-                    'success': False,
-                    'message': "You don't have permission to update this order."
-                })
-        
-        # For staff users, check if they created this order
-        if (hasattr(request.user, 'profile') and 
-            request.user.profile.user_type == 'staff' and 
-            not request.user.is_superuser and
-            order.created_by != request.user):
+        if not check_order_permission(request, order):
             return JsonResponse({
                 'success': False,
                 'message': "You don't have permission to update this order."
@@ -569,7 +620,8 @@ def createorder(request):
 
         # Force shop if user has only one
         if user_shops and len(user_shops) == 1:
-            post_data['shop'] = str(user_shops[0].id)  # Convert to string
+            # Use the shop name directly instead of trying to get id from string
+            post_data['shop'] = user_shops[0]
 
         # Default order_status
         if not post_data.get('order_status'):
@@ -637,7 +689,7 @@ def createorder(request):
                 # Let the model's save() method generate the unique code
                 # Don't set total_price yet as items haven't been saved
                 order.total_price = 0  # Temporary value
-                order.amount_paid = order.amount_paid or 0
+                
                 order.balance = -order.amount_paid  # Temporary value
                 
                 # Save the order to generate the unique code
@@ -666,7 +718,7 @@ def createorder(request):
                 order.save()
 
                 messages.success(request, f'Order created successfully! Code: {order.uniquecode}')
-                return redirect('customordertable')
+                return redirect('laundry:customordertable')
 
             except IntegrityError as e:
                 if 'uniquecode' in str(e):
@@ -703,7 +755,8 @@ def createorder(request):
         customer_form = CustomerForm()
         order_form = OrderForm()
         if user_shops and len(user_shops) == 1:
-            order_form.fields['shop'].initial = user_shops[0].id
+            # Set the initial value to the shop name, not the id
+            order_form.fields['shop'].initial = user_shops[0]
         order_form.fields['order_status'].initial = 'pending'
         OrderItemFormSet = forms.formset_factory(OrderItemForm, extra=1)
         item_formset = OrderItemFormSet(prefix='items')
@@ -727,18 +780,16 @@ def search_customers(request):
         if len(query) < 2:
             return JsonResponse({'customers': []})
         
+        # Base queryset
         customers = Customer.objects.filter(
             Q(phone__icontains=query) | Q(name__icontains=query)
-        )[:10]  # Limit to 10 results
+        )
         
-        # Filter by shop if user is not superuser
-        user_shops = get_user_shops(request)
-        if user_shops is not None and user_shops:
-            # Get orders from user's shops and then get those customers
-            shop_customer_ids = Order.objects.filter(
-                shop__in=user_shops
-            ).values_list('customer_id', flat=True).distinct()
-            customers = customers.filter(id__in=shop_customer_ids)
+        # Apply permission filtering
+        customers = apply_customer_permissions(customers, request)
+        
+        # Apply the limit AFTER all filtering
+        customers = customers[:10]  # Limit to 10 results
         
         results = []
         for customer in customers:
@@ -766,19 +817,12 @@ def generaldashboard(request):
         # Superuser sees all orders
         orders = Order.objects.all()
         # For counts, exclude delivered orders
-        count_orders = Order.objects.exclude(order_status='Delivered')
+        count_orders = Order.objects.exclude(order_status='Delivered_picked')
     elif user_shops:
         # Staff sees only their shop's orders
         orders = Order.objects.filter(shop__in=user_shops)
         # For counts, exclude delivered orders
-        count_orders = Order.objects.filter(shop__in=user_shops).exclude(order_status='Delivered')
-        
-        # For staff users, only show orders they created
-        if (hasattr(request.user, 'profile') and 
-            request.user.profile.user_type == 'staff' and 
-            not request.user.is_superuser):
-            orders = orders.filter(created_by=request.user)
-            count_orders = count_orders.filter(created_by=request.user)
+        count_orders = Order.objects.filter(shop__in=user_shops).exclude(order_status='Delivered_picked')
     else:
         # Users with no shop assignments see nothing
         orders = Order.objects.none()
@@ -799,7 +843,7 @@ def generaldashboard(request):
         shops = Order.objects.values_list('shop', flat=True).distinct()
         for shop in shops:
             if shop:  # Ensure shop is not empty
-                shop_orders = Order.objects.filter(shop=shop).exclude(order_status='Delivered')
+                shop_orders = Order.objects.filter(shop=shop).exclude(order_status='Delivered_picked')
                 shop_performance[shop] = {
                     'total_orders': shop_orders.count(),
                     'completed_orders': shop_orders.filter(order_status='Completed').count(),
@@ -842,24 +886,107 @@ def dashboard(request):
 def home(request):
     return render(request, 'home.html')
 
-def index(request):
-    cl = MpesaClient()
-    phone_number = '0701396967'
-    amount = 1
-    account_reference = 'reference'
-    transaction_desc = 'Description'
-    callback_url = 'https://darajambili.herokuapp.com/express-payment'
-    response = cl.stk_push(phone_number, amount, account_reference, transaction_desc, callback_url)
-    return HttpResponse('Index')
+def initiatepayment(request, order_id):
+    if request.method == 'POST':
+        order = get_object_or_404(Order, id=order_id)
+        
+        # Check if order is already fully paid
+        if order.balance <= 0:
+            messages.warning(request, f"Order {order.uniquecode} is already fully paid.")
+            return redirect('laundry:customordertable')
+            
+        cl = MpesaClient()
+        phone_number = str(order.customer.phone)
+        amount = int(order.balance)  # This should be the exact balance amount
+        
+        account_reference = f"ORDER{order.id}"
+        transaction_desc = f"Payment for order {order.uniquecode}"
+        callback_url = 'https://mydomain.com/path'
+        # Use a valid callback URL - make sure this matches your actual domain
+        #callback_url = request.build_absolute_uri(reverse('stk_push_callback'))
+        
+        try:
+            response = cl.stk_push(phone_number, amount, account_reference, transaction_desc, callback_url)
+            response_data = response.json()
+            
+            if 'CheckoutRequestID' in response_data:
+                checkout_request_id = response_data['CheckoutRequestID']
+                order.checkout_request_id = checkout_request_id
+                order.payment_status = 'processing'  # Set status to processing while waiting for callback
+                order.save()
+                
+                messages.success(request, f"Payment initiated for order {order.uniquecode}. Check your phone to complete payment.")
+            else:
+                error_message = response_data.get('errorMessage', 'Unknown error occurred')
+                messages.error(request, f"Payment initiation failed: {error_message}")
+                
+        except Exception as e:
+            logger.error(f"Error initiating payment: {e}")
+            messages.error(request, f"Error initiating payment: {str(e)}")
+            
+        return redirect('laundry:customordertable')
+    
+    return JsonResponse({'status': 'error', 'message': 'Invalid request method'})
 
 @csrf_exempt
 def stk_push_callback(request):
-    """Handle M-Pesa STK Push callback"""
     if request.method == 'POST':
-        # Process the callback data here
-        data = json.loads(request.body)
-        logger.info(f"STK Push callback received: {data}")
-        return JsonResponse({'ResultCode': 0, 'ResultDesc': 'Success'})
+        try:
+            data = json.loads(request.body)
+            logger.info(f"STK Push callback received: {data}")
+
+            stk_callback = data.get("Body", {}).get("stkCallback", {})
+            result_code = stk_callback.get("ResultCode")
+            checkout_request_id = stk_callback.get("CheckoutRequestID")
+            result_desc = stk_callback.get("ResultDesc", "")
+            callback_metadata = stk_callback.get("CallbackMetadata", {}).get("Item", [])
+
+            if result_code == 0:
+                # Payment was successful
+                try:
+                    order = Order.objects.get(checkout_request_id=checkout_request_id)
+                    
+                    # Extract payment details from metadata
+                    balance_paid = 0
+                    mpesa_receipt_number = ""
+                    
+                    for item in callback_metadata:
+                        if item.get("Name") == "Amount":
+                            balance_paid = item.get("Value", 0)
+                        elif item.get("Name") == "MpesaReceiptNumber":
+                            mpesa_receipt_number = item.get("Value", "")
+                    
+                    # Update order with payment details - set balance to zero
+                    order.balance = 0
+                    order.total_price =  order.amount_paid+balance_paid  # Assuming full payment
+                    order.payment_date = timezone.now()
+                    order.save()
+                    
+                    logger.info(f"✅ Order {order.id} marked as paid. Receipt: {mpesa_receipt_number}, Amount: {balance_paid}")
+                    
+                except Order.DoesNotExist:
+                    logger.error(f"❌ No order found for CheckoutRequestID {checkout_request_id}")
+                    return JsonResponse({'ResultCode': 1, 'ResultDesc': 'Order not found'})
+                    
+            else:
+                # Payment failed
+                try:
+                    order = Order.objects.get(checkout_request_id=checkout_request_id)
+                    order.payment_status = 'failed'
+                    order.save()
+                    logger.error(f"❌ Payment failed for order {order.id}: {result_desc}")
+                except Order.DoesNotExist:
+                    logger.error(f"❌ Payment failed for unknown order with CheckoutRequestID {checkout_request_id}: {result_desc}")
+        
+            return JsonResponse({'ResultCode': 0, 'ResultDesc': 'Success'})
+            
+        except json.JSONDecodeError:
+            logger.error("Invalid JSON in callback")
+            return JsonResponse({'ResultCode': 1, 'ResultDesc': 'Invalid JSON'})
+        except Exception as e:
+            logger.error(f"Unexpected error in callback: {e}")
+            return JsonResponse({'ResultCode': 1, 'ResultDesc': 'Server error'})
+            
     return JsonResponse({'ResultCode': 1, 'ResultDesc': 'Invalid request method'})
 
 def logout_view(request):
@@ -869,346 +996,159 @@ def logout_view(request):
     return redirect('login')
 
 @login_required
-@admin_required
-def user_management(request):
-    """User management page for admins"""
-    users = User.objects.select_related('profile').all().order_by('-date_joined')
-    
-    # Get filter parameters
-    search_query = request.GET.get('search', '')
-    shop_filter = request.GET.get('shop', '')
-    status_filter = request.GET.get('status', '')
-    user_type_filter = request.GET.get('user_type', '')
-    
-    # Apply filters
-    if search_query:
-        users = users.filter(
-            Q(username__icontains=search_query) |
-            Q(email__icontains=search_query) |
-            Q(first_name__icontains=search_query) |
-            Q(last_name__icontains=search_query)
-        )
-    
-    if shop_filter:
-        users = users.filter(profile__shop=shop_filter)
-    
-    if status_filter == 'active':
-        users = users.filter(is_active=True)
-    elif status_filter == 'inactive':
-        users = users.filter(is_active=False)
-    elif status_filter == 'staff':
-        users = users.filter(is_staff=True)
-    elif status_filter == 'superuser':
-        users = users.filter(is_superuser=True)
-    
-    if user_type_filter:
-        users = users.filter(profile__user_type=user_type_filter)
-    
-    # Prepare filter options with selected status
-    shop_options = [
-        {'value': '', 'label': 'All Shops', 'selected': shop_filter == ''},
-        {'value': 'Shop A', 'label': 'Shop A', 'selected': shop_filter == 'Shop A'},
-        {'value': 'Shop B', 'label': 'Shop B', 'selected': shop_filter == 'Shop B'}
-    ]
-    
-    status_options = [
-        {'value': '', 'label': 'All Status', 'selected': status_filter == ''},
-        {'value': 'active', 'label': 'Active', 'selected': status_filter == 'active'},
-        {'value': 'inactive', 'label': 'Inactive', 'selected': status_filter == 'inactive'},
-        {'value': 'staff', 'label': 'Staff Users', 'selected': status_filter == 'staff'},
-        {'value': 'superuser', 'label': 'Superusers', 'selected': status_filter == 'superuser'}
-    ]
-    
-    user_type_options = [
-        {'value': '', 'label': 'All Types', 'selected': user_type_filter == ''},
-        {'value': 'admin', 'label': 'Admins', 'selected': user_type_filter == 'admin'},
-        {'value': 'staff', 'label': 'Staff', 'selected': user_type_filter == 'staff'}
-    ]
-    
-    # Add last login information and account status to each user
-    users_with_status = []
-    for user in users:
-        # Determine account status
-        if not user.is_active:
-            status = 'inactive'
-            status_class = 'danger'
-            status_text = 'Inactive'
-        elif user.is_superuser:
-            status = 'superuser'
-            status_class = 'primary'
-            status_text = 'Superuser'
-        elif user.is_staff:
-            status = 'staff'
-            status_class = 'info'
-            status_text = 'Staff'
-        else:
-            status = 'active'
-            status_class = 'success'
-            status_text = 'Active'
-        
-        # Get last login info
-        if user.last_login:
-            last_login = user.last_login.strftime('%Y-%m-%d %H:%M')
-            days_since_login = (timezone.now() - user.last_login).days
-        else:
-            last_login = 'Never'
-            days_since_login = None
-        
-        # Get user type from profile
-        user_type = getattr(user.profile, 'user_type', 'N/A') if hasattr(user, 'profile') else 'N/A'
-        shop = getattr(user.profile, 'shop', 'Not assigned') if hasattr(user, 'profile') else 'Not assigned'
-        
-        users_with_status.append({
-            'user': user,
-            'status': status,
-            'status_class': status_class,
-            'status_text': status_text,
-            'last_login': last_login,
-            'days_since_login': days_since_login,
-            'user_type': user_type,
-            'shop': shop,
-            'is_online': user.last_login and (timezone.now() - user.last_login).seconds < 300  # Online if logged in last 5 minutes
-        })
-    
-    # Pagination
-    paginator = Paginator(users_with_status, 20)
-    page_number = request.GET.get('page')
-    try:
-        page_obj = paginator.page(page_number)
-    except PageNotAnInteger:
-        page_obj = paginator.page(1)
-    except EmptyPage:
-        page_obj = paginator.page(paginator.num_pages)
-    
-    # Build pagination URL base
-    pagination_params = []
-    if search_query:
-        pagination_params.append(f'search={search_query}')
-    if shop_filter:
-        pagination_params.append(f'shop={shop_filter}')
-    if status_filter:
-        pagination_params.append(f'status={status_filter}')
-    if user_type_filter:
-        pagination_params.append(f'user_type={user_type_filter}')
-    
-    pagination_url_suffix = '&'.join(pagination_params)
-    if pagination_url_suffix:
-        pagination_url_suffix = '&' + pagination_url_suffix
-    
-    # Statistics
-    total_users = users.count()
-    active_users = users.filter(is_active=True).count()
-    inactive_users = users.filter(is_active=False).count()
-    staff_users = users.filter(is_staff=True, is_superuser=False).count()
-    superusers = users.filter(is_superuser=True).count()
-    
-    # Users who never logged in
-    never_logged_in = users.filter(last_login__isnull=True).count()
-    
-    # Recently active users (last 7 days)
-    seven_days_ago = timezone.now() - timezone.timedelta(days=7)
-    recently_active = users.filter(last_login__gte=seven_days_ago).count()
-    
-    context = {
-        'users': page_obj,
-        'search_query': search_query,
-        'shop_options': shop_options,
-        'status_options': status_options,
-        'user_type_options': user_type_options,
-        'total_users': total_users,
-        'active_users': active_users,
-        'inactive_users': inactive_users,
-        'staff_users': staff_users,
-        'superusers': superusers,
-        'never_logged_in': never_logged_in,
-        'recently_active': recently_active,
-        'pagination_url_suffix': pagination_url_suffix,
-        'current_filters': {
-            'shop': shop_filter,
-            'status': status_filter,
-            'user_type': user_type_filter
-        }
-    }
-    
-    return render(request, 'Admin/user_management.html', context)
-
-@login_required
-@admin_required
 def user_add(request):
-    """Add new user with proper validation"""
     if request.method == 'POST':
         form = UserCreateForm(request.POST)
         profile_form = ProfileEditForm(request.POST)
+        laundry_form = LaundryProfileForm(request.POST)
 
         if form.is_valid() and profile_form.is_valid():
             try:
-                # Save the user
-                user = form.save(commit=False)
+                with transaction.atomic():
+                    # Create base user object but don't save yet
+                    user = form.save(commit=False)
 
-                # Assign role based on profile user_type
-                user_type = profile_form.cleaned_data.get("user_type")
+                    # Get profile data
+                    user_type = profile_form.cleaned_data['user_type']
+                    app_type = profile_form.cleaned_data['app_type']
 
-                if user_type == "admin":
-                    user.is_staff = True
-                    user.is_superuser = True
-                elif user_type == "staff":
-                    user.is_staff = True
-                    user.is_superuser = False
+                    # Assign role permissions
+                    if user_type == "admin":
+                        user.is_staff = True
+                        user.is_superuser = True
+                        
+                    elif user_type == "staff":
+                        user.is_staff = True
+                        user.is_superuser = False
+                    else:
+                        user.is_staff = False
+                        user.is_superuser = False
 
-                user.save()
+                    # Assign app_type and user_type directly on the user
+                    user.user_type = user_type
+                    user.app_type = app_type
+                    user.save()
 
-                # Create UserProfile
-                profile = profile_form.save(commit=False)
-                profile.user = user
-                profile.save()
+                    # Create LaundryProfile only if app_type is laundry
+                    if app_type == 'laundry' and user!=user.is_superuser:
+                        if laundry_form.is_valid():
+                            LaundryProfile.objects.create(
+                                user=user,
+                                shop=laundry_form.cleaned_data['shop']
+                            )
+                        else:
+                            raise Exception("Please select a valid shop for laundry users")
+                    
 
-                messages.success(request, f'User {user.username} ({user_type}) created successfully!')
-                return redirect('user_management')
+                messages.success(request, f"User {user.email} created successfully!")
+                return redirect('laundry:user_management')
 
+            except IntegrityError:
+                form.add_error("email", "This email is already registered.")
             except Exception as e:
-                messages.error(request, f'Error creating user: {str(e)}')
-        else:
-            # Collect all form errors
-            error_messages = []
-            for field, errors in {**form.errors, **profile_form.errors}.items():
-                for error in errors:
-                    error_messages.append(f"{field}: {error}")
-            messages.error(request, 'Please correct the following errors: ' + '; '.join(error_messages))
+                messages.error(request, f"Error creating user: {str(e)}")
+
     else:
         form = UserCreateForm()
         profile_form = ProfileEditForm()
+        laundry_form = LaundryProfileForm()
 
-    context = {
-        'form': form,
-        'profile_form': profile_form,
-        'title': 'Add New User'
-    }
-
-    return render(request, 'Admin/user_form.html', context)
+    return render(request, "Admin/user_form.html", {
+        "form": form,
+        "profile_form": profile_form,
+        "laundry_form": laundry_form,
+        "title": "Add New User"
+    })
 
 @login_required
 @admin_required
 def user_edit(request, pk):
-    """Edit user information including profile and password"""
+    """Edit user information including profile and laundry profile"""
     user = get_object_or_404(User, pk=pk)
-    
-    # Get or create user profile
-    profile, created = UserProfile.objects.get_or_create(user=user)
-    
+
+    # Get laundry profile if exists
+    laundry_profile = getattr(user, 'laundry_profile', None)
+
     if request.method == 'POST':
         user_form = UserEditForm(request.POST, instance=user, prefix='user')
-        profile_form = ProfileEditForm(request.POST, instance=profile, prefix='profile')
+        laundry_form = LaundryProfileForm(
+            request.POST, 
+            instance=laundry_profile, 
+            prefix='laundry'
+        )
         password_form = PasswordChangeForm(user, request.POST, prefix='password')
-        
-        # Check which form was submitted
-        if 'update_user' in request.POST and user_form.is_valid() and profile_form.is_valid():
-            try:
-                # Save user information
-                user = user_form.save(commit=False)
-                
-                # Update user type and permissions based on profile
-                user_type = profile_form.cleaned_data.get('user_type')
-                if user_type == 'admin':
-                    user.is_staff = True
-                    user.is_superuser = True
-                elif user_type == 'staff':
-                    user.is_staff = True
-                    user.is_superuser = False
-                
-                user.save()
-                
-                # Save profile information
-                profile = profile_form.save(commit=False)
-                profile.user = user
-                profile.save()
-                
-                messages.success(request, f'User {user.username} updated successfully!')
-                return redirect('user_management')
-                
-            except Exception as e:
-                messages.error(request, f'Error updating user: {str(e)}')
-        
+
+        # Save user + (optional) laundry profile
+        if 'update_user' in request.POST:
+            forms_valid = user_form.is_valid()
+
+            if forms_valid and user_form.cleaned_data.get('app_type') == 'laundry':
+                forms_valid = laundry_form.is_valid()
+
+            if forms_valid:
+                try:
+                    with transaction.atomic():
+                        user = user_form.save(commit=False)
+
+                        # Handle staff/admin permissions
+                        if user.user_type == 'admin':
+                            user.is_staff = True
+                            user.is_superuser = True
+                        elif user.user_type == 'staff':
+                            user.is_staff = True
+                            user.is_superuser = False
+                        else:
+                            user.is_staff = False
+                            user.is_superuser = False
+
+                        user.save()
+
+                        # Handle laundry profile
+                        if user.app_type == 'laundry':
+                            laundry_profile = laundry_form.save(commit=False)
+                            laundry_profile.user = user
+                            laundry_profile.save()
+                        elif hasattr(user, 'laundry_profile'):
+                            user.laundry_profile.delete()
+
+                    messages.success(request, f'User {user.username} updated successfully!')
+                    return redirect('laundry:user_management')
+
+                except Exception as e:
+                    messages.error(request, f'Error updating user: {str(e)}')
+
         elif 'change_password' in request.POST and password_form.is_valid():
-            try:
-                password_form.save()
-                # Update the session auth hash to keep the user logged in if changing own password
-                if request.user == user:
-                    update_session_auth_hash(request, user)
-                messages.success(request, 'Password updated successfully!')
-                return redirect('user_edit', pk=user.pk)
-                
-            except Exception as e:
-                messages.error(request, f'Error changing password: {str(e)}')
-        
-        else:
-            # Collect all form errors
-            error_messages = []
-            if not user_form.is_valid():
-                for field, errors in user_form.errors.items():
-                    for error in errors:
-                        error_messages.append(f"User {field}: {error}")
-            
-            if not profile_form.is_valid():
-                for field, errors in profile_form.errors.items():
-                    for error in errors:
-                        error_messages.append(f"Profile {field}: {error}")
-            
-            if 'change_password' in request.POST and not password_form.is_valid():
-                for field, errors in password_form.errors.items():
-                    for error in errors:
-                        error_messages.append(f"Password {field}: {error}")
-            
-            if error_messages:
-                messages.error(request, 'Please correct the following errors: ' + '; '.join(error_messages))
-    
+            password_form.save()
+            if request.user == user:
+                update_session_auth_hash(request, user)
+            messages.success(request, 'Password updated successfully!')
+            return redirect('laundry:user_edit', pk=user.pk)
+
     else:
-        # GET request - initialize forms with current data
         user_form = UserEditForm(instance=user, prefix='user')
-        profile_form = ProfileEditForm(instance=profile, prefix='profile')
         password_form = PasswordChangeForm(user, prefix='password')
-    
+
+        if hasattr(user, 'laundry_profile'):
+            laundry_form = LaundryProfileForm(instance=user.laundry_profile, prefix='laundry')
+        else:
+            laundry_form = LaundryProfileForm(prefix='laundry')
+
     context = {
         'user_form': user_form,
-        'profile_form': profile_form,
+        'laundry_form': laundry_form,
         'password_form': password_form,
         'user': user,
-        'profile': profile,
         'title': f'Edit User - {user.username}'
     }
-    
+
     return render(request, 'Admin/user_edit_form.html', context)
 
 @login_required
 @admin_required
-def user_delete(request, pk):
-    """Delete a user"""
-    user = get_object_or_404(User, pk=pk)
-    
-    # Prevent users from deleting themselves
-    if user == request.user:
-        messages.error(request, "You cannot delete your own account!")
-        return redirect('user_management')
-    
-    if request.method == 'POST':
-        username = user.username
-        user.delete()
-        messages.success(request, f'User {username} deleted successfully!')
-        return redirect('user_management')
-    
-    context = {
-        'user': user,
-    }
-    
-    return render(request, 'Admin/user_confirm_delete.html', context)
-
-
-
-@login_required
-@admin_required
 def user_profile(request, pk):
-    """View user profile and details"""
+    """View user profile and details with laundry profile information"""
     user = get_object_or_404(User, pk=pk)
-    profile = getattr(user, 'profile', None)
+    laundry_profile = getattr(user, 'laundryprofile', None)
     
     # Get customers created by this user
     customers_created = Customer.objects.filter(created_by=user).count()
@@ -1222,13 +1162,199 @@ def user_profile(request, pk):
     
     context = {
         'user': user,
-        'profile': profile,
+        'laundry_profile': laundry_profile,
         'total_orders': total_orders,
         'total_revenue': total_revenue,
         'customers_created': customers_created,
     }
     
     return render(request, 'Admin/user_profile.html', context)
+
+@login_required
+@admin_required
+def user_management(request):
+    """Optimized User management page for admins with laundry shop information"""
+
+    # Start with all users
+    users = User.objects.all()
+
+    # --- Filters ---
+    search_query = request.GET.get("search", "").strip()
+    shop_filter = request.GET.get("shop", "").strip()
+    status_filter = request.GET.get("status", "").strip()
+    user_type_filter = request.GET.get("user_type", "").strip()
+    app_type_filter = request.GET.get("app_type", "").strip()
+
+    if search_query:
+        users = users.filter(
+            Q(email__icontains=search_query)
+            | Q(first_name__icontains=search_query)
+            | Q(last_name__icontains=search_query)
+        )
+
+    if shop_filter:
+        users = users.filter(laundry_profile__shop=shop_filter)
+
+    if status_filter:
+        status_map = {
+            "active": {"is_active": True},
+            "inactive": {"is_active": False},
+            "staff": {"is_staff": True},
+            "superuser": {"is_superuser": True},
+        }
+        if status_filter in status_map:
+            users = users.filter(**status_map[status_filter])
+
+    if user_type_filter:
+        users = users.filter(user_type=user_type_filter)
+
+    if app_type_filter:
+        users = users.filter(app_type=app_type_filter)
+
+    # --- Build options for filters ---
+    all_shops = (
+        LaundryProfile.objects.values_list("shop", flat=True).distinct().order_by("shop")
+    )
+    shop_options = [{"value": "", "label": "All Shops", "selected": shop_filter == ""}]
+    shop_options += [
+        {"value": shop, "label": shop, "selected": shop_filter == shop}
+        for shop in all_shops
+    ]
+
+    status_options = [
+        {"value": "", "label": "All Status", "selected": status_filter == ""},
+        {"value": "active", "label": "Active", "selected": status_filter == "active"},
+        {"value": "inactive", "label": "Inactive", "selected": status_filter == "inactive"},
+        {"value": "staff", "label": "Staff Users", "selected": status_filter == "staff"},
+        {"value": "superuser", "label": "Superusers", "selected": status_filter == "superuser"},
+    ]
+
+    user_type_options = [
+        {"value": "", "label": "All Types", "selected": user_type_filter == ""},
+        {"value": "admin", "label": "Admins", "selected": user_type_filter == "admin"},
+        {"value": "staff", "label": "Staff", "selected": user_type_filter == "staff"},
+        {"value": "customer", "label": "Customers", "selected": user_type_filter == "customer"},
+    ]
+
+    app_type_options = [
+        {"value": "", "label": "All App Types", "selected": app_type_filter == ""},
+        {"value": "laundry", "label": "Laundry", "selected": app_type_filter == "laundry"},
+        {"value": "hotel", "label": "Hotel", "selected": app_type_filter == "hotel"},
+    ]
+
+    # --- Prepare user details ---
+    users_with_status = []
+    for user in users:
+        # Account status
+        if not user.is_active:
+            status = ("inactive", "danger", "Inactive")
+        elif user.is_superuser:
+            status = ("superuser", "primary", "Superuser")
+        elif user.is_staff:
+            status = ("staff", "info", "Staff")
+        else:
+            status = ("active", "success", "Active")
+
+        # Login info
+        if user.last_login:
+            last_login = user.last_login.strftime("%Y-%m-%d %H:%M")
+            days_since_login = (timezone.now() - user.last_login).days
+        else:
+            last_login = "Never"
+            days_since_login = None
+
+        # Add full details
+        users_with_status.append(
+            {
+                "id": user.id,
+                "email": user.email,
+                "first_name": user.first_name,
+                "last_name": user.last_name,
+                "is_active": user.is_active,
+                "is_staff": user.is_staff,
+                "is_superuser": user.is_superuser,
+                "status": status[0],
+                "status_class": status[1],
+                "status_text": status[2],
+                "last_login": last_login,
+                "days_since_login": days_since_login,
+                "user_type": getattr(user, "user_type", ""),
+                "app_type": getattr(user, "app_type", ""),
+                "shop": getattr(getattr(user, "laundry_profile", None), "shop", ""),
+                "is_online": bool(
+                    user.last_login
+                    and (timezone.now() - user.last_login).seconds < 300
+                ),
+                "date_joined": user.date_joined.strftime("%Y-%m-%d"),
+            }
+        )
+
+    # --- Pagination ---
+    paginator = Paginator(users_with_status, 20)
+    page_number = request.GET.get("page")
+    try:
+        page_obj = paginator.page(page_number)
+    except PageNotAnInteger:
+        page_obj = paginator.page(1)
+    except EmptyPage:
+        page_obj = paginator.page(paginator.num_pages)
+
+    # --- Statistics ---
+    total_users = users.count()
+    active_users = users.filter(is_active=True).count()
+    inactive_users = users.filter(is_active=False).count()
+    staff_users = users.filter(is_staff=True, is_superuser=False).count()
+    superusers = users.filter(is_superuser=True).count()
+    never_logged_in = users.filter(last_login__isnull=True).count()
+    recently_active = users.filter(last_login__gte=timezone.now() - timezone.timedelta(days=7)).count()
+
+    # --- Context ---
+    context = {
+        "users": page_obj,
+        "search_query": search_query,
+        "shop_options": shop_options,
+        "status_options": status_options,
+        "user_type_options": user_type_options,
+        "app_type_options": app_type_options,
+        "total_users": total_users,
+        "active_users": active_users,
+        "inactive_users": inactive_users,
+        "staff_users": staff_users,
+        "superusers": superusers,
+        "never_logged_in": never_logged_in,
+        "recently_active": recently_active,
+        "current_filters": {
+            "shop": shop_filter,
+            "status": status_filter,
+            "user_type": user_type_filter,
+            "app_type": app_type_filter,
+        },
+    }
+
+    return render(request, "Admin/user_management.html", context)
+
+@login_required
+@admin_required
+def user_delete(request, pk):
+    """Delete a user"""
+    user = get_object_or_404(User, pk=pk)
+    
+    # Prevent users from deleting themselves
+    if user == request.user:
+        messages.error(request, "You cannot delete your own account!")
+        return redirect('laundry:user_management')
+    
+    if request.method == 'POST':
+        email = user.email
+        user.delete()
+        messages.success(request, f'User {email} deleted successfully!')
+        return redirect('laundry:user_management')
+    
+    context = {
+        'user': user,
+    }
+    
+    return render(request, 'Admin/user_confirm_delete.html', context)
 
 @login_required
 @shop_required
@@ -1247,20 +1373,25 @@ def customer_management(request):
             Q(phone__icontains=search_query)
         )
     
-    # Filter by shop if user is not superuser
-    user_shops = get_user_shops(request)
-    if user_shops is not None and user_shops:
-        # Get orders from user's shops and then get those customers
-        shop_customer_ids = Order.objects.filter(
-            shop__in=user_shops
-        ).values_list('customer_id', flat=True).distinct()
-        customers = customers.filter(id__in=shop_customer_ids)
+    # Apply permission filtering
+    customers = apply_customer_permissions(customers, request)
     
-    # For staff users, only show customers they created
-    if (hasattr(request.user, 'profile') and 
-        request.user.profile.user_type == 'staff' and 
-        not request.user.is_superuser):
-        customers = customers.filter(created_by=request.user)
+    # Also include customers created by users from the same shop
+    user_shops = get_user_shops(request)
+    if user_shops is not None and user_shops and not request.user.is_superuser:
+        # Get users from the same shops
+        same_shop_user_ids = User.objects.filter(
+            laundry_profile__shop__in=user_shops
+        ).values_list('id', flat=True)
+        
+        # Include customers created by users from the same shop
+        same_shop_customers = Customer.objects.filter(
+            created_by_id__in=same_shop_user_ids
+        )
+        
+        # Combine with existing customers
+        customers = customers | same_shop_customers
+        customers = customers.distinct()
     
     # Pagination
     paginator = Paginator(customers, 20)
@@ -1291,7 +1422,7 @@ def customer_add(request):
             customer.created_by = request.user
             customer.save()
             messages.success(request, f'Customer {customer.name} added successfully!')
-            return redirect('customer_management')
+            return redirect('laundry:customer_management')
     else:
         form = CustomerForm()
     
@@ -1309,31 +1440,16 @@ def customer_edit(request, pk):
     customer = get_object_or_404(Customer, pk=pk)
     
     # Check if user has permission to edit this customer
-    user_shops = get_user_shops(request)
-    if user_shops is not None and user_shops:
-        # Check if customer has orders in user's shops
-        customer_shop_orders = Order.objects.filter(
-            customer=customer,
-            shop__in=user_shops
-        ).exists()
-        if not customer_shop_orders and not request.user.is_superuser:
-            messages.error(request, "You don't have permission to edit this customer.")
-            return redirect('customer_management')
-    
-    # For staff users, check if they created this customer
-    if (hasattr(request.user, 'profile') and 
-        request.user.profile.user_type == 'staff' and 
-        not request.user.is_superuser and
-        customer.created_by != request.user):
+    if not check_customer_permission(request, customer):
         messages.error(request, "You don't have permission to edit this customer.")
-        return redirect('customer_management')
+        return redirect('laundry:customer_management')
     
     if request.method == 'POST':
         form = CustomerForm(request.POST, instance=customer)
         if form.is_valid():
             form.save()
             messages.success(request, f'Customer {customer.name} updated successfully!')
-            return redirect('customer_management')
+            return redirect('laundry:customer_management')
     else:
         form = CustomerForm(instance=customer)
     
@@ -1352,34 +1468,20 @@ def customer_delete(request, pk):
     customer = get_object_or_404(Customer, pk=pk)
     
     # Check if user has permission
-    user_shops = get_user_shops(request)
-    if user_shops is not None and user_shops:
-        customer_shop_orders = Order.objects.filter(
-            customer=customer,
-            shop__in=user_shops
-        ).exists()
-        if not customer_shop_orders and not request.user.is_superuser:
-            messages.error(request, "You don't have permission to delete this customer.")
-            return redirect('customer_management')
-    
-    # For staff users, check if they created this customer
-    if (hasattr(request.user, 'profile') and 
-        request.user.profile.user_type == 'staff' and 
-        not request.user.is_superuser and
-        customer.created_by != request.user):
+    if not check_customer_permission(request, customer):
         messages.error(request, "You don't have permission to delete this customer.")
-        return redirect('customer_management')
+        return redirect('laundry:customer_management')
     
     if request.method == 'POST':
         # Check if customer has orders
         if customer.orders.exists():
             messages.error(request, f'Cannot delete {customer.name} because they have existing orders.')
-            return redirect('customer_management')
+            return redirect('laundry:customer_management')
         
         customer_name = customer.name
         customer.delete()
         messages.success(request, f'Customer {customer_name} deleted successfully!')
-        return redirect('customer_management')
+        return redirect('laundry:customer_management')
     
     context = {
         'customer': customer,
@@ -1394,20 +1496,15 @@ def customer_orders(request, pk):
     customer = get_object_or_404(Customer, pk=pk)
     
     # Check permission
-    user_shops = get_user_shops(request)
+    if not check_customer_permission(request, customer):
+        messages.error(request, "You don't have permission to view this customer's orders.")
+        return redirect('laundry:customer_management')
+    
+    # Get orders for this customer
     orders = customer.orders.all()
     
-    if user_shops is not None and user_shops and not request.user.is_superuser:
-        orders = orders.filter(shop__in=user_shops)
-        if not orders.exists():
-            messages.error(request, "You don't have permission to view this customer's orders.")
-            return redirect('customer_management')
-    
-    # For staff users, only show orders they created
-    if (hasattr(request.user, 'profile') and 
-        request.user.profile.user_type == 'staff' and 
-        not request.user.is_superuser):
-        orders = orders.filter(created_by=request.user)
+    # Apply order permissions
+    orders = apply_order_permissions(orders, request)
     
     # Get statistics
     total_orders = orders.count()
@@ -1433,7 +1530,6 @@ def customer_orders(request, pk):
     }
     
     return render(request, 'Admin/customer_orders.html', context) 
-
 
 @login_required
 def create_expense_field(request):
@@ -1484,7 +1580,6 @@ def create_expense_field(request):
         "form": form,
         "default_expenses": default_expenses
     })
-
 
 @login_required
 def expense_field_list(request):
@@ -1564,3 +1659,21 @@ def delete_expense_record(request, record_id):
         messages.success(request, "Expense record deleted successfully!")
         return redirect("expense_list")
     return render(request, "expenses/delete_expense_record.html", {"record": record})
+
+@login_required
+def debug_users(request):
+    """Return all user data as JSON for debugging."""
+    users = User.objects.all().values(
+        "id",
+        "email",
+        "first_name",
+        "last_name",
+        "user_type",   # custom field in UserProfile
+        "app_type",    # custom field in UserProfile
+        "is_staff",
+        "is_superuser",
+        "is_active",
+        "last_login",
+        "date_joined",
+    )
+    return JsonResponse(list(users), safe=False)

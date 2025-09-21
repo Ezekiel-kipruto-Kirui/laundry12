@@ -1,5 +1,4 @@
 {% load static tailwind_tags %}
-
 {% load static %}
 
 <!DOCTYPE html>
@@ -77,9 +76,57 @@
             margin-left: 64px !important;
         }
 
+        /* Dropdown styles */
+        .dropdown-content {
+            display: none;
+            padding-left: 1.5rem;
+            border-left: 2px solid #374151;
+            margin-left: 0.5rem;
+        }
+
+        .dropdown-open .dropdown-content {
+            display: block;
+        }
+
+        .dropdown-toggle {
+            cursor: pointer;
+        }
+
+        .dropdown-toggle i.fa-chevron-down {
+            transition: transform 0.3s ease;
+        }
+
+        .dropdown-open .dropdown-toggle i.fa-chevron-down {
+            transform: rotate(180deg);
+        }
+
         /* Mobile overlay improvements */
         .mobile-overlay {
             transition: opacity 0.3s ease;
+        }
+
+        /* Scrollable sidebar */
+        .sidebar-scrollable {
+            height: calc(100% - 80px);
+            overflow-y: auto;
+        }
+
+        .sidebar-scrollable::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        .sidebar-scrollable::-webkit-scrollbar-track {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 3px;
+        }
+
+        .sidebar-scrollable::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 3px;
+        }
+
+        .sidebar-scrollable::-webkit-scrollbar-thumb:hover {
+            background: rgba(255, 255, 255, 0.3);
         }
 
         /* Mobile sidebar styles */
@@ -115,111 +162,303 @@
             <div class="flex items-center justify-between">
                 <div class="flex items-center space-x-3">
                     <div class="w-6 h-6 bg-blue-500 rounded-lg flex items-center justify-center">
+                        {% if user.is_authenticated and user.is_superuser %}
+                        <i class="fas fa-cog text-white text-sm"></i>
+                        {% elif user.is_authenticated and user.groups.all.0.name == 'Hotel Staff' %}
+                        <i class="fas fa-utensils text-white text-sm"></i>
+                        {% elif user.is_authenticated and user.groups.all.0.name == 'Laundry Staff' %}
                         <i class="fas fa-shirt text-white text-sm"></i>
+                        {% else %}
+                        <i class="fas fa-building text-white text-sm"></i>
+                        {% endif %}
                     </div>
-                    <span class="text-white text-sm font-medium sidebar-header-text">Clean Page Laundry</span>
+                    <span class="text-white text-sm font-medium sidebar-header-text">
+                        {% if user.is_authenticated and user.is_superuser %}
+                        Admin Panel
+                        {% elif user.is_authenticated and user.groups.all.0.name == 'Hotel Staff' %}
+                        Hotel Management
+                        {% elif user.is_authenticated and user.groups.all.0.name == 'Laundry Staff' %}
+                        Laundry Management
+                        {% else %}
+                        Welcome
+                        {% endif %}
+                    </span>
                 </div>
+                {% if user.is_superuser %}
                 <button id="sidebar-toggle" class="sidebar-toggle-btn text-gray-400 hover:text-white lg:flex hidden">
                     <i class="fas fa-chevron-left"></i>
                 </button>
+                {% endif %}
                 <button id="mobile-close-sidebar" class="text-gray-400 hover:text-white lg:hidden">
                     <i class="fas fa-times"></i>
                 </button>
             </div>
         </div>
 
-        <!-- Navigation -->
-        <nav class="p-2 lg:p-4 space-y-1">
-            <!-- Dashboard -->
-            <a href="{% url 'dashboard' %}"
-                class="flex items-center space-x-3 px-3 py-2 lg:px-4 lg:py-3 text-gray-300 hover:bg-gray-700 hover:text-white rounded-lg transition-colors group"
-                title="Dashboard">
-                <i class="fas fa-tachometer-alt w-5 text-center"></i>
-                <span class="sidebar-text">Dashboard</span>
-            </a>
+        <!-- Navigation with Scrollable Container -->
+        <div class="sidebar-scrollable">
+            <nav class="p-2 lg:p-4 space-y-1">
+                <!-- Superuser sees everything -->
+                {% if user.is_authenticated and user.is_superuser %}
+                <!-- Dashboard -->
+                <a href="{% url 'laundry:dashboard' %}"
+                    class="flex items-center space-x-3 px-3 py-2 lg:px-4 lg:py-3 text-gray-300 hover:bg-gray-700 hover:text-white rounded-lg transition-colors group"
+                    title="Dashboard">
+                    <i class="fas fa-tachometer-alt w-5 text-center"></i>
+                    <span class="sidebar-text">Dashboard</span>
+                </a>
 
-            <!-- Create Order -->
-            <a href="{% url 'createorder' %}"
-                class="flex items-center space-x-3 px-3 py-2 lg:px-4 lg:py-3 text-gray-300 hover:bg-gray-700 hover:text-white rounded-lg transition-colors group"
-                title="Create Order">
-                <i class="fas fa-plus-circle w-5 text-center"></i>
-                <span class="sidebar-text">Create Order</span>
-            </a>
+                <!-- Analytics/Reports -->
+                <a href="{% url 'laundry:laundryapp_dashboard' %}"
+                    class="flex items-center space-x-3 px-3 py-2 lg:px-4 lg:py-3 text-gray-300 hover:bg-gray-700 hover:text-white rounded-lg transition-colors group"
+                    title="Reports">
+                    <i class="fas fa-chart-line w-5 text-center"></i>
+                    <span class="sidebar-text">Reports</span>
+                </a>
 
-            <!-- Orders -->
-            <a href="{% url 'customordertable' %}"
-                class="flex items-center space-x-3 px-3 py-2 lg:px-4 lg:py-3 text-gray-300 hover:bg-gray-700 hover:text-white rounded-lg transition-colors group"
-                title="Orders">
-                <i class="fas fa-shopping-cart w-5 text-center"></i>
-                <span class="sidebar-text">Orders</span>
-            </a>
+                <!-- Laundry Management Dropdown -->
+                <div class="dropdown-group" id="laundry-dropdown-group">
+                    <div class="dropdown-toggle flex items-center space-x-3 px-3 py-2 lg:px-4 lg:py-3 text-gray-300 hover:bg-gray-700 hover:text-white rounded-lg transition-colors group cursor-pointer"
+                        onclick="toggleDropdown('laundry-dropdown', 'laundry')">
+                        <i class="fas fa-shirt w-5 text-center"></i>
+                        <span class="sidebar-text flex-1">Laundry Shop</span>
+                        <i class="fas fa-chevron-down text-xs transition-transform duration-300"></i>
+                    </div>
+                    <div id="laundry-dropdown" class="dropdown-content mt-1 space-y-1">
+                        <a href="{% url 'laundry:dashboard' %}"
+                            class="flex items-center space-x-3 px-3 py-2 text-gray-300 hover:bg-gray-700 hover:text-white rounded-lg transition-colors group"
+                            title="Dashboard">
+                            <i class="fas fa-tachometer-alt w-4 text-center"></i>
+                            <span class="sidebar-text text-sm">Dashboard</span>
+                        </a>
+                        <a href="{% url 'laundry:createorder' %}"
+                            class="flex items-center space-x-3 px-3 py-2 text-gray-300 hover:bg-gray-700 hover:text-white rounded-lg transition-colors group"
+                            title="Create Order">
+                            <i class="fas fa-plus-circle w-4 text-center"></i>
+                            <span class="sidebar-text text-sm">Create Order</span>
+                        </a>
+                        <a href="{% url 'laundry:customordertable' %}"
+                            class="flex items-center space-x-3 px-3 py-2 text-gray-300 hover:bg-gray-700 hover:text-white rounded-lg transition-colors group"
+                            title="Orders">
+                            <i class="fas fa-shopping-cart w-4 text-center"></i>
+                            <span class="sidebar-text text-sm">Orders</span>
+                        </a>
+                        <a href="{% url 'laundry:customer_management' %}"
+                            class="flex items-center space-x-3 px-3 py-2 text-gray-300 hover:bg-gray-700 hover:text-white rounded-lg transition-colors group"
+                            title="Customers">
+                            <i class="fas fa-users w-4 text-center"></i>
+                            <span class="sidebar-text text-sm">Customers</span>
+                        </a>
+                    </div>
+                </div>
 
-            <!-- Customers -->
-            <a href="{% url 'customer_management' %}"
-                class="flex items-center space-x-3 px-3 py-2 lg:px-4 lg:py-3 text-gray-300 hover:bg-gray-700 hover:text-white rounded-lg transition-colors group"
-                title="Customers">
-                <i class="fas fa-users w-5 text-center"></i>
-                <span class="sidebar-text">Customers</span>
-            </a>
+                <!-- Hotel Management Dropdown -->
+                <div class="dropdown-group" id="hotel-dropdown-group">
+                    <div class="dropdown-toggle flex items-center space-x-3 px-3 py-2 lg:px-4 lg:py-3 text-gray-300 hover:bg-gray-700 hover:text-white rounded-lg transition-colors group cursor-pointer"
+                        onclick="toggleDropdown('hotel-dropdown', 'hotel')">
+                        <i class="fas fa-hotel w-5 text-center"></i>
+                        <span class="sidebar-text flex-1">Hotel</span>
+                        <i class="fas fa-chevron-down text-xs transition-transform duration-300"></i>
+                    </div>
+                    <div id="hotel-dropdown" class="dropdown-content mt-1 space-y-1">
 
-            {% if user.is_authenticated %}
-            {% if user.is_superuser %}
-            <!-- Analytics -->
-            <a href="{% url 'laundryapp_dashboard' %}"
-                class="flex items-center space-x-3 px-3 py-2 lg:px-4 lg:py-3 text-gray-300 hover:bg-gray-700 hover:text-white rounded-lg transition-colors group"
-                title="Reports">
-                <i class="fas fa-chart-line w-5 text-center"></i>
-                <span class="sidebar-text">Reports</span>
-            </a>
-            <a href="{% url 'expense_list' %}"
-                class="flex items-center space-x-3 px-3 py-2 lg:px-4 lg:py-3 text-gray-300 hover:bg-gray-700 hover:text-white rounded-lg transition-colors group"
-                title="Expenses">
-                <i class="fas fa-money-bill-wave w-5 text-center"></i>
-                <span class="sidebar-text">Expenses</span>
-            </a>
+                        <a href="{% url 'hotel:category_list' %}"
+                            class="flex items-center space-x-3 px-3 py-2 text-gray-300 hover:bg-gray-700 hover:text-white rounded-lg transition-colors group"
+                            title="Categories">
+                            <i class="fas fa-folder w-4 text-center"></i>
+                            <span class="sidebar-text text-sm">Categories</span>
+                        </a>
+                        <a href="{% url 'hotel:food_item_list' %}"
+                            class="flex items-center space-x-3 px-3 py-2 text-gray-300 hover:bg-gray-700 hover:text-white rounded-lg transition-colors group"
+                            title="Food Items">
+                            <i class="fas fa-hamburger w-4 text-center"></i>
+                            <span class="sidebar-text text-sm">Food Items</span>
+                        </a>
+                        <a href="{% url 'hotel:create_order' %}"
+                            class="flex items-center space-x-3 px-3 py-2 text-gray-300 hover:bg-gray-700 hover:text-white rounded-lg transition-colors group"
+                            title="Create Order">
+                            <i class="fas fa-plus-circle w-4 text-center"></i>
+                            <span class="sidebar-text text-sm">Create Order</span>
+                        </a>
+                        <a href="{% url 'hotel:order_list' %}"
+                            class="flex items-center space-x-3 px-3 py-2 text-gray-300 hover:bg-gray-700 hover:text-white rounded-lg transition-colors group"
+                            title="Orders">
+                            <i class="fas fa-receipt w-4 text-center"></i>
+                            <span class="sidebar-text text-sm">Orders</span>
+                        </a>
+                    </div>
+                </div>
 
-            <!-- Settings -->
-            <a href="{% url 'user_management' %}"
-                class="flex items-center space-x-3 px-3 py-2 lg:px-4 lg:py-3 text-gray-300 hover:bg-gray-700 hover:text-white rounded-lg transition-colors group"
-                title="Site Management">
-                <i class="fas fa-cog w-5 text-center"></i>
-                <span class="sidebar-text">Site management</span>
-            </a>
-            {% endif %}
-            {% endif %}
-        </nav>
+                <!-- Expenses -->
+                <a href="{% url 'laundry:expense_list' %}"
+                    class="flex items-center space-x-3 px-3 py-2 lg:px-4 lg:py-3 text-gray-300 hover:bg-gray-700 hover:text-white rounded-lg transition-colors group"
+                    title="Expenses">
+                    <i class="fas fa-money-bill-wave w-5 text-center"></i>
+                    <span class="sidebar-text">Expenses</span>
+                </a>
+
+                <!-- Site Management -->
+                <a href="{% url 'laundry:user_management' %}"
+                    class="flex items-center space-x-3 px-3 py-2 lg:px-4 lg:py-3 text-gray-300 hover:bg-gray-700 hover:text-white rounded-lg transition-colors group"
+                    title="Site Management">
+                    <i class="fas fa-cog w-5 text-center"></i>
+                    <span class="sidebar-text">Site Management</span>
+                </a>
+                {% endif %}
+
+                <!-- Hotel Navigation (shown to hotel staff and regular users) -->
+                {% if user.is_authenticated and not user.is_superuser and not user.groups.all.0.name == 'Laundry Staff' or not user.is_authenticated %}
+                <!-- Dashboard for hotel users -->
+                <a href="{% url 'laundry:dashboard' %}"
+                    class="flex items-center space-x-3 px-3 py-2 lg:px-4 lg:py-3 text-gray-300 hover:bg-gray-700 hover:text-white rounded-lg transition-colors group"
+                    title="Dashboard">
+                    <i class="fas fa-tachometer-alt w-5 text-center"></i>
+                    <span class="sidebar-text">Dashboard</span>
+                </a>
+
+                <!-- Menu -->
+                <a href="{% url 'hotel:menu' %}"
+                    class="flex items-center space-x-3 px-3 py-2 lg:px-4 lg:py-3 text-gray-300 hover:bg-gray-700 hover:text-white rounded-lg transition-colors group"
+                    title="Menu">
+                    <i class="fas fa-utensils w-5 text-center"></i>
+                    <span class="sidebar-text">Menu</span>
+                </a>
+
+                <!-- Categories (for hotel staff and regular users) -->
+                <a href="{% url 'hotel:category_list' %}"
+                    class="flex items-center space-x-3 px-3 py-2 lg:px-4 lg:py-3 text-gray-300 hover:bg-gray-700 hover:text-white rounded-lg transition-colors group"
+                    title="Categories">
+                    <i class="fas fa-folder w-5 text-center"></i>
+                    <span class="sidebar-text">Categories</span>
+                </a>
+
+                <!-- Food Items (for hotel staff and regular users) -->
+                <a href="{% url 'hotel:food_item_list' %}"
+                    class="flex items-center space-x-3 px-3 py-2 lg:px-4 lg:py-3 text-gray-300 hover:bg-gray-700 hover:text-white rounded-lg transition-colors group"
+                    title="Food Items">
+                    <i class="fas fa-hamburger w-5 text-center"></i>
+                    <span class="sidebar-text">Food Items</span>
+                </a>
+
+                <!-- Create Order -->
+                <a href="{% url 'hotel:create_order' %}"
+                    class="flex items-center space-x-3 px-3 py-2 lg:px-4 lg:py-3 text-gray-300 hover:bg-gray-700 hover:text-white rounded-lg transition-colors group"
+                    title="Create Order">
+                    <i class="fas fa-plus-circle w-5 text-center"></i>
+                    <span class="sidebar-text">Create Order</span>
+                </a>
+
+                <!-- Orders -->
+                <a href="{% url 'hotel:order_list' %}"
+                    class="flex items-center space-x-3 px-3 py-2 lg:px-4 lg:py-3 text-gray-300 hover:bg-gray-700 hover:text-white rounded-lg transition-colors group"
+                    title="Orders">
+                    <i class="fas fa-receipt w-5 text-center"></i>
+                    <span class="sidebar-text">Orders</span>
+                </a>
+                {% endif %}
+
+                <!-- Laundry Navigation (shown to laundry staff only) -->
+                {% if user.is_authenticated and user.groups.all.0.name == 'Laundry Staff' %}
+                <!-- Dashboard -->
+                <a href="{% url 'laundry:dashboard' %}"
+                    class="flex items-center space-x-3 px-3 py-2 lg:px-4 lg:py-3 text-gray-300 hover:bg-gray-700 hover:text-white rounded-lg transition-colors group"
+                    title="Dashboard">
+                    <i class="fas fa-tachometer-alt w-5 text-center"></i>
+                    <span class="sidebar-text">Dashboard</span>
+                </a>
+
+                <!-- Create Order -->
+                <a href="{% url 'laundry:createorder' %}"
+                    class="flex items-center space-x-3 px-3 py-2 lg:px-4 lg:py-3 text-gray-300 hover:bg-gray-700 hover:text-white rounded-lg transition-colors group"
+                    title="Create Order">
+                    <i class="fas fa-plus-circle w-5 text-center"></i>
+                    <span class="sidebar-text">Create Order</span>
+                </a>
+
+                <!-- Orders -->
+                <a href="{% url 'laundry:customordertable' %}"
+                    class="flex items-center space-x-3 px-3 py-2 lg:px-4 lg:py-3 text-gray-300 hover:bg-gray-700 hover:text-white rounded-lg transition-colors group"
+                    title="Orders">
+                    <i class="fas fa-shopping-cart w-5 text-center"></i>
+                    <span class="sidebar-text">Orders</span>
+                </a>
+
+                <!-- Customers -->
+                <a href="{% url 'laundry:customer_management' %}"
+                    class="flex items-center space-x-3 px-3 py-2 lg:px-4 lg:py-3 text-gray-300 hover:bg-gray-700 hover:text-white rounded-lg transition-colors group"
+                    title="Customers">
+                    <i class="fas fa-users w-5 text-center"></i>
+                    <span class="sidebar-text">Customers</span>
+                </a>
+                {% endif %}
+
+                <!-- For unauthenticated users -->
+                {% if not user.is_authenticated %}
+                <a href="{% url 'hotel:menu' %}"
+                    class="flex items-center space-x-3 px-3 py-2 lg:px-4 lg:py-3 text-gray-300 hover:bg-gray-700 hover:text-white rounded-lg transition-colors group"
+                    title="Menu">
+                    <i class="fas fa-utensils w-5 text-center"></i>
+                    <span class="sidebar-text">Menu</span>
+                </a>
+                {% endif %}
+            </nav>
+        </div>
     </div>
 
     <!-- Main Content -->
-    <div id="main-content" class="content-transition min-h-screen content-mobile-full lg:ml-64">
+    <div id="main-content"
+        class="content-transition min-h-screen content-mobile-full {% if not user.is_superuser %}lg:ml-64{% endif %}">
         <!-- Header -->
         <header class="bg-white shadow-sm border-b border-gray-200">
             <div class="flex items-center justify-between px-4 py-3 lg:px-6 lg:py-4">
-               
-
-                <div class="flex items-center justify-around space-x-3">
+                <div class="flex items-center space-x-3 p-2">
                     <button id="mobile-sidebar-toggle" class="lg:hidden text-gray-600 hover:text-gray-900 p-2">
                         <i class="fas fa-bars text-xl"></i>
                     </button>
-                    <div class="relative">
-                        <div class="w-8 h-8 lg:w-10 lg:h-10 bg-blue-500 rounded-full flex items-center justify-center">
-                            <span class="text-blue-600 font-semibold text-sm lg:text-base">{{ user.get_username|first|upper }}</span>
+                    <div class="flex items-center justify-around space-x-3">
+                        <div class="relative">
+                            <div
+                                class="w-8 h-8 lg:w-10 lg:h-10 bg-blue-500 rounded-full flex items-center justify-center">
+                                <span class="text-white font-semibold text-sm lg:text-base">{{
+                                    user.get_username|first|upper}}</span>
+                            </div>
+                            <div
+                                class="absolute bottom-0 right-0 w-2 h-2 lg:w-3 lg:h-3 bg-green-500 shadow-xl border-gray-500 rounded-full">
+                            </div>
                         </div>
-                        <div
-                            class="absolute bottom-0 right-0 w-2 h-2 lg:w-3 lg:h-3 bg-green-500 shadow-xl border-gray-500 rounded-full">
+                        <div class="flex-1 min-w-0 hidden sm:block">
+                            <p class="text-blue-800 text-sm font-medium truncate">{{ user.get_username }}</p>
+                            <p class="text-gray-600 text-xs">
+                                {% if user.is_superuser %}
+                                Administrator
+                                {% elif user.groups.all.0.name == 'Hotel Staff' %}
+                                Hotel Staff
+                                {% elif user.groups.all.0.name == 'Laundry Staff' %}
+                                Laundry Staff
+                                {% else %}
+                                Customer
+                                {% endif %}
+                            </p>
                         </div>
-                    </div>
-                    <div class="flex-1 min-w-0 hidden sm:block">
-                        <p class="text-blue-800 text-sm font-medium truncate">{{ user.get_username }}</p>
                     </div>
                 </div>
 
-                <div class="flex items-center space-x-4">
-                    <!-- Notifications -->
-                    <a href="{% url 'logout' %}" class="text-blue-800 hover:text-blue-600 text-sm lg:text-base">
-                        <i class="fas fa-sign-out-alt mr-1"></i><span class="hidden sm:inline">Logout</span>
-                    </a>
-                </div>
+                {% if user.is_authenticated %}
+                <form method="post" action="{% url 'logout' %}">
+                    {% csrf_token %}
+                    <button type="submit"
+                        class="text-blue-800 hover:text-blue-600 text-sm lg:text-base bg-transparent border-0 cursor-pointer flex items-center">
+                        <i class="fas fa-sign-out-alt mr-1"></i>
+                        <span class="hidden sm:inline">Logout</span>
+                    </button>
+                </form>
+                {% else %}
+                <a href="{% url 'login' %}"
+                    class="text-blue-800 hover:text-blue-600 text-sm lg:text-base bg-transparent border-0 cursor-pointer flex items-center">
+                    <i class="fas fa-sign-in-alt mr-1"></i>
+                    <span class="hidden sm:inline">Login</span>
+                </a>
+                {% endif %}
             </div>
         </header>
 
@@ -257,16 +496,22 @@
         const mobileCloseSidebar = document.getElementById('mobile-close-sidebar');
         const mobileOverlay = document.getElementById('mobile-overlay');
 
-        // Check if sidebar state is stored in localStorage
-        const isSidebarCollapsed = localStorage.getItem('sidebarCollapsed') === 'true';
+        // Only enable sidebar collapse for superusers
+        const isSuperuser = '{% if user.is_superuser %}true{% else %} false{% endif %}';
+
+        // Check if sidebar state is stored in localStorage (only for superusers)
+        let isSidebarCollapsed = false;
+        if (isSuperuser) {
+            isSidebarCollapsed = localStorage.getItem('sidebarCollapsed') === 'true';
+        }
 
         // Initialize sidebar state
         if (isSidebarCollapsed) {
             collapseSidebar();
         }
 
-        // Toggle sidebar on desktop (collapse/expand)
-        if (sidebarToggle) {
+        // Toggle sidebar on desktop (collapse/expand) - only for superusers
+        if (sidebarToggle && isSuperuser) {
             sidebarToggle.addEventListener('click', () => {
                 if (sidebar.classList.contains('sidebar-collapsed')) {
                     expandSidebar();
@@ -300,8 +545,37 @@
             mobileOverlay.classList.remove('mobile-overlay-visible');
         });
 
-        // Collapse sidebar function (like Django Unfold)
+        // Dropdown toggle function with persistence
+        function toggleDropdown(dropdownId, dropdownKey) {
+            const dropdown = document.getElementById(dropdownId);
+            const parent = dropdown.closest('.dropdown-group');
+
+            // Toggle the dropdown
+            parent.classList.toggle('dropdown-open');
+
+            // Save the state to localStorage
+            const isOpen = parent.classList.contains('dropdown-open');
+            localStorage.setItem(`dropdown-${dropdownKey}`, isOpen ? 'open' : 'closed');
+        }
+
+        // Restore dropdown states on page load
+        function restoreDropdownStates() {
+            const laundryState = localStorage.getItem('dropdown-laundry');
+            const hotelState = localStorage.getItem('dropdown-hotel');
+
+            if (laundryState === 'open') {
+                document.getElementById('laundry-dropdown-group').classList.add('dropdown-open');
+            }
+
+            if (hotelState === 'open') {
+                document.getElementById('hotel-dropdown-group').classList.add('dropdown-open');
+            }
+        }
+
+        // Collapse sidebar function (like Django Unfold) - only for superusers
         function collapseSidebar() {
+            if (!isSuperuser) return;
+
             sidebar.classList.add('sidebar-collapsed');
             mainContent.classList.add('content-expanded');
             mainContent.classList.remove('ml-64');
@@ -312,8 +586,10 @@
             localStorage.setItem('sidebarCollapsed', 'true');
         }
 
-        // Expand sidebar function
+        // Expand sidebar function - only for superusers
         function expandSidebar() {
+            if (!isSuperuser) return;
+
             sidebar.classList.remove('sidebar-collapsed');
             mainContent.classList.remove('content-expanded');
             mainContent.classList.add('ml-64');
@@ -338,33 +614,45 @@
                 sidebar.classList.remove('sidebar-collapsed');
                 mainContent.classList.remove('content-expanded');
             } else {
-                // On desktop, respect the collapsed state
+                // On desktop, respect the collapsed state (only for superusers)
                 sidebar.classList.remove('sidebar-mobile-hidden');
                 sidebar.classList.add('sidebar-mobile-visible');
                 mainContent.classList.remove('content-mobile-full');
                 mobileOverlay.classList.add('hidden');
 
-                if (localStorage.getItem('sidebarCollapsed') === 'true') {
-                    collapseSidebar();
+                if (isSuperuser) {
+                    if (localStorage.getItem('sidebarCollapsed') === 'true') {
+                        collapseSidebar();
+                    } else {
+                        expandSidebar();
+                    }
                 } else {
-                    expandSidebar();
+                    // For non-superusers, always show expanded sidebar
+                    sidebar.classList.remove('sidebar-collapsed');
+                    mainContent.classList.remove('content-expanded');
+                    mainContent.classList.add('ml-64');
                 }
             }
         }
 
         // Initial call and event listener
-        handleResize();
+        document.addEventListener('DOMContentLoaded', function () {
+            handleResize();
+            restoreDropdownStates();
+        });
         window.addEventListener('resize', handleResize);
 
-        // Keyboard shortcuts (Ctrl+B to toggle sidebar like Django Unfold)
-        document.addEventListener('keydown', (e) => {
-            if (e.ctrlKey && e.key === 'b') {
-                e.preventDefault();
-                if (window.innerWidth >= 1024) {
-                    sidebarToggle.click();
+        // Keyboard shortcuts (Ctrl+B to toggle sidebar like Django Unfold) - only for superusers
+        if (isSuperuser) {
+            document.addEventListener('keydown', (e) => {
+                if (e.ctrlKey && e.key === 'b') {
+                    e.preventDefault();
+                    if (window.innerWidth >= 1024) {
+                        sidebarToggle.click();
+                    }
                 }
-            }
-        });
+            });
+        }
     </script>
 
     {% block extrajs %}{% endblock %}

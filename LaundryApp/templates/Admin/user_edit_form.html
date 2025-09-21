@@ -1,4 +1,4 @@
-{% extends '../home.html' %}
+{% extends 'home.html' %}
 {% load static tailwind_tags %}
 
 {% block extra_css %}
@@ -45,7 +45,7 @@
                     <h1 class="text-2xl font-bold text-white">
                         <i class="fas fa-user-edit mr-2"></i>{{ title }}
                     </h1>
-                    <a href="{% url 'user_management' %}"
+                    <a href="{% url 'laundry:user_management' %}"
                         class="bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 rounded-lg transition duration-200 ease-in-out transform hover:scale-105">
                         <i class="fas fa-arrow-left mr-2"></i>Back to Users
                     </a>
@@ -86,76 +86,70 @@
                             </div>
 
                             <div class="space-y-4">
+                                <!-- Username -->
                                 <div>
-                                    <label for="{{ user_form.username.id_for_label }}"
-                                        class="block text-sm font-medium text-gray-700 mb-1">Username</label>
-                                    <input type="text" name="{{ user_form.username.name }}"
-                                        id="{{ user_form.username.id_for_label }}"
-                                        value="{{ user_form.username.value|default:'' }}"
-                                        class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white text-gray-900">
-                                    {% if user_form.username.errors %}
-                                    <div class="text-red-500 text-sm mt-1">{{ user_form.username.errors }}</div>
-                                    {% endif %}
+                                    <label class="block text-sm font-medium text-gray-700 mb-1">Username</label>
+                                    {{ user_form.username }}
+                                    {% for error in user_form.username.errors %}
+                                    <div class="text-red-500 text-sm mt-1">{{ error }}</div>
+                                    {% endfor %}
                                 </div>
 
+                                <!-- Email -->
                                 <div>
-                                    <label for="{{ user_form.email.id_for_label }}"
-                                        class="block text-sm font-medium text-gray-700 mb-1">Email</label>
-                                    <input type="email" name="{{ user_form.email.name }}"
-                                        id="{{ user_form.email.id_for_label }}"
-                                        value="{{ user_form.email.value|default:'' }}"
-                                        class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white text-gray-900">
-                                    {% if user_form.email.errors %}
-                                    <div class="text-red-500 text-sm mt-1">{{ user_form.email.errors }}</div>
-                                    {% endif %}
+                                    <label class="block text-sm font-medium text-gray-700 mb-1">Email</label>
+                                    {{ user_form.email }}
+                                    {% for error in user_form.email.errors %}
+                                    <div class="text-red-500 text-sm mt-1">{{ error }}</div>
+                                    {% endfor %}
                                 </div>
 
+                                <!-- First/Last name -->
                                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                                     <div>
-                                        <label for="{{ user_form.first_name.id_for_label }}"
-                                            class="block text-sm font-medium text-gray-700 mb-1">First Name</label>
-                                        <input type="text" name="{{ user_form.first_name.name }}"
-                                            id="{{ user_form.first_name.id_for_label }}"
-                                            value="{{ user_form.first_name.value|default:'' }}"
-                                            class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white text-gray-900">
-                                        {% if user_form.first_name.errors %}
-                                        <div class="text-red-500 text-sm mt-1">{{ user_form.first_name.errors }}</div>
-                                        {% endif %}
+                                        <label class="block text-sm font-medium text-gray-700 mb-1">First Name</label>
+                                        {{ user_form.first_name }}
+                                        {% for error in user_form.first_name.errors %}
+                                        <div class="text-red-500 text-sm mt-1">{{ error }}</div>
+                                        {% endfor %}
                                     </div>
                                     <div>
-                                        <label for="{{ user_form.last_name.id_for_label }}"
-                                            class="block text-sm font-medium text-gray-700 mb-1">Last Name</label>
-                                        <input type="text" name="{{ user_form.last_name.name }}"
-                                            id="{{ user_form.last_name.id_for_label }}"
-                                            value="{{ user_form.last_name.value|default:'' }}"
-                                            class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white text-gray-900">
-                                        {% if user_form.last_name.errors %}
-                                        <div class="text-red-500 text-sm mt-1">{{ user_form.last_name.errors }}</div>
-                                        {% endif %}
+                                        <label class="block text-sm font-medium text-gray-700 mb-1">Last Name</label>
+                                        {{ user_form.last_name }}
+                                        {% for error in user_form.last_name.errors %}
+                                        <div class="text-red-500 text-sm mt-1">{{ error }}</div>
+                                        {% endfor %}
                                     </div>
                                 </div>
 
-                            <div class="form-group mb-3">
-                                <label for="{{ profile_form.shop.id_for_label }}" class="form-label">Shop</label>
-                                {{ profile_form.shop }}
-                                {% if profile_form.shop.errors %}
-                                <div class="text-danger">{{ profile_form.shop.errors }}</div>
-                                {% endif %}
-                            </div>
+                                <!-- User type -->
                                 <div>
-                                    <label for="{{ profile_form.user_type.id_for_label }}"
-                                        class="block text-sm font-medium text-gray-700 mb-1">User Type</label>
-                                    <select name="{{ profile_form.user_type.name }}"
-                                        id="{{ profile_form.user_type.id_for_label }}"
-                                        class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white text-gray-900">
-                                        {% for value, label in profile_form.user_type.field.choices %}
-                                        <option value="{{ value }}" {% if profile_form.user_type.value == value %}selected{% endif %}>{{ label }}</option>
-                                        {% endfor %}
-                                    </select>
-                                    {% if profile_form.user_type.errors %}
-                                    <div class="text-red-500 text-sm mt-1">{{ profile_form.user_type.errors }}</div>
-                                    {% endif %}
+                                    <label class="block text-sm font-medium text-gray-700 mb-1">User Type</label>
+                                    {{ user_form.user_type }}
+                                    {% for error in user_form.user_type.errors %}
+                                    <div class="text-red-500 text-sm mt-1">{{ error }}</div>
+                                    {% endfor %}
                                 </div>
+
+                                <!-- App Type -->
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-1">App Type</label>
+                                    {{ user_form.app_type }}
+                                    {% for error in user_form.app_type.errors %}
+                                    <div class="text-red-500 text-sm mt-1">{{ error }}</div>
+                                    {% endfor %}
+                                </div>
+
+                                <!-- Shop (if applicable) -->
+                                {% if user_form.app_type.value == 'laundry' or user_form.app_type.value == 'laundry' %}
+                                <div id="shop-field">
+                                    <label class="block text-sm font-medium text-gray-700 mb-1">Shop</label>
+                                    {{ laundry_form.shop }}
+                                    {% for error in laundry_form.shop.errors %}
+                                    <div class="text-red-500 text-sm mt-1">{{ error }}</div>
+                                    {% endfor %}
+                                </div>
+                                {% endif %}
                             </div>
                         </div>
 
@@ -168,63 +162,47 @@
                             </div>
 
                             <div class="space-y-4">
+                                <!-- Phone -->
                                 <div>
-                                    <label for="{{ profile_form.phone.id_for_label }}"
-                                        class="block text-sm font-medium text-gray-700 mb-1">Phone</label>
-                                    <input type="text" name="{{ profile_form.phone.name }}"
-                                        id="{{ profile_form.phone.id_for_label }}"
-                                        value="{{ profile_form.phone.value|default:'' }}"
-                                        class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white text-gray-900">
-                                    {% if profile_form.phone.errors %}
-                                    <div class="text-red-500 text-sm mt-1">{{ profile_form.phone.errors }}</div>
-                                    {% endif %}
+                                    <label class="block text-sm font-medium text-gray-700 mb-1">Phone</label>
+                                    {{ user_form.phone }}
+                                    {% for error in user_form.phone.errors %}
+                                    <div class="text-red-500 text-sm mt-1">{{ error }}</div>
+                                    {% endfor %}
                                 </div>
 
+                                <!-- Address -->
                                 <div>
-                                    <label for="{{ profile_form.address.id_for_label }}"
-                                        class="block text-sm font-medium text-gray-700 mb-1">Address</label>
-                                    <textarea name="{{ profile_form.address.name }}"
-                                        id="{{ profile_form.address.id_for_label }}" rows="3"
-                                        class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white text-gray-900">{{ profile_form.address.value|default:'' }}</textarea>
-                                    {% if profile_form.address.errors %}
-                                    <div class="text-red-500 text-sm mt-1">{{ profile_form.address.errors }}</div>
-                                    {% endif %}
+                                    <label class="block text-sm font-medium text-gray-700 mb-1">Address</label>
+                                    {{ user_form.address }}
+                                    {% for error in user_form.address.errors %}
+                                    <div class="text-red-500 text-sm mt-1">{{ error }}</div>
+                                    {% endfor %}
                                 </div>
 
+                                <!-- DOB -->
                                 <div>
-                                    <label for="{{ profile_form.date_of_birth.id_for_label }}"
-                                        class="block text-sm font-medium text-gray-700 mb-1">Date of Birth</label>
-                                    <input type="date" name="{{ profile_form.date_of_birth.name }}"
-                                        id="{{ profile_form.date_of_birth.id_for_label }}"
-                                        value="{{ profile_form.date_of_birth.value|default:''|date:'Y-m-d' }}"
-                                        class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white text-gray-900">
-                                    {% if profile_form.date_of_birth.errors %}
-                                    <div class="text-red-500 text-sm mt-1">{{ profile_form.date_of_birth.errors }}</div>
-                                    {% endif %}
+                                    <label class="block text-sm font-medium text-gray-700 mb-1">Date of Birth</label>
+                                    {{ user_form.date_of_birth }}
+                                    {% for error in user_form.date_of_birth.errors %}
+                                    <div class="text-red-500 text-sm mt-1">{{ error }}</div>
+                                    {% endfor %}
                                 </div>
 
+                                <!-- Profile Picture -->
                                 <div>
                                     <label class="block text-sm font-medium text-gray-700 mb-1">Profile Picture</label>
-                                    {% if profile.profile_picture %}
+                                    {% if user.profile_picture %}
                                     <div class="mb-3 text-center">
-                                        <img src="{{ profile.profile_picture.url }}" alt="Profile Picture"
+                                        <img src="{{ user.profile_picture.url }}" alt="Profile Picture"
                                             class="rounded-lg border-2 border-gray-200 mx-auto max-h-32 max-w-32">
                                         <p class="text-gray-500 text-sm mt-2">Current profile picture</p>
                                     </div>
                                     {% endif %}
-                                    <div class="relative">
-                                        <input type="file" name="{{ profile_form.profile_picture.name }}"
-                                            id="{{ profile_form.profile_picture.id_for_label }}"
-                                            class="custom-file-input">
-                                        <label for="{{ profile_form.profile_picture.id_for_label }}"
-                                            class="bg-gradient-to-r from-green-500 to-teal-500 hover:from-green-600 hover:to-teal-600 text-white px-4 py-2 rounded-lg cursor-pointer transition duration-200 ease-in-out inline-block">
-                                            <i class="fas fa-upload mr-2"></i>Choose New Image
-                                        </label>
-                                    </div>
-                                    {% if profile_form.profile_picture.errors %}
-                                    <div class="text-red-500 text-sm mt-1">{{ profile_form.profile_picture.errors }}
-                                    </div>
-                                    {% endif %}
+                                    {{ user_form.profile_picture }}
+                                    {% for error in user_form.profile_picture.errors %}
+                                    <div class="text-red-500 text-sm mt-1">{{ error }}</div>
+                                    {% endfor %}
                                 </div>
                             </div>
                         </div>
@@ -240,36 +218,28 @@
 
                         <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
                             <div>
-                                <label for="{{ password_form.old_password.id_for_label }}"
-                                    class="block text-sm font-medium text-gray-700 mb-1">Current Password</label>
-                                <input type="password" name="{{ password_form.old_password.name }}"
-                                    id="{{ password_form.old_password.id_for_label }}"
-                                    class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white text-gray-900">
-                                {% if password_form.old_password.errors %}
-                                <div class="text-red-500 text-sm mt-1">{{ password_form.old_password.errors }}</div>
-                                {% endif %}
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Current Password</label>
+                                {{ password_form.old_password }}
+                                {% for error in password_form.old_password.errors %}
+                                <div class="text-red-500 text-sm mt-1">{{ error }}</div>
+                                {% endfor %}
                             </div>
                             <div>
-                                <label for="{{ password_form.new_password1.id_for_label }}"
-                                    class="block text-sm font-medium text-gray-700 mb-1">New Password</label>
-                                <input type="password" name="{{ password_form.new_password1.name }}"
-                                    id="{{ password_form.new_password1.id_for_label }}"
-                                    class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white text-gray-900">
-                                {% if password_form.new_password1.errors %}
-                                <div class="text-red-500 text-sm mt-1">{{ password_form.new_password1.errors }}</div>
-                                {% endif %}
+                                <label class="block text-sm font-medium text-gray-700 mb-1">New Password</label>
+                                {{ password_form.new_password1 }}
+                                {% for error in password_form.new_password1.errors %}
+                                <div class="text-red-500 text-sm mt-1">{{ error }}</div>
+                                {% endfor %}
                             </div>
                             <div>
-                                <label for="{{ password_form.new_password2.id_for_label }}"
-                                    class="block text-sm font-medium text-gray-700 mb-1">Confirm Password</label>
-                                <input type="password" name="{{ password_form.new_password2.name }}"
-                                    id="{{ password_form.new_password2.id_for_label }}"
-                                    class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white text-gray-900">
-                                {% if password_form.new_password2.errors %}
-                                <div class="text-red-500 text-sm mt-1">{{ password_form.new_password2.errors }}</div>
-                                {% endif %}
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Confirm Password</label>
+                                {{ password_form.new_password2 }}
+                                {% for error in password_form.new_password2.errors %}
+                                <div class="text-red-500 text-sm mt-1">{{ error }}</div>
+                                {% endfor %}
                             </div>
                         </div>
+
                         <div class="text-center mt-4">
                             <button type="submit" name="change_password"
                                 class="bg-gradient-to-r from-yellow-500 to-orange-500 hover:from-yellow-600 hover:to-orange-600 text-gray-800 px-6 py-2 rounded-lg font-semibold transition duration-200 ease-in-out transform hover:scale-105">
@@ -284,7 +254,7 @@
                             class="bg-gradient-to-r from-blue-600 to-purple-700 hover:from-blue-700 hover:to-purple-800 text-white px-8 py-3 rounded-lg font-semibold transition duration-200 ease-in-out transform hover:scale-105">
                             <i class="fas fa-save mr-2"></i> Save Changes
                         </button>
-                        <a href="{% url 'user_management' %}"
+                        <a href="{% url 'laundry:user_management' %}"
                             class="bg-gray-600 hover:bg-gray-700 text-white px-8 py-3 rounded-lg font-semibold transition duration-200 ease-in-out transform hover:scale-105 inline-block">
                             <i class="fas fa-times mr-2"></i> Cancel
                         </a>
@@ -299,19 +269,7 @@
 {% block extra_js %}
 <script>
     document.addEventListener('DOMContentLoaded', function () {
-        // Custom file input styling
-        const fileInputs = document.querySelectorAll('input[type="file"]');
-        fileInputs.forEach(input => {
-            input.addEventListener('change', function (e) {
-                const fileName = e.target.files[0]?.name || 'Choose file';
-                const label = input.nextElementSibling;
-                if (label && label.classList.contains('custom-file-label')) {
-                    label.textContent = fileName;
-                }
-            });
-        });
-
-        // Auto-dismiss alerts after 5 seconds
+        // Auto-dismiss alerts
         const alerts = document.querySelectorAll('.alert');
         alerts.forEach(alert => {
             setTimeout(() => {
@@ -320,6 +278,28 @@
                 setTimeout(() => alert.remove(), 500);
             }, 5000);
         });
+
+        // Show/hide laundry shop field based on app type selection
+        const appTypeSelect = document.querySelector('select[name="user-app_type"]');
+        const shopField = document.getElementById('shop-field');
+
+        function toggleShopField() {
+            if (appTypeSelect && shopField) {
+                if (appTypeSelect.value === 'laundry') {
+                    shopField.style.display = 'block';
+                } else {
+                    shopField.style.display = 'none';
+                }
+            }
+        }
+
+        if (appTypeSelect && shopField) {
+            // Initial state
+            toggleShopField();
+
+            // Add event listener
+            appTypeSelect.addEventListener('change', toggleShopField);
+        }
     });
 </script>
 {% endblock %}

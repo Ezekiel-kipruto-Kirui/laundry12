@@ -16,8 +16,14 @@ Including another URLconf
 """
 from django.contrib import admin
 from django.urls import path,include
+from LaundryApp.commonview import redirect_after_login
+from django.shortcuts import redirect
 
 urlpatterns = [
     path('admin/', admin.site.urls),
-    path('', include('LaundryApp.urls')),
+    path("accounts/", include("django.contrib.auth.urls")),
+    path('redirect-after-login/', redirect_after_login, name='redirect_after_login'),
+    path('', include(('LaundryApp.urls', 'laundry'), namespace='laundry')),
+    path('Hotel/', include(('HotelApp.urls','hotel'),namespace="hotel")),
+    
 ]

@@ -1,0 +1,342 @@
+{% extends 'home.html' %}
+{% load static %}
+
+{% block content %}
+<div class="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <div class="bg-white rounded-xl shadow-md overflow-hidden">
+        <!-- Order Header -->
+        <div class="bg-gradient-to-r from-blue-600 to-blue-700 text-white p-6">
+            <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                <div>
+                    <h1 class="text-2xl font-bold mb-2">{{ title }}</h1>
+                    <p class="text-blue-100">Placed on {{ order.created_at|date:"F d, Y H:i" }}</p>
+                    <p class="text-blue-100">Order ID: #{{ order.id }}</p>
+                </div>
+                <div class="flex items-center gap-3">
+                    <span class="px-3 py-1 bg-white text-blue-600 rounded-full text-sm font-semibold">
+                        {{ order.get_order_status_display }}
+                    </span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Order Edit Form -->
+        <div class="p-6">
+            <form method="post" id="order-form">
+                {% csrf_token %}
+
+                <!-- Order Status -->
+                <div class="mb-6">
+                    <label for="{{ form.order_status.id_for_label }}"
+                        class="block text-sm font-medium text-gray-700 mb-2">
+                        Order Status
+                    </label>
+                    {{ form.order_status }}
+                    {% if form.order_status.errors %}
+                    <p class="mt-1 text-sm text-red-600">{{ form.order_status.errors.0 }}</p>
+                    {% endif %}
+                </div>
+
+                <!-- Order Items -->
+                <div class="flex justify-between items-center mb-4">
+                    <h3 class="text-lg font-semibold text-gray-800">Order Items</h3>
+                    <button type="button" id="add-item-btn"
+                        class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition duration-200 flex items-center">
+                        <i class="fas fa-plus mr-2"></i>
+                        Add Food Item
+                    </button>
+                </div>
+
+                {{ formset.management_form }}
+
+                <div id="order-items-container" class="space-y-4 mb-6">
+                    {% for item_form in formset %}
+                    <div
+                        class="order-item border border-gray-200 rounded-lg p-4 {% if item_form.DELETE.value %}bg-gray-100 opacity-75{% endif %}">
+                        <div class="grid grid-cols-1 md:grid-cols-12 gap-4 items-end">
+                            <!-- Food Item -->
+                            <div class="md:col-span-5">
+                                <label class="block text-sm font-medium text-gray-700 mb-2">
+                                    Food Item
+                                </label>
+                                {{ item_form.food_item }}
+                            </div>
+
+                            <!-- Quantity -->
+                            <div class="md:col-span-3">
+                                <label class="block text-sm font-medium text-gray-700 mb-2">
+                                    Quantity
+                                </label>
+                                {{ item_form.quantity }}
+                            </div>
+
+                            <!-- Price (display only) -->
+                            <div class="md:col-span-2">
+                                <label class="block text-sm font-medium text-gray-700 mb-2">
+                                    Price (each)
+                                </label>
+                                <div class="price-display p-2 bg-gray-50 rounded text-sm">
+                                    {% if item_form.instance.food_item %}
+                                    Ksh{{ item_form.instance.food_item.price }}
+                                    {% else %}
+                                    Ksh 0.00
+                                    {% endif %}
+                                </div>
+                            </div>
+
+                            <!-- Actions -->
+                            <div class="md:col-span-2 flex items-center space-x-2 justify-end">
+                                {% if item_form.instance.pk %}
+                                <!-- Delete checkbox for existing items -->
+                                <div class="flex items-center">
+                                    {{ item_form.DELETE }}
+                                    <label for="{{ item_form.DELETE.id_for_label }}"
+                                        class="ml-2 text-sm text-red-600 cursor-pointer hover:text-red-800">
+                                        Remove
+                                    </label>
+                                </div>
+                                {% else %}
+                                <!-- Remove button for new items -->
+                                <button type="button"
+                                    class="remove-item-btn text-red-600 hover:text-red-800 text-sm font-medium">
+                                    Remove
+                                </button>
+                                {% endif %}
+
+                                <!-- Hidden fields -->
+                                {{ item_form.id }}
+                            </div>
+                        </div>
+
+                        {% if item_form.errors %}
+                        <div class="mt-2 p-2 bg-red-50 rounded-lg">
+                            {% for error in item_form.errors %}
+                            <p class="text-sm text-red-600">{{ error }}</p>
+                            {% endfor %}
+                        </div>
+                        {% endif %}
+                    </div>
+                    {% endfor %}
+                </div>
+
+                <!-- Order Total -->
+                <div class="flex justify-end mb-6">
+                    <div class="bg-blue-50 p-4 rounded-lg w-full md:w-1/3">
+                        <div class="flex justify-between items-center mb-2">
+                            <span class="font-medium text-gray-700">Subtotal:</span>
+                            <span class="font-semibold" id="subtotal">Ksh{{ order.get_total|floatformat:2 }}</span>
+                        </div>
+                        <div class="flex justify-between items-center">
+                            <span class="font-medium text-gray-700">Total:</span>
+                            <span class="text-xl font-bold text-blue-700" id="total">Ksh{{ order.get_total|floatformat:2
+                                }}</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Form Actions -->
+                <div class="flex flex-col sm:flex-row gap-4 pt-6 border-t border-gray-200">
+                    <button type="submit"
+                        class="bg-green-600 hover:bg-green-700 text-white px-6 py-3 rounded-lg font-semibold transition duration-200 flex items-center justify-center">
+                        <i class="fas fa-save mr-2"></i>
+                        Update Order
+                    </button>
+
+                    <a href="{% url 'hotel:order_detail' order.pk %}"
+                        class="bg-gray-300 hover:bg-gray-400 text-gray-800 px-6 py-3 rounded-lg font-semibold transition duration-200 flex items-center justify-center">
+                        <i class="fas fa-times mr-2"></i>
+                        Cancel
+                    </a>
+
+                    <a href="{% url 'hotel:order_list' %}"
+                        class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg font-semibold transition duration-200 flex items-center justify-center">
+                        <i class="fas fa-list mr-2"></i>
+                        Back to Orders
+                    </a>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Empty form template for new items (hidden) -->
+<div id="empty-form" class="hidden">
+    <div class="order-item border border-gray-200 rounded-lg p-4">
+        <div class="grid grid-cols-1 md:grid-cols-1 gap-4 items-end">
+            <!-- Food Item -->
+            <div class="md:col-span-5">
+                <label class="block text-sm font-medium text-gray-700 mb-2">
+                    Food Item
+                </label>
+                <select name="order_items-__prefix__-food_item"
+                    class="food-item-select w-full p-2 border border-gray-300 rounded">
+                    <option value="">Select a food item</option>
+                    {% for food in available_food_items %}
+                    <option value="{{ food.id }}" data-price="{{ food.price }}">{{ food.name }} - Ksh{{ food.price }}
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <!-- Quantity -->
+            <div class="md:col-span-3">
+                <label class="block text-sm font-medium text-gray-700 mb-2">
+                    Quantity
+                </label>
+                <input type="number" name="order_items-__prefix__-quantity" value="1" min="1"
+                    class="quantity-input w-full p-2 border border-gray-300 rounded">
+            </div>
+
+            <!-- Price (display only) -->
+            <div class="md:col-span-2">
+                <label class="block text-sm font-medium text-gray-700 mb-2">
+                    Price (each)
+                </label>
+                <div class="price-display p-2 bg-gray-50 rounded text-sm">
+                    Ksh0.00
+                </div>
+            </div>
+
+            <!-- Actions -->
+            <div class="md:col-span-2 flex items-center justify-end">
+                <button type="button" class="remove-item-btn text-red-600 hover:text-red-800 text-sm font-medium">
+                    Remove
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    select,
+    input {
+        width: 100%;
+        padding: 0.75rem;
+        border: 1px solid #D1D5DB;
+        border-radius: 0.5rem;
+        transition: border-color 0.2s;
+    }
+
+    select:focus,
+    input:focus {
+        outline: none;
+        border-color: #3B82F6;
+        box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+    }
+
+    /* Checkbox styling */
+    input[type="checkbox"] {
+        width: auto;
+        margin-right: 0.5rem;
+    }
+
+    .order-item {
+        transition: all 0.3s ease;
+    }
+
+    .order-item-removing {
+        opacity: 0.5;
+        background-color: #f9fafb;
+    }
+</style>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        const addItemBtn = document.getElementById('add-item-btn');
+        const container = document.getElementById('order-items-container');
+        const totalForms = document.getElementById('id_order_items-TOTAL_FORMS');
+        const emptyForm = document.getElementById('empty-form').innerHTML;
+
+        // Add new item form
+        addItemBtn.addEventListener('click', function () {
+            const formNum = parseInt(totalForms.value);
+            const newForm = emptyForm.replace(/__prefix__/g, formNum);
+
+            const div = document.createElement('div');
+            div.innerHTML = newForm;
+            container.appendChild(div.firstElementChild);
+
+            totalForms.value = formNum + 1;
+
+            // Add event listeners to the new form
+            initFormEvents(div.firstElementChild);
+        });
+
+        // Initialize events for existing forms
+        document.querySelectorAll('.order-item').forEach(item => {
+            initFormEvents(item);
+        });
+
+        // Remove item button handler
+        document.addEventListener('click', function (e) {
+            if (e.target.classList.contains('remove-item-btn')) {
+                const item = e.target.closest('.order-item');
+                item.classList.add('order-item-removing');
+
+                // If it's a new item (not saved to DB), remove it completely
+                if (!item.querySelector('input[name$="-id"]') || !item.querySelector('input[name$="-id"]').value) {
+                    setTimeout(() => {
+                        item.remove();
+                        updateOrderTotal();
+                    }, 300);
+                } else {
+                    // For existing items, mark as deleted
+                    const deleteCheckbox = item.querySelector('input[type="checkbox"][name$="-DELETE"]');
+                    if (deleteCheckbox) {
+                        deleteCheckbox.checked = true;
+                        updateOrderTotal();
+                    }
+                }
+            }
+        });
+
+        // Initialize form events for a specific item
+        function initFormEvents(item) {
+            const foodSelect = item.querySelector('.food-item-select');
+            const quantityInput = item.querySelector('.quantity-input');
+            const priceDisplay = item.querySelector('.price-display');
+
+            if (foodSelect) {
+                foodSelect.addEventListener('change', function () {
+                    const selectedOption = this.options[this.selectedIndex];
+                    const price = selectedOption.getAttribute('data-price') || '0.00';
+                    priceDisplay.textContent = '$' + parseFloat(price).toFixed(2);
+                    updateOrderTotal();
+                });
+            }
+
+            if (quantityInput) {
+                quantityInput.addEventListener('input', updateOrderTotal);
+            }
+        }
+
+        // Update order total
+        function updateOrderTotal() {
+            let subtotal = 0;
+
+            document.querySelectorAll('.order-item').forEach(item => {
+                // Skip items marked for deletion
+                const deleteCheckbox = item.querySelector('input[type="checkbox"][name$="-DELETE"]');
+                if (deleteCheckbox && deleteCheckbox.checked) return;
+
+                const foodSelect = item.querySelector('.food-item-select');
+                const quantityInput = item.querySelector('.quantity-input');
+
+                if (foodSelect && quantityInput) {
+                    const selectedOption = foodSelect.options[foodSelect.selectedIndex];
+                    const price = selectedOption ? parseFloat(selectedOption.getAttribute('data-price') || 0) : 0;
+                    const quantity = parseInt(quantityInput.value) || 0;
+
+                    subtotal += price * quantity;
+                }
+            });
+
+            document.getElementById('subtotal').textContent = '$' + subtotal.toFixed(2);
+            document.getElementById('total').textContent = '$' + subtotal.toFixed(2);
+        }
+
+        // Initial calculation
+        updateOrderTotal();
+    });
+</script>
+{% endblock %}

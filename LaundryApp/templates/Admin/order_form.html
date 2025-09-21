@@ -261,8 +261,7 @@
                                     {% endif %}
                                     {% if user_has_single_shop %}
                                     <p class="text-sm text-gray-500 mt-2">
-                                        Your orders are automatically assigned to <span class="font-semibold">{{
-                                            user_shop }}</span> based on your user group.
+                                        Your orders are automatically assigned to <span class="font-semibold">{{ user_shop }}</span> based on your user group.
                                     </p>
                                     {% endif %}
                                 </div>
@@ -456,16 +455,7 @@
                                     </label>
                                 </div>
                                 <!-- Payment Status -->
-                                <div class="relative">
-                                    {{ order_form.payment_status }}
-                                    <label for="id_payment_status"
-                                        class="form-label absolute left-4 top-3 pointer-events-none">
-                                        Payment Status
-                                    </label>
-                                    {% if order_form.payment_status.errors %}
-                                    <div class="text-red-500 text-sm mt-2">{{ order_form.payment_status.errors }}</div>
-                                    {% endif %}
-                                </div>
+                                
                             </div>
                         </div>
                     </div>
@@ -539,373 +529,389 @@
         });
     </script>
 
-    <script>
-        document.addEventListener('DOMContentLoaded', function () {
-            /** ------------------------------
-             * Utility Functions
-             -------------------------------*/
-            function addClasses(el, ...classes) { el.classList.add(...classes); }
-            function removeClasses(el, ...classes) { el.classList.remove(...classes); }
-            function showToast(message, type) {
-                const toast = document.getElementById('toast');
-                const toastMessage = document.getElementById('toast-message');
-                if (!toast || !toastMessage) return;
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        /** ------------------------------
+         * Utility Functions
+         -------------------------------*/
+        function addClasses(el, ...classes) { el.classList.add(...classes); }
+        function removeClasses(el, ...classes) { el.classList.remove(...classes); }
+        function showToast(message, type) {
+            const toast = document.getElementById('toast');
+            const toastMessage = document.getElementById('toast-message');
+            if (!toast || !toastMessage) return;
 
-                toastMessage.textContent = message;
-                const toastElement = toast.querySelector('div');
-                if (toastElement) {
-                    const colors = {
-                        success: "bg-green-500",
-                        error: "bg-red-500",
-                        info: "bg-blue-500",
-                        default: "bg-gray-500"
-                    };
-                    toastElement.className = `px-6 py-4 rounded-lg shadow-lg text-white font-medium ${colors[type] || colors.default}`;
-                }
-
-                toast.classList.replace("opacity-0", "opacity-100");
-                toast.classList.replace("-translate-y-8", "translate-y-0");
-
-                setTimeout(() => {
-                    toast.classList.replace("opacity-100", "opacity-0");
-                    toast.classList.replace("translate-y-0", "-translate-y-8");
-                }, 3000);
+            toastMessage.textContent = message;
+            const toastElement = toast.querySelector('div');
+            if (toastElement) {
+                const colors = {
+                    success: "bg-green-500",
+                    error: "bg-red-500",
+                    info: "bg-blue-500",
+                    default: "bg-gray-500"
+                };
+                toastElement.className = `px-6 py-4 rounded-lg shadow-lg text-white font-medium ${colors[type] || colors.default}`;
             }
 
-            /** ------------------------------
-             * Shop field auto-lock
-             -------------------------------*/
-            '{% if user_has_single_shop %}'
-            const shopSelect = document.getElementById('id_shop');
-            if (shopSelect) {
-                // Fix for "invalid form control" error - set a value for the disabled select
-                shopSelect.value = '{{ user_shop.id }}';
+            toast.classList.replace("opacity-0", "opacity-100");
+            toast.classList.replace("-translate-y-8", "translate-y-0");
+
+            setTimeout(() => {
+                toast.classList.replace("opacity-100", "opacity-0");
+                toast.classList.replace("translate-y-0", "-translate-y-8");
+            }, 3000);
+        }
+
+        /** ------------------------------
+         * Shop field auto-lock for Shop A and Shop B users
+         -------------------------------*/
+        '{% if not user.is_superuser %}'
+        const shopSelect = document.getElementById('id_shop');
+        if (shopSelect) {
+            // Get the user's shop from the template variable
+            const userShop = '{{ user_shop }}';
+
+            if (userShop) {
+                // Set the shop value and disable the select
+                shopSelect.value = userShop;
                 shopSelect.disabled = true;
+                
+                // Create a hidden input to ensure the value is submitted
                 const hiddenShopInput = document.createElement('input');
                 hiddenShopInput.type = 'hidden';
                 hiddenShopInput.name = 'shop';
-                hiddenShopInput.value = '{{ user_shop.id }}';
+                hiddenShopInput.value = userShop;
                 shopSelect.parentNode.appendChild(hiddenShopInput);
+
+                // Style the disabled select
                 addClasses(shopSelect, 'bg-gray-100', 'cursor-not-allowed');
-            }
-            '{% endif %}'
 
-        
-            /** ------------------------------
-             * Form fields styling
-             -------------------------------*/
-            document.querySelectorAll('input, select, textarea').forEach(field => {
-                if (field.type === 'hidden' || field.classList.contains('no-style')) return;
-                addClasses(field, 'w-full', 'px-4', 'py-3', 'border', 'border-gray-300',
-                    'rounded-lg', 'focus:outline-none', 'transition-all', 'duration-200', 'bg-white');
-                field.addEventListener('focus', () => {
-                    addClasses(field, 'ring-2', 'ring-accent-500', 'border-accent-500');
-                    removeClasses(field, 'border-gray-300');
-                });
-                field.addEventListener('blur', () => {
-                    removeClasses(field, 'ring-2', 'ring-accent-500', 'border-accent-500');
-                    addClasses(field, 'border-gray-300');
-                });
-            });
-
-            /** ------------------------------
-             * Multi-step form logic
-             -------------------------------*/
-            const steps = document.querySelectorAll('.form-step');
-            const stepIndicators = document.querySelectorAll('.step');
-            const prevBtn = document.getElementById('prev-btn');
-            const nextBtn = document.getElementById('next-btn');
-            const submitBtn = document.getElementById('submit-btn');
-            const orderForm = document.getElementById('order-form');
-            let currentStep = 1;
-
-            function updateFormSteps() {
-                steps.forEach(step => step.classList.toggle('hidden', parseInt(step.dataset.step) !== currentStep));
-
-                stepIndicators.forEach((indicator, idx) => {
-                    const stepNumber = idx + 1;
-                    const stepElement = indicator.querySelector('div');
-                    const stepText = indicator.querySelector('span');
-                    const icon = stepElement?.querySelector('i');
-                    if (!stepElement || !stepText) return;
-
-                    if (stepNumber === currentStep) {
-                        stepElement.className = "w-10 h-10 md:w-12 md:h-12 rounded-full bg-accent-500 border-2 border-accent-500 flex items-center justify-center shadow-lg mb-2 md:mb-3";
-                        icon?.classList.replace("text-gray-400", "text-white");
-                        stepText.className = "text-xs md:text-sm font-medium text-accent-600 step-text";
-                    } else if (stepNumber < currentStep) {
-                        stepElement.className = "w-10 h-10 md:w-12 md:h-12 rounded-full bg-green-500 border-2 border-green-500 flex items-center justify-center shadow-lg mb-2 md:mb-3";
-                        icon?.classList.replace("text-gray-400", "text-white");
-                        stepText.className = "text-xs md:text-sm font-medium text-green-600 step-text";
-                    } else {
-                        stepElement.className = "w-10 h-10 md:w-12 md:h-12 rounded-full bg-gray-100 border-2 border-gray-300 flex items-center justify-center shadow-lg mb-2 md:mb-3";
-                        icon?.classList.replace("text-white", "text-gray-400");
-                        stepText.className = "text-xs md:text-sm font-medium text-gray-500 step-text";
-                    }
-                });
-
-                prevBtn?.classList.toggle('hidden', currentStep === 1);
-                if (nextBtn && submitBtn) {
-                    nextBtn.classList.toggle('hidden', currentStep === steps.length);
-                    submitBtn.classList.toggle('hidden', currentStep !== steps.length);
+                // Hide the shop field label and select for better UX
+                const shopLabel = document.querySelector('label[for="id_shop"]');
+                if (shopLabel) {
+                    shopLabel.style.display = 'none';
                 }
+                shopSelect.style.display = 'none';
+
+                // Show a message indicating the auto-assigned shop
+              
             }
+        }
+        '{% endif %}'
+        /** ------------------------------
+         * Form fields styling
+         -------------------------------*/
+        document.querySelectorAll('input, select, textarea').forEach(field => {
+            if (field.type === 'hidden' || field.classList.contains('no-style')) return;
+            addClasses(field, 'w-full', 'px-4', 'py-3', 'border', 'border-gray-300',
+                'rounded-lg', 'focus:outline-none', 'transition-all', 'duration-200', 'bg-white');
+            field.addEventListener('focus', () => {
+                addClasses(field, 'ring-2', 'ring-accent-500', 'border-accent-500');
+                removeClasses(field, 'border-gray-300');
+            });
+            field.addEventListener('blur', () => {
+                removeClasses(field, 'ring-2', 'ring-accent-500', 'border-accent-500');
+                addClasses(field, 'border-gray-300');
+            });
+        });
 
-            nextBtn?.addEventListener('click', () => {
-                const currentStepEl = document.querySelector(`.form-step[data-step="${currentStep}"]`);
-                if (!currentStepEl) return;
+        /** ------------------------------
+         * Multi-step form logic
+         -------------------------------*/
+        const steps = document.querySelectorAll('.form-step');
+        const stepIndicators = document.querySelectorAll('.step');
+        const prevBtn = document.getElementById('prev-btn');
+        const nextBtn = document.getElementById('next-btn');
+        const submitBtn = document.getElementById('submit-btn');
+        const orderForm = document.getElementById('order-form');
+        let currentStep = 1;
 
-                const requiredFields = currentStepEl.querySelectorAll('[required]');
-                let isValid = true;
+        function updateFormSteps() {
+            steps.forEach(step => step.classList.toggle('hidden', parseInt(step.dataset.step) !== currentStep));
 
-                requiredFields.forEach(field => {
-                    const error = field.parentNode.querySelector('.text-red-500');
-                    if (!field.value.trim()) {
-                        isValid = false;
-                        addClasses(field, 'border-red-500', 'ring-red-500');
-                        if (!error) {
-                            const errorDiv = document.createElement('div');
-                            errorDiv.className = 'text-red-500 text-sm mt-1';
-                            errorDiv.textContent = 'This field is required';
-                            field.parentNode.appendChild(errorDiv);
-                        }
-                    } else {
-                        removeClasses(field, 'border-red-500', 'ring-red-500');
-                        error?.remove();
-                    }
-                });
+            stepIndicators.forEach((indicator, idx) => {
+                const stepNumber = idx + 1;
+                const stepElement = indicator.querySelector('div');
+                const stepText = indicator.querySelector('span');
+                const icon = stepElement?.querySelector('i');
+                if (!stepElement || !stepText) return;
 
-                if (isValid) { currentStep++; updateFormSteps(); }
-                else {
-                    showToast('Please fill in all required fields', 'error');
-                    requiredFields[0]?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                if (stepNumber === currentStep) {
+                    stepElement.className = "w-10 h-10 md:w-12 md:h-12 rounded-full bg-accent-500 border-2 border-accent-500 flex items-center justify-center shadow-lg mb-2 md:mb-3";
+                    icon?.classList.replace("text-gray-400", "text-white");
+                    stepText.className = "text-xs md:text-sm font-medium text-accent-600 step-text";
+                } else if (stepNumber < currentStep) {
+                    stepElement.className = "w-10 h-10 md:w-12 md:h-12 rounded-full bg-green-500 border-2 border-green-500 flex items-center justify-center shadow-lg mb-2 md:mb-3";
+                    icon?.classList.replace("text-gray-400", "text-white");
+                    stepText.className = "text-xs md:text-sm font-medium text-green-600 step-text";
+                } else {
+                    stepElement.className = "w-10 h-10 md:w-12 md:h-12 rounded-full bg-gray-100 border-2 border-gray-300 flex items-center justify-center shadow-lg mb-2 md:mb-3";
+                    icon?.classList.replace("text-white", "text-gray-400");
+                    stepText.className = "text-xs md:text-sm font-medium text-gray-500 step-text";
                 }
             });
 
-            prevBtn?.addEventListener('click', () => { currentStep--; updateFormSteps(); });
-
-            /** ------------------------------
-             * Customer search with tooltip
-             -------------------------------*/
-            const customerSearch = document.getElementById('customer-search');
-            const customerResults = document.getElementById('customer-results');
-            const customerIdInput = document.getElementById('customer_id');
-            const customerNameInput = document.getElementById('id_name');
-            const customerPhoneInput = document.getElementById('id_phone');
-            const customerAddressInput = document.getElementById('id_address');
-            if (customerSearch && customerResults) {
-                let searchTimeout;
-
-                // Show loading state
-                function showLoading() {
-                    customerResults.innerHTML = '<div class="p-3 text-center text-gray-500">Searching...</div>';
-                    customerResults.classList.remove('hidden');
-                }
-
-                // Show error state
-                function showError() {
-                    customerResults.innerHTML = '<div class="p-3 text-center text-red-500">Error searching customers</div>';
-                    customerResults.classList.remove('hidden');
-                }
-
-                // Show no results
-                function showNoResults() {
-                    customerResults.innerHTML = '<div class="p-3 text-center text-gray-500">No customers found</div>';
-                    customerResults.classList.remove('hidden');
-                }
-
-                customerSearch.addEventListener('input', function () {
-                    clearTimeout(searchTimeout);
-                    const query = this.value.trim();
-
-                    if (query.length < 2) {
-                        customerResults.classList.add('hidden');
-                        return;
-                    }
-
-                    showLoading();
-
-                    searchTimeout = setTimeout(() => {
-                        fetch(`/search-customers/?q=${encodeURIComponent(query)}`)
-                            .then(res => {
-                                if (!res.ok) throw new Error('Network response was not ok');
-                                return res.json();
-                            })
-                            .then(data => {
-                                customerResults.innerHTML = '';
-
-                                if (data.customers && data.customers.length) {
-                                    data.customers.forEach(c => {
-                                        const div = document.createElement('div');
-                                        div.className = 'p-3 border-b border-gray-200 hover:bg-gray-50 cursor-pointer transition-colors';
-                                        div.innerHTML = `
-                                        <div class="font-medium text-gray-800">${c.name}</div>
-                                        <div class="text-sm text-gray-600">${c.phone}</div>
-                                         <div class="text-sm text-gray-600">${c.address}</div>
-                                    `;
-                                        div.onclick = () => {
-                                            customerIdInput.value = c.id;
-                                            customerNameInput.value = c.name;
-                                            customerPhoneInput.value = c.phone;
-                                            customerAddressInput.value = c.address;
-                                            customerResults.classList.add('hidden');
-                                            customerSearch.value = '';
-                                            showToast(`Customer selected: ${c.name}`, 'success');
-                                        };
-                                        customerResults.appendChild(div);
-                                    });
-                                    customerResults.classList.remove('hidden');
-                                } else {
-                                    showNoResults();
-                                }
-                            })
-                            .catch(error => {
-                                console.error('Error fetching customers:', error);
-                                showError();
-                            });
-                    }, 300);
-                });
-
-                // Hide results when clicking outside
-                document.addEventListener('click', e => {
-                    if (!customerSearch.contains(e.target) && !customerResults.contains(e.target)) {
-                        customerResults.classList.add('hidden');
-                    }
-                });
-
-                // Show results when focusing on search (if there's a query)
-                customerSearch.addEventListener('focus', function () {
-                    const query = this.value.trim();
-                    if (query.length >= 2 && customerResults.children.length > 0) {
-                        customerResults.classList.remove('hidden');
-                    }
-                });
+            prevBtn?.classList.toggle('hidden', currentStep === 1);
+            if (nextBtn && submitBtn) {
+                nextBtn.classList.toggle('hidden', currentStep === steps.length);
+                submitBtn.classList.toggle('hidden', currentStep !== steps.length);
             }
+        }
 
-            /** ------------------------------
-             * Items management & total calculation
-             -------------------------------*/
-            let itemCount = parseInt("{{ item_formset.total_form_count }}");
-            const addItemBtn = document.getElementById('add-item-btn');
-            const orderItemsContainer = document.getElementById('order-items-container');
-            const totalFormsInput = document.getElementById('id_items-TOTAL_FORMS');
+        nextBtn?.addEventListener('click', () => {
+            const currentStepEl = document.querySelector(`.form-step[data-step="${currentStep}"]`);
+            if (!currentStepEl) return;
 
-            function calculateTotal() {
-                const orderTotalElement = document.getElementById('order-total');
-                if (!orderTotalElement) return;
-                let total = 0;
-                document.querySelectorAll('.item-form').forEach(item => {
-                    if (item.style.display === 'none') return;
-                    const qty = parseFloat(item.querySelector('input[name$="quantity"]')?.value) || 0;
-                    const price = parseFloat(item.querySelector('input[name$="unit_price"]')?.value) || 0;
-                    total += qty * price;
-                });
-                orderTotalElement.textContent = `KSh ${total.toFixed(2)}`;
-            }
+            const requiredFields = currentStepEl.querySelectorAll('[required]');
+            let isValid = true;
 
-            addItemBtn?.addEventListener('click', () => {
-                const template = document.querySelector('.item-form:last-child');
-                if (!template) return;
-
-                const newItem = template.cloneNode(true);
-                const newIndex = itemCount;
-
-                newItem.querySelectorAll('input, select, textarea').forEach(input => {
-                    if (input.name) {
-                        input.name = input.name.replace(/items-\d+-/, `items-${newIndex}-`);
-                        input.id = input.id.replace(/items-\d+-/, `items-${newIndex}-`);
-                        input.value = '';
+            requiredFields.forEach(field => {
+                const error = field.parentNode.querySelector('.text-red-500');
+                if (!field.value.trim()) {
+                    isValid = false;
+                    addClasses(field, 'border-red-500', 'ring-red-500');
+                    if (!error) {
+                        const errorDiv = document.createElement('div');
+                        errorDiv.className = 'text-red-500 text-sm mt-1';
+                        errorDiv.textContent = 'This field is required';
+                        field.parentNode.appendChild(errorDiv);
                     }
-                });
-
-                const itemNumber = newItem.querySelector('.font-semibold.text-gray-700');
-                if (itemNumber) itemNumber.textContent = `Item #${newIndex + 1}`;
-
-                const qtyInput = newItem.querySelector('input[name$="quantity"]');
-                if (qtyInput) qtyInput.value = 1;
-                const priceInput = newItem.querySelector('input[name$="unit_price"]');
-                if (priceInput) priceInput.value = 0;
-
-                let removeBtn = newItem.querySelector('.remove-item');
-                if (!removeBtn) {
-                    removeBtn = document.createElement('button');
-                    removeBtn.type = 'button';
-                    removeBtn.className = 'remove-item text-red-500 hover:text-red-700 transition-colors';
-                    removeBtn.innerHTML = '<i class="fas fa-times-circle text-xl"></i>';
-                    newItem.querySelector('.flex.justify-between.items-start')?.appendChild(removeBtn);
+                } else {
+                    removeClasses(field, 'border-red-500', 'ring-red-500');
+                    error?.remove();
                 }
-                removeBtn.onclick = () => {
-                    if (document.querySelectorAll('.item-form').length > 1) {
-                        newItem.querySelector('input[name$="DELETE"]')?.setAttribute('value', 'on');
-                        newItem.style.display = 'none';
-                        calculateTotal();
-                    }
-                };
-
-                orderItemsContainer.appendChild(newItem);
-                itemCount++; totalFormsInput.value = itemCount;
-                calculateTotal();
             });
 
+            if (isValid) { currentStep++; updateFormSteps(); }
+            else {
+                showToast('Please fill in all required fields', 'error');
+                requiredFields[0]?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }
+        });
+
+        prevBtn?.addEventListener('click', () => { currentStep--; updateFormSteps(); });
+
+        /** ------------------------------
+         * Customer search with tooltip
+         -------------------------------*/
+        const customerSearch = document.getElementById('customer-search');
+        const customerResults = document.getElementById('customer-results');
+        const customerIdInput = document.getElementById('customer_id');
+        const customerNameInput = document.getElementById('id_name');
+        const customerPhoneInput = document.getElementById('id_phone');
+        const customerAddressInput = document.getElementById('id_address');
+        if (customerSearch && customerResults) {
+            let searchTimeout;
+
+            // Show loading state
+            function showLoading() {
+                customerResults.innerHTML = '<div class="p-3 text-center text-gray-500">Searching...</div>';
+                customerResults.classList.remove('hidden');
+            }
+
+            // Show error state
+            function showError() {
+                customerResults.innerHTML = '<div class="p-3 text-center text-red-500">Error searching customers</div>';
+                customerResults.classList.remove('hidden');
+            }
+
+            // Show no results
+            function showNoResults() {
+                customerResults.innerHTML = '<div class="p-3 text-center text-gray-500">No customers found</div>';
+                customerResults.classList.remove('hidden');
+            }
+
+            customerSearch.addEventListener('input', function () {
+                clearTimeout(searchTimeout);
+                const query = this.value.trim();
+
+                if (query.length < 2) {
+                    customerResults.classList.add('hidden');
+                    return;
+                }
+
+                showLoading();
+
+                searchTimeout = setTimeout(() => {
+                    fetch(`/search-customers/?q=${encodeURIComponent(query)}`)
+                        .then(res => {
+                            if (!res.ok) throw new Error('Network response was not ok');
+                            return res.json();
+                        })
+                        .then(data => {
+                            customerResults.innerHTML = '';
+
+                            if (data.customers && data.customers.length) {
+                                data.customers.forEach(c => {
+                                    const div = document.createElement('div');
+                                    div.className = 'p-3 border-b border-gray-200 hover:bg-gray-50 cursor-pointer transition-colors';
+                                    div.innerHTML = `
+                                    <div class="font-medium text-gray-800">${c.name}</div>
+                                    <div class="text-sm text-gray-600">${c.phone}</div>
+                                     <div class="text-sm text-gray-600">${c.address}</div>
+                                `;
+                                    div.onclick = () => {
+                                        customerIdInput.value = c.id;
+                                        customerNameInput.value = c.name;
+                                        customerPhoneInput.value = c.phone;
+                                        customerAddressInput.value = c.address;
+                                        customerResults.classList.add('hidden');
+                                        customerSearch.value = '';
+                                        showToast(`Customer selected: ${c.name}`, 'success');
+                                    };
+                                    customerResults.appendChild(div);
+                                });
+                                customerResults.classList.remove('hidden');
+                            } else {
+                                showNoResults();
+                            }
+                        })
+                        .catch(error => {
+                            console.error('Error fetching customers:', error);
+                            showError();
+                        });
+                }, 300);
+            });
+
+            // Hide results when clicking outside
             document.addEventListener('click', e => {
-                if (e.target.closest('.remove-item')) {
-                    const item = e.target.closest('.item-form');
-                    if (item && document.querySelectorAll('.item-form').length > 1) {
-                        item.querySelector('input[name$="DELETE"]')?.setAttribute('value', 'on');
-                        item.style.display = 'none';
-                        calculateTotal();
-                    }
+                if (!customerSearch.contains(e.target) && !customerResults.contains(e.target)) {
+                    customerResults.classList.add('hidden');
                 }
             });
 
-            document.addEventListener('input', e => {
-                if (e.target.name?.includes('quantity') || e.target.name?.includes('unit_price')) {
+            // Show results when focusing on search (if there's a query)
+            customerSearch.addEventListener('focus', function () {
+                const query = this.value.trim();
+                if (query.length >= 2 && customerResults.children.length > 0) {
+                    customerResults.classList.remove('hidden');
+                }
+            });
+        }
+
+        /** ------------------------------
+         * Items management & total calculation
+         -------------------------------*/
+        let itemCount = parseInt("{{ item_formset.total_form_count }}");
+        const addItemBtn = document.getElementById('add-item-btn');
+        const orderItemsContainer = document.getElementById('order-items-container');
+        const totalFormsInput = document.getElementById('id_items-TOTAL_FORMS');
+
+        function calculateTotal() {
+            const orderTotalElement = document.getElementById('order-total');
+            if (!orderTotalElement) return;
+            let total = 0;
+            document.querySelectorAll('.item-form').forEach(item => {
+                if (item.style.display === 'none') return;
+                //const qty = parseFloat(item.querySelector('input[name$="quantity"]')?.value) || 0;
+                const price = parseFloat(item.querySelector('input[name$="unit_price"]')?.value) || 0;
+                total += price;
+            });
+            orderTotalElement.textContent = `KSh ${total.toFixed(2)}`;
+        }
+
+        addItemBtn?.addEventListener('click', () => {
+            const template = document.querySelector('.item-form:last-child');
+            if (!template) return;
+
+            const newItem = template.cloneNode(true);
+            const newIndex = itemCount;
+
+            newItem.querySelectorAll('input, select, textarea').forEach(input => {
+                if (input.name) {
+                    input.name = input.name.replace(/items-\d+-/, `items-${newIndex}-`);
+                    input.id = input.id.replace(/items-\d+-/, `items-${newIndex}-`);
+                    input.value = '';
+                }
+            });
+
+            const itemNumber = newItem.querySelector('.font-semibold.text-gray-700');
+            if (itemNumber) itemNumber.textContent = `Item #${newIndex + 1}`;
+
+            const qtyInput = newItem.querySelector('input[name$="quantity"]');
+            if (qtyInput) qtyInput.value = 1;
+            const priceInput = newItem.querySelector('input[name$="unit_price"]');
+            if (priceInput) priceInput.value = 0;
+
+            let removeBtn = newItem.querySelector('.remove-item');
+            if (!removeBtn) {
+                removeBtn = document.createElement('button');
+                removeBtn.type = 'button';
+                removeBtn.className = 'remove-item text-red-500 hover:text-red-700 transition-colors';
+                removeBtn.innerHTML = '<i class="fas fa-times-circle text-xl"></i>';
+                newItem.querySelector('.flex.justify-between.items-start')?.appendChild(removeBtn);
+            }
+            removeBtn.onclick = () => {
+                if (document.querySelectorAll('.item-form').length > 1) {
+                    newItem.querySelector('input[name$="DELETE"]')?.setAttribute('value', 'on');
+                    newItem.style.display = 'none';
                     calculateTotal();
                 }
-            });
+            };
 
-            /** ------------------------------
-             * Final form submission
-             -------------------------------*/
-            orderForm?.addEventListener('submit', e => {
-                let isValid = true;
-                orderForm.querySelectorAll('[required]').forEach(field => {
-                    const error = field.parentNode.querySelector('.text-red-500');
-                    if (!field.value.trim()) {
-                        isValid = false;
-                        addClasses(field, 'border-red-500', 'ring-red-500');
-                        if (!error) {
-                            const errorDiv = document.createElement('div');
-                            errorDiv.className = 'text-red-500 text-sm mt-1';
-                            errorDiv.textContent = 'This field is required';
-                            field.parentNode.appendChild(errorDiv);
-                        }
-                    } else {
-                        removeClasses(field, 'border-red-500', 'ring-red-500');
-                        error?.remove();
+            orderItemsContainer.appendChild(newItem);
+            itemCount++; totalFormsInput.value = itemCount;
+            calculateTotal();
+        });
+
+        document.addEventListener('click', e => {
+            if (e.target.closest('.remove-item')) {
+                const item = e.target.closest('.item-form');
+                if (item && document.querySelectorAll('.item-form').length > 1) {
+                    item.querySelector('input[name$="DELETE"]')?.setAttribute('value', 'on');
+                    item.style.display = 'none';
+                    calculateTotal();
+                }
+            }
+        });
+
+        document.addEventListener('input', e => {
+            if (e.target.name?.includes('quantity') || e.target.name?.includes('unit_price')) {
+                calculateTotal();
+            }
+        });
+
+        /** ------------------------------
+         * Final form submission
+         -------------------------------*/
+        orderForm?.addEventListener('submit', e => {
+            let isValid = true;
+            orderForm.querySelectorAll('[required]').forEach(field => {
+                const error = field.parentNode.querySelector('.text-red-500');
+                if (!field.value.trim()) {
+                    isValid = false;
+                    addClasses(field, 'border-red-500', 'ring-red-500');
+                    if (!error) {
+                        const errorDiv = document.createElement('div');
+                        errorDiv.className = 'text-red-500 text-sm mt-1';
+                        errorDiv.textContent = 'This field is required';
+                        field.parentNode.appendChild(errorDiv);
                     }
-                });
-
-                if (!isValid) {
-                    e.preventDefault();
-                    showToast('Please fill in all required fields before submitting', 'error');
-                    const firstError = orderForm.querySelector('.border-red-500');
-                    firstError?.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                    const errorStep = firstError?.closest('.form-step');
-                    if (errorStep) { currentStep = parseInt(errorStep.dataset.step); updateFormSteps(); }
                 } else {
-                    submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i> Creating Order...';
-                    submitBtn.disabled = true;
+                    removeClasses(field, 'border-red-500', 'ring-red-500');
+                    error?.remove();
                 }
             });
 
-            /** ------------------------------
-             * Init
-             -------------------------------*/
-            updateFormSteps();
-            calculateTotal();
+            if (!isValid) {
+                e.preventDefault();
+                showToast('Please fill in all required fields before submitting', 'error');
+                const firstError = orderForm.querySelector('.border-red-500');
+                firstError?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                const errorStep = firstError?.closest('.form-step');
+                if (errorStep) { currentStep = parseInt(errorStep.dataset.step); updateFormSteps(); }
+            } else {
+                submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i> Creating Order...';
+                submitBtn.disabled = true;
+            }
         });
-    </script>
 
+        /** ------------------------------
+         * Init
+         -------------------------------*/
+        updateFormSteps();
+        calculateTotal();
+    });
+        </script>
 </body>
 {% endblock %}

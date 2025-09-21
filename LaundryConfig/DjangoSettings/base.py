@@ -51,12 +51,17 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     
     'LaundryApp',
+    'HotelApp',
+    
+
+
     'tailwind',
     'crispy_forms',
     'import_export',
     'django_daraja',
     'theme',
     'compressor',
+    "widget_tweaks",
 ]
 
 MIDDLEWARE = [
@@ -93,9 +98,10 @@ MPESA_PASSKEY = env('MPESA_PASSKEY')
 MPESA_INITIATOR_USERNAME = env('MPESA_INITIATOR_USERNAME')
 MPESA_INITIATOR_SECURITY_CREDENTIAL = env('MPESA_INITIATOR_SECURITY_CREDENTIAL')
 
-
+AUTH_USER_MODEL = 'LaundryApp.UserProfile'
 ROOT_URLCONF = 'LaundryConfig.urls'
-LOGIN_REDIRECT_URL = "dashboard" 
+LOGIN_REDIRECT_URL = '/redirect-after-login/'  # after login, always check role
+LOGOUT_REDIRECT_URL = '/accounts/login/'
 
 TEMPLATES = [
     {
@@ -160,6 +166,8 @@ USE_TZ = True
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/5.2/howto/static-files/
 
+MEDIA_URL = '/media/'
+MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 # Configure static files for production
 STATIC_URL = 'static/'
 
@@ -203,81 +211,3 @@ LOGGING = {
     },
 }
 
-UNFOLD = {
-    "SITE_TITLE": "ELITE Laundry",
-    "SITE_HEADER": "Elite Laundry Management System",
-    "SITE_SUBHEADER": "Performance Analytics & Administration",
-    "SITE_URL": "/admin/",
-    "SITE_ICON": {
-        "light": lambda request: static("icons/laundry-light.svg"),
-        "dark": lambda request: static("icons/laundry-dark.svg"),
-    },
-    "SITE_LOGO": {
-        "light": lambda request: static("logos/laundry-logo-light.svg"),
-        "dark": lambda request: static("logos/laundry-logo-dark.svg"),
-    },
-    "SITE_SYMBOL": "local_laundry_service", # Material icon for laundry
-    "SHOW_HISTORY": True,
-    "SHOW_VIEW_ON_SITE": True,
-    "SHOW_BACK_BUTTON": True,
-    "THEME": None, # Correctly set to None to allow user theme choice
-
-    "SHOW_RECENT_ACTIONS": lambda request: request.user.is_superuser,
-    "TEMPLATES": {
-        "index": "admin/index.html",   # Point to our custom template
-    },
-    
-    "COLORS": {
-        # Define a single color palette that Unfold can map to both themes.
-        "primary": {
-            50: '#fdf2f8',
-            100: '#fce7f3',
-            200: '#fbcfe8',
-            300: '#f9a8d4',
-            400: '#f472b6',
-            500: '#ec4899',
-            600: '#db2777',
-            700: '#be185d',
-            800: '#9d174d',
-            900: '#831843',
-        },
-        "secondary": {
-            50: "#f5f3ff",
-            100: "#ede9fe",
-            200: "#ddd6fe",
-            300: "#c4b5fd",
-            400: "#a78bfa",
-            500: "#8b5cf6",
-            600: "#7c3aed",
-            700: "#6d28d9",
-            800: "#5b21b6",
-            900: "#4c1d95",
-            950: "#241151",
-        },
-        "font": {
-            # Unfold's default is to use light colors for dark themes and dark for light themes.
-            # Your previous config had subtle-light and subtle-dark reversed.
-            
-        },
-    },
-   "SIDEBAR": {
-    "show_search": True,
-    "navigation": [
-        
-        {
-            "title": "Dashboard",
-            "items": [
-    
-                {
-                    "title": "Report",
-                    "icon": "analytics",
-                    "link": reverse_lazy("admin:laundryapp_dashboard"),
-                    "permission": lambda request: request.user.is_superuser
-                },
-            ],
-        },
-        
-       
-    ],
-},
-}

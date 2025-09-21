@@ -1,4 +1,4 @@
-{% extends "base.html" %}
+{% extends "../home.html" %}
 
 {% block title %}Delete User - Laundry Management System{% endblock %}
 
@@ -22,7 +22,7 @@
                         {% csrf_token %}
                         <div class="d-grid gap-2">
                             <button type="submit" class="btn btn-danger">Yes, Delete User</button>
-                            <a href="{% url 'user_management' %}" class="btn btn-secondary">Cancel</a>
+                            <a href="{% url 'laundry:user_management' %}" class="btn btn-secondary">Cancel</a>
                         </div>
                     </form>
                 </div>

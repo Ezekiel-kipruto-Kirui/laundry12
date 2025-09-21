@@ -7,6 +7,10 @@
 <div class="min-h-screen bg-gray-50 py-8">
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <!-- Header -->
+        <div class="mb-8">
+            <h1 class="text-3xl font-bold text-gray-900">User Management</h1>
+            <p class="text-gray-600 mt-2">Manage all users, their roles, and permissions</p>
+        </div>
 
         <!-- Statistics Cards -->
         <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
@@ -63,39 +67,11 @@
             </div>
         </div>
 
-        <!-- Additional Stats -->
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-            <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-                <div class="flex items-center justify-between">
-                    <div>
-                        <p class="text-lg font-semibold text-gray-900">Recently Active</p>
-                        <p class="text-2xl font-bold text-blue-600">{{ recently_active }}</p>
-                        <p class="text-sm text-gray-600">Logged in last 7 days</p>
-                    </div>
-                    <div class="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
-                        <i class="fas fa-clock text-blue-500"></i>
-                    </div>
-                </div>
-            </div>
-
-            <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-                <div class="flex items-center justify-between">
-                    <div>
-                        <p class="text-lg font-semibold text-gray-900">Never Logged In</p>
-                        <p class="text-2xl font-bold text-red-600">{{ never_logged_in }}</p>
-                        <p class="text-sm text-gray-600">No login activity</p>
-                    </div>
-                    <div class="w-10 h-10 bg-red-100 rounded-full flex items-center justify-center">
-                        <i class="fas fa-exclamation-triangle text-red-500"></i>
-                    </div>
-                </div>
-            </div>
-        </div>
 
         <!-- Search and Filter Section -->
         <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-8">
             <h2 class="text-xl font-semibold text-gray-900 mb-6">Search & Filter Users</h2>
-            <form method="get" class="grid grid-cols-4 md:grid-cols-1 gap-4">
+            <form method="get"class="flex flex-col md:flex-row justify-between items-center">
                 <!-- Search -->
                 <div>
                     <label class="block text-sm font-medium text-gray-700 mb-2">Search</label>
@@ -143,18 +119,35 @@
                     </select>
                 </div>
 
-                <!-- Apply Button -->
-                <div class="flex items-end">
-                    <button type="submit"
-                        class="w-full px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg transition-colors duration-200 flex items-center justify-center shadow-sm hover:shadow-md">
-                        <i class="fas fa-filter mr-2"></i>
-                        Apply Filters
-                    </button>
+                <!-- App Type Filter -->
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Hotel/Laundry</label>
+                    <select name="app_type"
+                        class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors duration-200">
+                        {% for option in app_type_options %}
+                        <option value="{{ option.value }}" {% if option.selected %}selected{% endif %}>
+                            {{ option.label }}
+                        </option>
+                        {% endfor %}
+                    </select>
                 </div>
+
+          <div>
+            <P>Apply filters</P>
+            <button type="submit"
+                class="h-10 px-4 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg transition-colors duration-200 flex items-center justify-center shadow-sm hover:shadow-md">
+                <i class="fas fa-filter mr-2"></i>
+                Apply Filters
+            </button>
+          </div>      <!-- Apply Button -->
+       
+
+
+
             </form>
 
             <!-- Active Filters -->
-            {% if current_filters.shop or current_filters.status or current_filters.user_type %}
+            {% if current_filters.shop or current_filters.status or current_filters.user_type or current_filters.app_type %}
             <div class="mt-6 pt-4 border-t border-gray-200">
                 <span class="text-sm font-medium text-gray-700 mb-3 block">Active filters:</span>
                 <div class="flex flex-wrap gap-2">
@@ -188,6 +181,16 @@
                         </a>
                     </span>
                     {% endif %}
+                    {% if current_filters.app_type %}
+                    <span
+                        class="inline-flex items-center px-3 py-1 bg-pink-100 text-pink-800 text-sm rounded-full font-medium">
+                        App: {{ current_filters.app_type }}
+                        <a href="?{% for key, value in current_filters.items %}{% if key != 'app_type' %}{{ key }}={{ value }}&{% endif %}{% endfor %}"
+                            class="ml-2 text-pink-600 hover:text-pink-800">
+                            <i class="fas fa-times"></i>
+                        </a>
+                    </span>
+                    {% endif %}
                 </div>
             </div>
             {% endif %}
@@ -202,8 +205,8 @@
                         <h2 class="text-xl font-semibold text-gray-900">Users List</h2>
                         <p class="text-sm text-gray-600 mt-1">{{ users.paginator.count }} user{{ users.paginator.count|pluralize }} found</p>
                     </div>
-                    <a href="{% url 'user_add' %}"
-                        class="mt-4 sm:mt-0 inline-flex items-center px-6 py-3 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white font-semibold rounded-lg transition-all duration-200 shadow-sm hover:shadow-md transform hover:-translate-y-0.5">
+                    <a href="{% url 'laundry:user_add' %}"
+                        class="mt-4 sm:mt-0 inline-flex items-center px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg transition-all duration-200 shadow-sm hover:shadow-md transform hover:-translate-y-0.5">
                         <i class="fas fa-plus-circle mr-2"></i>
                         Add New User
                     </a>
@@ -249,11 +252,11 @@
                                         <i class="fas fa-user text-white text-sm"></i>
                                     </div>
                                     <div>
-                                        <div class="text-sm font-medium text-gray-900">{{ user_data.user.username }}
+                                        <div class="text-sm font-medium text-gray-900">{{ user_data.email }}
                                         </div>
                                         <div class="text-sm text-gray-500">
-                                            {% if user_data.user.get_full_name %}
-                                            {{ user_data.user.get_full_name }}
+                                            {% if user_data.first_name or user_data.last_name %}
+                                            {{ user_data.first_name }} {{ user_data.last_name }}
                                             {% else %}
                                             No name provided
                                             {% endif %}
@@ -264,32 +267,49 @@
 
                             <!-- Contact -->
                             <td class="px-6 py-4 whitespace-nowrap">
-                                <div class="text-sm text-gray-900">{{ user_data.user.email|default:"No email" }}</div>
-                                <div class="text-xs text-gray-500">Primary contact</div>
+                                <div class="text-sm text-gray-900">{{ user_data.email|default:"No email" }}</div>
+                                {% comment %} If you have phone number data, you can add it here {% endcomment %}
                             </td>
 
                             <!-- Shop & Role -->
                             <td class="px-6 py-4 whitespace-nowrap">
                                 <div class="space-y-2">
-                                    <!-- Shop -->
+                                    <!-- Shop or App Type -->
                                     <div>
+                                        {% if user_data.app_type == "laundry" and user_data.shop %}
                                         <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium 
-                                            {% if user_data.shop == 'Shop A' %}bg-blue-100 text-blue-800
-                                            {% elif user_data.shop == 'Shop B' %}bg-green-100 text-green-800
-                                            {% else %}bg-gray-100 text-gray-600{% endif %}">
+                                                {% if user_data.shop == 'Shop A' %}bg-blue-100 text-blue-800
+                                                {% elif user_data.shop == 'Shop B' %}bg-green-100 text-green-800
+                                                {% else %}bg-gray-100 text-gray-600{% endif %}">
                                             <i class="fas fa-store mr-1 text-xs"></i>
                                             {{ user_data.shop }}
                                         </span>
+                                        {% elif user_data.app_type %}
+                                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium 
+                                                {% if user_data.app_type == 'hotel' %}bg-pink-100 text-pink-800
+                                                {% else %}bg-gray-100 text-gray-600{% endif %}">
+                                            <i class="fas fa-building mr-1 text-xs"></i>
+                                            {{ user_data.app_type|title }}
+                                        </span>
+                                        {% else %}
+                                        <span
+                                            class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-600">
+                                            <i class="fas fa-question-circle mr-1 text-xs"></i>
+                                            Not specified
+                                        </span>
+                                        {% endif %}
                                     </div>
+
                                     <!-- User Type -->
                                     <div>
                                         <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium 
                                             {% if user_data.user_type == 'admin' %}bg-purple-100 text-purple-800
                                             {% elif user_data.user_type == 'staff' %}bg-amber-100 text-amber-800
+                                            {% elif user_data.user_type == 'customer' %}bg-green-100 text-green-800
                                             {% else %}bg-gray-100 text-gray-600{% endif %}">
                                             <i
-                                                class="fas {% if user_data.user_type == 'admin' %}fa-crown{% else %}fa-user-tie{% endif %} mr-1 text-xs"></i>
-                                            {{ user_data.user_type|title }}
+                                                class="fas {% if user_data.user_type == 'admin' %}fa-crown{% elif user_data.user_type == 'staff' %}fa-user-tie{% else %}fa-user{% endif %} mr-1 text-xs"></i>
+                                            {{ user_data.user_type|title|default:"Not specified" }}
                                         </span>
                                     </div>
                                 </div>
@@ -345,35 +365,39 @@
 
                             <!-- Joined Date -->
                             <td class="px-6 py-4 whitespace-nowrap">
-                                <div class="text-sm text-gray-900">{{ user_data.user.date_joined|date:"M d, Y" }}</div>
-                                <div class="text-xs text-gray-500">{{ user_data.user.date_joined|timesince }} ago</div>
+                                <div class="text-sm text-gray-900">{{ user_data.date_joined }}</div>
+                                {% comment %} If you want to show relative time, you'll need to pass the date object {% endcomment %}
                             </td>
 
                             <!-- Actions -->
                             <td class="px-6 py-4 whitespace-nowrap">
                                 <div class="flex items-center space-x-2">
+                                    {% if user_data.id %}
                                     <!-- View Profile -->
-                                    <a href="{% url 'user_profile' user_data.user.pk %}"
+                                    <a href="{% url 'laundry:user_profile' user_data.id %}"
                                         class="inline-flex items-center p-2 bg-blue-100 hover:bg-blue-200 text-blue-700 rounded-lg transition-colors duration-200 group"
                                         title="View Profile">
                                         <i
                                             class="fas fa-eye text-sm group-hover:scale-110 transition-transform duration-200"></i>
                                     </a>
                                     <!-- Edit User -->
-                                    <a href="{% url 'user_edit' user_data.user.pk %}"
+                                    <a href="{% url 'laundry:user_edit' user_data.id %}"
                                         class="inline-flex items-center p-2 bg-amber-100 hover:bg-amber-200 text-amber-700 rounded-lg transition-colors duration-200 group"
                                         title="Edit User">
                                         <i
                                             class="fas fa-edit text-sm group-hover:scale-110 transition-transform duration-200"></i>
                                     </a>
                                     <!-- Delete User -->
-                                    {% if user_data.user != request.user %}
-                                    <a href="{% url 'user_delete' user_data.user.pk %}"
+                                    {% if user_data.id != request.user.id %}
+                                    <a href="{% url 'laundry:user_delete' user_data.id %}"
                                         class="inline-flex items-center p-2 bg-red-100 hover:bg-red-200 text-red-700 rounded-lg transition-colors duration-200 group"
                                         title="Delete User">
                                         <i
                                             class="fas fa-trash text-sm group-hover:scale-110 transition-transform duration-200"></i>
                                     </a>
+                                    {% endif %}
+                                    {% else %}
+                                    <span class="text-gray-400 text-xs">No actions</span>
                                     {% endif %}
                                 </div>
                             </td>
@@ -387,7 +411,7 @@
                                 <p class="text-gray-500 text-lg">No users found</p>
                                 <p class="text-gray-400 text-sm mt-2">Try adjusting your search criteria or add a new
                                     user</p>
-                                <a href="{% url 'user_add' %}"
+                                <a href="{% url 'laundry:user_add' %}"
                                     class="inline-block mt-4 px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors duration-200 text-sm font-semibold">
                                     Add First User
                                 </a>
@@ -407,7 +431,7 @@
                     </div>
                     <div class="flex space-x-2">
                         {% if users.has_previous %}
-                        <a href="?page={{ users.previous_page_number }}{{ pagination_url_suffix }}"
+                        <a href="?page={{ users.previous_page_number }}{% for key, value in current_filters.items %}{% if value %}&{{ key }}={{ value }}{% endif %}{% endfor %}"
                             class="px-4 py-2 bg-white border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors duration-200 shadow-sm">
                             Previous
                         </a>
@@ -420,7 +444,7 @@
                             {{ i }}
                         </span>
                         {% elif i > users.number|add:'-3' and i < users.number|add:'3' %} <a
-                            href="?page={{ i }}{{ pagination_url_suffix }}"
+                            href="?page={{ i }}{% for key, value in current_filters.items %}{% if value %}&{{ key }}={{ value }}{% endif %}{% endfor %}"
                             class="px-4 py-2 bg-white border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors duration-200 shadow-sm">
                             {{ i }}
                             </a>
@@ -428,7 +452,7 @@
                             {% endfor %}
 
                             {% if users.has_next %}
-                            <a href="?page={{ users.next_page_number }}{{ pagination_url_suffix }}"
+                            <a href="?page={{ users.next_page_number }}{% for key, value in current_filters.items %}{% if value %}&{{ key }}={{ value }}{% endif %}{% endfor %}"
                                 class="px-4 py-2 bg-white border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors duration-200 shadow-sm">
                                 Next
                             </a>

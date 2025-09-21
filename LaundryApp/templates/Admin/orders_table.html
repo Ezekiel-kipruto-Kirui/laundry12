@@ -206,7 +206,7 @@
         <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
             <div>
                 <div class="flex items-center gap-3 mb-3">
-                    <a href="{% url 'dashboard' %}"
+                    <a href="{% url 'laundry:dashboard' %}"
                         class="inline-flex items-center px-4 py-2 bg-white rounded-lg shadow-sm border border-gray-200 text-gray-700 hover:text-blue-600 hover:shadow-md transition-all duration-200">
                         <i class="fas fa-home mr-2"></i>
                         <span class="text-sm font-medium">Dashboard Home</span>
@@ -238,7 +238,7 @@
                     </div>
                 </div>
 
-                <a href="{% url 'createorder' %}"
+                <a href="{% url 'laundry:createorder' %}"
                     class="btn-primary inline-flex items-center gap-2 px-4 py-2.5 text-white rounded-lg font-medium">
                     <i class="fas fa-plus-circle"></i>
                     <span>New Order</span>
@@ -253,9 +253,9 @@
                     <div class="p-3 bg-blue-100 rounded-xl mb-3">
                         <i class="fas fa-clipboard-check text-blue-600 text-xl"></i>
                     </div>
-                    <p class="text-sm text-gray-500 font-medium">Total Orders</p>
+                    <p class="text-sm text-gray-500 font-medium">Active Orders</p>
                     <h3 class="text-3xl font-bold text-gray-800 mt-1">{{ total_orders }}</h3>
-                    <p class="text-xs text-gray-500 mt-2">All active orders</p>
+                    <p class="text-xs text-gray-500 mt-2">Excluding delivered orders</p>
                 </div>
             </div>
 
@@ -277,7 +277,7 @@
                     </div>
                     <p class="text-sm text-gray-500 font-medium">Completed</p>
                     <h3 class="text-3xl font-bold text-gray-800 mt-1">{{ completed_orders }}</h3>
-                    <p class="text-xs text-gray-500 mt-2">Successfully processed</p>
+                    <p class="text-xs text-gray-500 mt-2">Ready for delivery</p>
                 </div>
             </div>
         </div>
@@ -290,17 +290,19 @@
                     <!-- All Orders Filter -->
                     <a href="?{% if request.GET.search %}search={{ request.GET.search }}{% endif %}"
                         class="filter-pill px-4 py-2 {% if not request.GET.status and not request.GET.payment %}bg-blue-100 text-blue-700 shadow-sm{% else %}bg-gray-100 text-gray-700{% endif %} rounded-lg text-sm font-medium flex items-center">
-                        All Orders
+                        Active Orders
                     </a>
 
                     <!-- Order Status Filters -->
                     <div class="flex flex-wrap items-center gap-2">
                         <span class="text-sm text-gray-500 font-medium">Status:</span>
                         {% for status_value, status_label in order_status_choices %}
+                        {% if status_value != 'delivered' %}
                         <a href="?{% if request.GET.search %}search={{ request.GET.search }}&{% endif %}status={{ status_value }}{% if request.GET.payment %}&payment={{ request.GET.payment }}{% endif %}"
                             class="filter-pill px-3 py-1.5 {% if request.GET.status == status_value %}bg-{% if status_value == 'pending' %}yellow{% elif status_value == 'processing' %}blue{% elif status_value == 'Completed' %}green{% else %}gray{% endif %}-100 text-{% if status_value == 'pending' %}yellow{% elif status_value == 'processing' %}blue{% elif status_value == 'Completed' %}green{% else %}gray{% endif %}-700 shadow-sm{% else %}bg-gray-100 text-gray-700{% endif %} rounded-full text-sm font-medium">
                             {{ status_label }}
                         </a>
+                        {% endif %}
                         {% endfor %}
                     </div>
 
@@ -355,7 +357,7 @@
                                 <div class="text-xs">{{ order.customer.name|truncatechars:15 }}</div>
                             </td>
                             <td>
-                                <div class="text-xs">{{ customer_form.address|truncatewords:2 }}</div>
+                                <div class="text-xs">{{ order.customer.address|truncatewords:2 }}</div>
                             </td>
                             <td>
                                 {% for item in order.items.all|slice:":1" %}
@@ -425,16 +427,10 @@
                                     class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
                                     <i class="fas fa-cog mr-1"></i> Processing
                                 </span>
-                                {% elif order.order_status == 'Delivered' %}
-                                <span
-                                    class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-purple-100 text-purple-800">
-                                    <i class="fas fa-truck mr-1"></i> Delivered
-                                </span>
                                 {% else %}
                                 <span
                                     class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
-                                    <i class="fas fa-question-circle mr-1"></i> {{
-                                    order.order_status|title|truncatechars:10 }}
+                                    <i class="fas fa-question-circle mr-1"></i> {{order.order_status|title|truncatechars:10 }}
                                 </span>
                                 {% endif %}
                             </td>
@@ -459,14 +455,10 @@
                             <td>
                                 <div class="flex items-center justify-center space-x-2">
                                     <!-- View Order Details -->
-                                    <a href="{% url 'order_detail' order.uniquecode %}"
-                                        class="action-btn view-btn text-blue-600 hover:bg-blue-100 p-2 rounded-lg transition-colors duration-200"
-                                        title="View Order Details">
-                                        <i class="fas fa-eye text-sm"></i>
-                                    </a>
+                                 
 
                                     <!-- Edit Order -->
-                                    <a href="{% url 'order_edit' order.uniquecode %}"
+                                    <a href="{% url 'laundry:order_edit' order.uniquecode %}"
                                         class="action-btn edit-btn text-amber-600 hover:bg-amber-100 p-2 rounded-lg transition-colors duration-200"
                                         title="Edit Order">
                                         <i class="fas fa-edit text-sm"></i>
@@ -483,39 +475,39 @@
                                             class="dropdown-menu absolute right-0 mt-1 w-48 bg-white rounded-md shadow-lg py-1 z-50">
                                             <!-- Mark as Completed -->
                                             {% if order.order_status != 'Completed' %}
-                                            <form action="{% url 'mark_order_completed' order.uniquecode %}"
-                                                method="post" class="w-full">
+                                        <form action="{% url 'laundry:update_order_status' order.uniquecode 'Completed' %}" method="post" class="w-full">
                                                 {% csrf_token %}
-                                                <button type="submit"
-                                                    class="w-full text-left px-4 py-2 text-sm text-green-700 hover:bg-green-100 flex items-center"
+                                                <button type="submit" class="w-full text-left px-4 py-2 text-sm text-green-700 hover:bg-green-100 flex items-center"
                                                     onclick="return confirm('Mark this order as completed?')">
                                                     <i class="fas fa-check-circle mr-2"></i> Mark Completed
                                                 </button>
-                                            </form>
-                                            {% endif %}
-
-                                            <!-- Update Payment Status -->
-                                            <div class="border-t border-gray-100 my-1"></div>
-                                            <span class="px-4 py-2 text-xs text-gray-500 font-semibold">Payment
-                                                Status</span>
-                                            {% for value, label in order.PAYMENT_STATUS_CHOICES %}
-                                            {% if value != order.payment_status %}
-                                            <form action="{% url 'update_payment_status' order.uniquecode %}"
-                                                method="post" class="w-full">
-                                                {% csrf_token %}
-                                                <input type="hidden" name="payment_status" value="{{ value }}">
-                                                <input type="hidden" name="amount_paid" value="{{ order.amount_paid }}">
-                                                <button type="submit"
-                                                    class="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center">
-                                                    <i class="fas fa-money-bill-wave mr-2"></i> Mark as {{ label }}
-                                                </button>
-                                            </form>
-                                            {% endif %}
-                                            {% endfor %}
-
+                                                </form>
+                                                {% endif %}
+                                                <!-- Mark as Delivered -->
+                                                
+                                                {% if order.order_status != 'Delivered_picked' %}
+                                                <form action="{% url 'laundry:update_order_status' order.uniquecode 'Delivered_picked' %}" method="post" class="w-full">
+                                                    {% csrf_token %}
+                                                    <button type="submit" class="w-full text-left px-4 py-2 text-sm text-green-700 hover:bg-green-100 flex items-center"
+                                                        onclick="return confirm('Mark this order as completed?')">
+                                                        <i class="fas fa-check-circle mr-2"></i> Mark Delivered
+                                                    </button>
+                                                    </form>
+                                                    {% endif %}
+                                        <!-- Update Payment Status -->
+                                        <div class="border-t border-gray-100 my-1"></div>
+                                        {% if order.payment_status != 'paid' %}
+                                                    <form action="{% url 'laundry:Mpesa_payment_initiation' order.id%}" method="post" class="w-full">
+                                                        {% csrf_token %}
+                                                        <button type="submit" class="w-full text-left px-4 py-2 text-sm text-green-700 hover:bg-green-100 flex items-center"
+                                                            onclick="return confirm('Mark this order as completed?')">
+                                                            <i class="fas fa-check-circle mr-2"></i>Complete Payment
+                                                        </button>
+                                                    </form>
+                                                    {% endif %}
                                             <!-- Delete Order -->
                                             <div class="border-t border-gray-100 my-1"></div>
-                                            <a href="{% url 'order_delete' order.uniquecode %}"
+                                            <a href="{% url 'laundry:order_delete' order.uniquecode %}"
                                                 class="block px-4 py-2 text-sm text-red-700 hover:bg-red-100 flex items-center"
                                                 onclick="return confirm('Are you sure you want to delete this order?')">
                                                 <i class="fas fa-trash mr-2"></i> Delete Order
@@ -536,10 +528,10 @@
                                     {% if request.GET.search or request.GET.status or request.GET.payment %}
                                     No orders match your current filters. Try adjusting your search criteria.
                                     {% else %}
-                                    There are no orders in the system yet. When you have orders, they'll appear here.
+                                    There are no active orders in the system. When you have orders, they'll appear here.
                                     {% endif %}
                                 </p>
-                                <a href="{% url 'createorder' %}"
+                                <a href="{% url 'laundry:createorder' %}"
                                     class="btn-primary mt-4 inline-flex items-center gap-2 px-4 py-2 text-white rounded-lg font-medium">
                                     <i class="fas fa-plus text-sm"></i>
                                     <span>Create New Order</span>
@@ -594,45 +586,152 @@
         </div>
     </div>
 
-    <script>
-        // Initialize dropdown functionality
-        document.addEventListener('DOMContentLoaded', function () {
-            // Toggle dropdowns on click
-            document.querySelectorAll('.dropdown > button').forEach(button => {
-                button.addEventListener('click', function (e) {
-                    e.stopPropagation();
-                    const dropdown = this.parentElement;
-                    const menu = dropdown.querySelector('.dropdown-menu');
+  <script>
+    document.addEventListener('DOMContentLoaded', function () {
+        // Toggle dropdowns on click
+        document.querySelectorAll('.dropdown > button').forEach(button => {
+            button.addEventListener('click', function (e) {
+                e.stopPropagation();
+                const dropdown = this.parentElement;
+                const menu = dropdown.querySelector('.dropdown-menu');
 
-                    // Close all other dropdowns
-                    document.querySelectorAll('.dropdown-menu').forEach(otherMenu => {
-                        if (otherMenu !== menu) {
-                            otherMenu.style.display = 'none';
-                        }
-                    });
-
-                    // Toggle current dropdown
-                    menu.style.display = menu.style.display === 'block' ? 'none' : 'block';
+                // Close all other dropdowns
+                document.querySelectorAll('.dropdown-menu').forEach(otherMenu => {
+                    if (otherMenu !== menu) {
+                        otherMenu.style.display = 'none';
+                    }
                 });
-            });
 
-            // Close dropdowns when clicking outside
-            document.addEventListener('click', function (e) {
-                if (!e.target.closest('.dropdown')) {
-                    document.querySelectorAll('.dropdown-menu').forEach(menu => {
-                        menu.style.display = 'none';
-                    });
-                }
-            });
-
-            // Prevent dropdown from closing when clicking inside
-            document.querySelectorAll('.dropdown-menu').forEach(menu => {
-                menu.addEventListener('click', function (e) {
-                    e.stopPropagation();
-                });
+                // Toggle current dropdown
+                menu.style.display = menu.style.display === 'block' ? 'none' : 'block';
             });
         });
-    </script>
+
+        // Close dropdowns when clicking outside
+        document.addEventListener('click', function (e) {
+            if (!e.target.closest('.dropdown')) {
+                document.querySelectorAll('.dropdown-menu').forEach(menu => {
+                    menu.style.display = 'none';
+                });
+            }
+        });
+
+        // Prevent dropdown from closing when clicking inside
+        document.querySelectorAll('.dropdown-menu').forEach(menu => {
+            menu.addEventListener('click', function (e) {
+                e.stopPropagation();
+            });
+        });
+
+        // Intercept form submissions for order status updates
+        document.querySelectorAll('form[action*="/order/"]').forEach(form => {
+            form.addEventListener('submit', function (e) {
+                e.preventDefault();
+
+                const form = this;
+                const url = form.action;
+                const formData = new FormData(form);
+                const orderRow = form.closest('tr');
+                const statusCell = orderRow.querySelector('.order-status');
+                const actionButtons = orderRow.querySelector('.action-buttons');
+
+                // Show loading state
+                const originalButton = form.querySelector('button');
+                const originalText = originalButton.innerHTML;
+                originalButton.innerHTML = '<span class="spinner-border spinner-border-sm" role="status"></span> Updating...';
+                originalButton.disabled = true;
+
+                fetch(url, {
+                    method: 'POST',
+                    body: formData,
+                    headers: {
+                        'X-Requested-With': 'XMLHttpRequest',
+                        'X-CSRFToken': formData.get('csrfmiddlewaretoken')
+                    }
+                })
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success) {
+                            // ✅ Update the status cell instantly
+                            statusCell.innerHTML = `<span class="badge bg-${getStatusBadgeClass(data.new_status)}">${data.status_display}</span>`;
+
+                            // Show success message
+                            showDjangoMessage('success', data.message);
+
+                            // If order is completed or delivered, remove action buttons
+                            if (data.new_status === 'Completed' || data.new_status === 'delivered') {
+                                actionButtons.innerHTML = '<span class="text-muted">No actions available</span>';
+                            }
+                        } else {
+                            showDjangoMessage('error', data.message);
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error:', error);
+                        showDjangoMessage('error', 'An error occurred while updating the order status.');
+                    })
+                    .finally(() => {
+                        // Restore button state
+                        originalButton.innerHTML = originalText;
+                        originalButton.disabled = false;
+
+                        // Close the dropdown menu
+                        const dropdownMenu = form.closest('.dropdown-menu');
+                        if (dropdownMenu) {
+                            dropdownMenu.style.display = 'none';
+                        }
+                    });
+            });
+        });
+    });
+
+    // Helper function to get badge class based on status
+    function getStatusBadgeClass(status) {
+        const statusClasses = {
+            'pending': 'warning',
+            'in_progress': 'info',
+            'Completed': 'success',
+            'delivered': 'secondary',
+            'cancelled': 'danger'
+        };
+        return statusClasses[status] || 'secondary';
+    }
+
+    // Helper function to simulate Django messages
+    function showDjangoMessage(type, message) {
+        let messageContainer = document.getElementById('django-messages');
+        if (!messageContainer) {
+            messageContainer = document.createElement('div');
+            messageContainer.id = 'django-messages';
+            messageContainer.className = 'position-fixed top-0 end-0 p-3';
+            messageContainer.style.zIndex = '9999';
+            document.body.appendChild(messageContainer);
+        }
+
+        const alertClass = type === 'success' ? 'alert-success' : 'alert-danger';
+        const iconClass = type === 'success' ? 'fa-check-circle' : 'fa-exclamation-circle';
+
+        const alertHtml = `
+        <div class="alert ${alertClass} alert-dismissible fade show" role="alert">
+            <i class="fas ${iconClass} me-2"></i>
+            ${message}
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+    `;
+
+        messageContainer.innerHTML = alertHtml;
+
+        // Auto-dismiss after 3 seconds
+        setTimeout(() => {
+            const alert = messageContainer.querySelector('.alert');
+            if (alert) {
+                const bsAlert = new bootstrap.Alert(alert);
+                bsAlert.close();
+            }
+        }, 3000);
+    }
+</script>
+
 </body>
 
 </html>

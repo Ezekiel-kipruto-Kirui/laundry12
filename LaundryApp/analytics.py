@@ -27,7 +27,7 @@ logger = logging.getLogger(__name__)
 
 # --- Constants ---
 MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
-ACTIVE_ORDER_STATUSES = ['pending', 'processing', 'Completed', 'Delivered']  # Statuses that count as active orders
+ACTIVE_ORDER_STATUSES = ['pending', 'processing', 'Completed', 'Delivered/picked']  # Statuses that count as active orders
 
 
 class DashboardAnalytics:
@@ -158,7 +158,7 @@ class DashboardAnalytics:
                 total_orders=Count('id'),
                 pending_orders=Count('id', filter=Q(order_status='pending')),
                 completed_orders=Count('id', filter=Q(order_status='Completed')),
-                delivered_orders=Count('id', filter=Q(order_status='Delivered')),
+                delivered_orders=Count('id', filter=Q(order_status='Delivered/picked')),
                 total_revenue=Coalesce(Sum('total_price'), 0, output_field=DecimalField()),
                 avg_order_value=Coalesce(Avg('total_price'), 0, output_field=DecimalField())
             )

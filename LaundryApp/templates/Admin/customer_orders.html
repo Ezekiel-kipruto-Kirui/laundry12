@@ -1,4 +1,4 @@
-{% extends "base.html" %}
+{% extends "../home.html" %}
 
 {% block title %}{{ customer.name }}'s Orders - Laundry Management System{% endblock %}
 
@@ -94,7 +94,7 @@
     </div>
 
     <div class="mt-3">
-        <a href="{% url 'customer_management' %}" class="btn btn-secondary">
+        <a href="{% url 'laundry:customer_management' %}" class="btn btn-secondary">
             <i class="fas fa-arrow-left"></i> Back to Customers
         </a>
     </div>

@@ -1,0 +1,111 @@
+{% extends 'home.html' %}
+{% load static %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <div class="bg-white rounded-xl shadow-md overflow-hidden">
+        <!-- Order Header -->
+        <div class="bg-gradient-to-r from-blue-600 to-blue-700 text-white p-6">
+            <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                <div>
+                    <h1 class="text-2xl font-bold mb-2">Order #{{ order.id }}</h1>
+                    <p class="text-blue-100">Placed on {{ order.created_at|date:"F d, Y H:i" }}</p>
+                </div>
+                <div class="flex items-center gap-3">
+                    <span class="px-3 py-1 bg-white text-blue-600 rounded-full text-sm font-semibold">
+                        {{ order.get_order_status_display }}
+                    </span>
+
+                    <!-- Status Update Dropdown -->
+                    <div class="relative">
+                        <button
+                            class="px-3 py-1 bg-white text-blue-600 rounded-full text-sm font-semibold hover:bg-blue-50 flex items-center gap-1"
+                            onclick="toggleDropdown('status-dropdown')">
+                            <i class="fas fa-cog"></i> Change
+                        </button>
+                        <div id="status-dropdown"
+                            class="absolute right-0 mt-2 w-40 bg-white rounded-md shadow-lg py-1 z-10 hidden">
+                            <form method="post" action="{% url 'hotel:order_edit' order.pk %}">
+                                {% csrf_token %}
+                                <button type="submit" name="order_status" value="In Progress"
+                                    class="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 {% if order.order_status == 'In Progress' %}bg-blue-50 text-blue-700{% endif %}">
+                                    <i class="fas fa-clock mr-2"></i> In Progress
+                                </button>
+                                <button type="submit" name="Kshrder_status" value="Served"
+                                    class="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 {% if order.order_status == 'Served' %}bg-green-50 text-green-700{% endif %}">
+                                    <i class="fas fa-check mr-2"></i> Served
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Order Details -->
+        <div class="p-6">
+            <!-- Order Items -->
+            <h3 class="text-lg font-semibold text-gray-800 mb-4">Order Items</h3>
+            <div class="border border-gray-200 rounded-lg overflow-hidden mb-6">
+                <table class="w-full">
+                    <thead class="bg-gray-50">
+                        <tr>
+                            <th class="px-4 py-3 text-left text-sm font-medium text-gray-700">Item</th>
+                            <th class="px-4 py-3 text-left text-sm font-medium text-gray-700">Quantity</th>
+                            <th class="px-4 py-3 text-left text-sm font-medium text-gray-700">Price</th>
+                            <th class="px-4 py-3 text-left text-sm font-medium text-gray-700">Total</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-gray-200">
+                        {% for item in order.order_items.all %}
+                        <tr>
+                            <td class="px-4 py-3 text-sm text-gray-800">{{ item.food_item.name }}</td>
+                            <td class="px-4 py-3 text-sm text-gray-600">{{ item.quantity }}</td>
+                            <td class="px-4 py-3 text-sm text-gray-600">Ksh{{ item.food_item.price }}</td>
+                            <td class="px-4 py-3 text-sm text-gray-600">Ksh{{ item.total_price|floatformat:2 }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                    <tfoot class="bg-gray-50">
+                        <tr>
+                            <td colspan="3" class="px-4 py-3 text-sm font-medium text-gray-700 text-right">Total:</td>
+                            <td class="px-4 py-3 text-sm font-bold text-gray-900">Ksh{{ order.total_amount|floatformat:2}}</td>
+                        </tr>
+                    </tfoot>
+                </table>
+            </div>
+        </div>
+
+        <!-- Actions -->
+        <div class="bg-gray-50 px-6 py-4 border-t border-gray-200 flex justify-between items-center">
+            <a href="{% url 'hotel:order_list' %}"
+                class="bg-gray-300 hover:bg-gray-400 text-gray-800 px-4 py-2 rounded-lg font-semibold transition duration-200">
+                <i class="fas fa-arrow-left mr-2"></i> Back to Orders
+            </a>
+
+            <form method="post" action="{% url 'hotel:order_delete' order.pk %}" class="inline">
+                {% csrf_token %}
+                <button type="submit"
+                    onclick="return confirm('Are you sure you want to delete this order? This action cannot be undone.');"
+                    class="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg font-semibold transition duration-200">
+                    <i class="fas fa-trash mr-2"></i> Delete Order
+                </button>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+    function toggleDropdown(dropdownId) {
+        const dropdown = document.getElementById(dropdownId);
+        dropdown.classList.toggle('hidden');
+    }
+
+    // Close dropdown when clicking outside
+    document.addEventListener('click', function (event) {
+        if (!event.target.closest('.relative')) {
+            document.getElementById('status-dropdown').classList.add('hidden');
+        }
+    });
+</script>
+{% endblock %}
