@@ -250,7 +250,20 @@
                             </h2>
 
                             <div class="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
+                                
+                                <!-- Delivery Date Field -->
+                                <div class="relative">
+                                    {{ order_form.delivery_date }}
+                                    <label for="id_delivery_date" class="form-label absolute left-4 top-3 pointer-events-none">
+                                        Picking date/Delivery Date *
+                                    </label>
+                                    {% if order_form.delivery_date.errors %}
+                                    <div class="text-red-500 text-sm mt-2">{{ order_form.delivery_date.errors }}</div>
+                                    {% endif %}
+                                </div>
+                               
                                 <!-- Shop Field -->
+                                {% if user_has_single_shop %}
                                 <div class="relative">
                                     {{ order_form.shop }}
                                     <label for="id_shop" class="form-label absolute left-4 top-3 pointer-events-none">
@@ -259,26 +272,12 @@
                                     {% if order_form.shop.errors %}
                                     <div class="text-red-500 text-sm mt-2">{{ order_form.shop.errors }}</div>
                                     {% endif %}
-                                    {% if user_has_single_shop %}
-                                    <p class="text-sm text-gray-500 mt-2">
-                                        Your orders are automatically assigned to <span class="font-semibold">{{ user_shop }}</span> based on your user group.
-                                    </p>
-                                    {% endif %}
                                 </div>
-
-                                <!-- Delivery Date Field -->
-                                <div class="relative">
-                                    {{ order_form.delivery_date }}
-                                    <label for="id_delivery_date"
-                                        class="form-label absolute left-4 top-3 pointer-events-none">
-                                        Picking date/Delivery Date *
-                                    </label>
-                                    {% if order_form.delivery_date.errors %}
-                                    <div class="text-red-500 text-sm mt-2">{{ order_form.delivery_date.errors }}</div>
-                                    {% endif %}
-                                </div>
+                                {% endif %}
+                                 
+                          
                             </div>
-
+                        
                             <div class="grid grid-cols-1 gap-4 md:gap-6 mt-4 md:mt-6">
                                 <!-- Address Field -->
                              

@@ -10,7 +10,7 @@
 {% endblock %}
 
 {% block content %}
-<div id="content-main" class="min-h-screen bg-gray-50 dark:bg-gray-900 p-6">
+<div id="content-main" class="min-h-screen p-6">
     <!-- Dashboard Header -->
     <div class="flex justify-between items-center mb-8 flex-wrap gap-4">
         <h1 class="text-3xl font-bold text-gray-800 dark:text-white flex items-center gap-3">
@@ -66,7 +66,29 @@
     </div>
 
     <!-- Overall Stats -->
+    <h2
+        class="text-xl font-semibold text-gray-800 dark:text-white mb-4 pl-3 border-l-4 border-pink-500 flex items-center gap-2">
+        <i class="fas fa-store text-pink-500"></i> General
+    </h2>
     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+        
+<!-- Total Revenue -->
+<div
+    class="bg-white dark:bg-gray-800 rounded-xl p-4 shadow-sm transition-all duration-300 hover:shadow-md border-t-4 border-green-500">
+    <div class="flex items-center justify-between mb-4">
+        <div class="w-10 h-10 rounded-lg bg-green-50 dark:bg-green-900/20 flex items-center justify-center">
+            <i class="fas fa-wallet text-green-500 text-lg"></i>
+        </div>
+    </div>
+    <div>
+        <h3 class="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">Total Revenue
+        </h3>
+        <div class="text-2xl font-bold text-gray-800 dark:text-white mt-1">Ksh
+            {{total_revenue|floatformat:2|default:"0.00" }}</div>
+        <div class="text-xs text-gray-500 dark:text-gray-400 mt-1">Total earnings</div>
+    </div>
+</div>
+
         <!-- Total Orders -->
         <div
             class="bg-white dark:bg-gray-800 rounded-xl p-4 shadow-sm transition-all duration-300 hover:shadow-md border-t-4 border-pink-500">
@@ -83,21 +105,7 @@
             </div>
         </div>
 
-        <!-- Total Revenue -->
-        <div
-            class="bg-white dark:bg-gray-800 rounded-xl p-4 shadow-sm transition-all duration-300 hover:shadow-md border-t-4 border-green-500">
-            <div class="flex items-center justify-between mb-4">
-                <div class="w-10 h-10 rounded-lg bg-green-50 dark:bg-green-900/20 flex items-center justify-center">
-                    <i class="fas fa-wallet text-green-500 text-lg"></i>
-                </div>
-            </div>
-            <div>
-                <h3 class="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">Total Revenue
-                </h3>
-                <div class="text-2xl font-bold text-gray-800 dark:text-white mt-1">Ksh {{total_revenue|floatformat:2|default:"0.00" }}</div>
-                <div class="text-xs text-gray-500 dark:text-gray-400 mt-1">Total earnings</div>
-            </div>
-        </div>
+       
 
         <!-- Pending Orders -->
         <div
@@ -136,7 +144,7 @@
     <div class="mb-8">
         <h2
             class="text-xl font-semibold text-gray-800 dark:text-white mb-4 pl-3 border-l-4 border-pink-500 flex items-center gap-2">
-            <i class="fas fa-store text-pink-500"></i> Shop A Performance
+            <i class="fas fa-store text-pink-500"></i> Shop A
         </h2>
         <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
             <!-- Shop A Revenue -->
@@ -184,10 +192,12 @@
                     </div>
                 </div>
                 <div>
-                    <h3 class="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">Partial
-                        Payments</h3>
+                    <h3 class="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">Payments</h3>
                     <div class="text-2xl font-bold text-gray-800 dark:text-white mt-1">{{ shop_a_completed_order }}
                     </div>
+                    <span class="text-yellow-500">{{ pending_payments }} pending</span> •
+                    <span class="text-blue-500">{{ partial_payments }} Partial</span>
+                    <span class="text-blue-500">{{ partial_payments }} completed</span>
                     <div class="text-xs text-gray-500 dark:text-gray-400 mt-1">Advanced payments</div>
                 </div>
             </div>
@@ -246,10 +256,14 @@
                     </div>
                 </div>
                 <div>
-                    <h3 class="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">Partial
-                        Payments</h3>
+                    <h3 class="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">Payments</h3>
                     <div class="text-2xl font-bold text-gray-800 dark:text-white mt-1">{{ shop_b_completed_orders }}
-                    </div>
+
+                    </div>{% for shop, stats in shop_payment_stats.items %}
+                    <span class="text-yellow-500"> {{ stats.pending }} (KSh {{ stats.pending_amount }}) pending</span> •
+                    <span class="text-blue-500">{{ stats.partial }} (KSh {{ stats.partial_amount }}) Partial</span>•
+                    <span class="text-blue-500">{{ stats.complete }} (KSh {{ stats.collected_amount }}) completed</span>
+                    {% endfor %}
                     <div class="text-xs text-gray-500 dark:text-gray-400 mt-1">Advanced payments</div>
                 </div>
             </div>
