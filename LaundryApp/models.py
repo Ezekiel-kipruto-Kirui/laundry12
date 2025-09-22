@@ -98,7 +98,8 @@ class Customer(models.Model):
     created_by = models.ForeignKey(
     UserProfile,
     # settings.AUTH_USER_MODEL,   # <--- THIS is the fix
-        on_delete=models.CASCADE
+        on_delete=models.CASCADE,
+        null=True
     )
     def __str__(self):
         return f"{self.name} ({self.phone})"
@@ -128,7 +129,7 @@ class Order(models.Model):
         ('card', 'Credit/Debit Card'),
         ('bank_transfer', 'Bank Transfer'),
         ('other', 'Other'),
-        ('pending_payment', 'Pending Payment'),
+        
     )
     payment_type = models.CharField(max_length=50, choices=PAYMENT_TYPE_CHOICES,
                                     default='pending_payment', blank=True, db_index=True)
@@ -287,23 +288,33 @@ class OrderItem(models.Model):
         return f"{self.quantity} x {', '.join(items)} ({self.servicetype})"
 
 
-class ExpenseField(models.Model):
-    label = models.CharField(max_length=100, unique=True, db_index=True)
+class Business(models.Model):
+    name = models.CharField(max_length=150, unique=True, db_index=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
-        return self.label
+        return self.name
 
+class ExpenseField(models.Model):
+    notes = models.CharField(max_length=150)
+    business = models.ForeignKey(Business, on_delete=models.CASCADE, related_name="expense_fields")
+    label = models.CharField(max_length=100, db_index=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together = ('business', 'label')  # Prevent duplicate labels per business
+
+    def __str__(self):
+        return f"{self.label} ({self.business.name})"
 
 class ExpenseRecord(models.Model):
     field = models.ForeignKey(ExpenseField, on_delete=models.CASCADE, db_index=True)
     amount = models.DecimalField(max_digits=10, decimal_places=2)
     date = models.DateField(auto_now_add=True, db_index=True)
+    business = models.ForeignKey(Business, on_delete=models.CASCADE, related_name='expense_records')
 
     def __str__(self):
-        return f"{self.field.label}: {self.amount}"
-
-
+        return f"{self.field.label}: {self.amount} ({self.business.name})"
 class Payment(models.Model):
     order = models.OneToOneField(Order, on_delete=models.CASCADE,
                                  related_name='payment', db_index=True)

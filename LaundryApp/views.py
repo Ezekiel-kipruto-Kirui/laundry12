@@ -1016,7 +1016,6 @@ def user_add(request):
                     if user_type == "admin":
                         user.is_staff = True
                         user.is_superuser = True
-                        
                     elif user_type == "staff":
                         user.is_staff = True
                         user.is_superuser = False
@@ -1029,8 +1028,8 @@ def user_add(request):
                     user.app_type = app_type
                     user.save()
 
-                    # Create LaundryProfile only if app_type is laundry
-                    if app_type == 'laundry' and user!=user.is_superuser:
+                    # Create LaundryProfile only if app_type is laundry and user is not superuser
+                    if app_type == 'laundry' and not user.is_superuser:
                         if laundry_form.is_valid():
                             LaundryProfile.objects.create(
                                 user=user,
@@ -1039,6 +1038,14 @@ def user_add(request):
                         else:
                             raise Exception("Please select a valid shop for laundry users")
                     
+                    # For hotel users, you might want to create a HotelProfile or handle differently
+                    # Add this section for hotel users:
+                    elif app_type == 'hotel':
+                        # Create HotelProfile or perform any hotel-specific setup
+                        # Example: HotelProfile.objects.create(user=user, hotel=...)
+                        # If you don't have a HotelProfile model yet, you can just pass
+                        # or add any hotel-specific initialization here
+                        pass
 
                 messages.success(request, f"User {user.email} created successfully!")
                 return redirect('laundry:user_management')
@@ -1059,7 +1066,6 @@ def user_add(request):
         "laundry_form": laundry_form,
         "title": "Add New User"
     })
-
 @login_required
 @admin_required
 def user_edit(request, pk):
@@ -1559,20 +1565,20 @@ def create_expense_field(request):
                 if not ExpenseField.objects.filter(label=expense_name).exists():
                     ExpenseField.objects.create(label=expense_name)
                     created_count += 1
-            
+        
             if created_count > 0:
                 messages.success(request, f"Successfully created {created_count} default expense categories!")
             else:
                 messages.info(request, "All default expense categories already exist.")
             
-            return redirect("expense_field_list")
+            return redirect("laundry:expense_field_list")
         
         # Process the regular form submission
         form = ExpenseFieldForm(request.POST)
         if form.is_valid():
             form.save()
             messages.success(request, "Expense field created successfully!")
-            return redirect("expense_field_list")
+            return redirect("laundry:expense_field_list")
     else:
         form = ExpenseFieldForm()
     
@@ -1616,7 +1622,7 @@ def expense_form(request):
             expense_record = form.save(commit=False)
             expense_record.save()
             messages.success(request, "Expense recorded successfully!")
-            return redirect("expense_list")
+            return redirect("laundry:expense_list")
     else:
         form = ExpenseRecordForm()
     return render(request, "expenses/expense_form.html", {"form": form})
@@ -1646,7 +1652,7 @@ def edit_expense_record(request, record_id):
         if form.is_valid():
             form.save()
             messages.success(request, "Expense record updated successfully!")
-            return redirect("expense_list")
+            return redirect("laundry:expense_list")
     else:
         form = ExpenseRecordForm(instance=record)
     return render(request, "expenses/edit_expense_record.html", {"form": form, "record": record})
@@ -1657,7 +1663,7 @@ def delete_expense_record(request, record_id):
     if request.method == "POST":
         record.delete()
         messages.success(request, "Expense record deleted successfully!")
-        return redirect("expense_list")
+        return redirect("laundry:expense_list")
     return render(request, "expenses/delete_expense_record.html", {"record": record})
 
 @login_required

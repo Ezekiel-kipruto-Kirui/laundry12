@@ -18,7 +18,7 @@
             {% csrf_token %}
 
             <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <a href="{% url 'hotel:load_default_food_items' %}" class="btn btn-primary">
+                <a href="{% url 'hotel:load_default_food_items' %}" class="btn btn-primary ">
                     Load Default Food Items
                 </a>
                 {% for field in form %}
