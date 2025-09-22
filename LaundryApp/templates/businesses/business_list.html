@@ -1,0 +1,32 @@
+{% extends "../home.html" %}
+{% block title %}Businesses{% endblock %}
+
+{% block content %}
+<div class="max-w-3xl mx-auto px-4 py-8">
+    <div class="flex justify-between items-center mb-6">
+        <h2 class="text-2xl font-bold text-gray-800">Businesses</h2>
+        <a href="{% url 'laundry:create_business' %}"
+            class="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700">
+            + Add Business
+        </a>
+    </div>
+
+    <div class="bg-white shadow rounded-lg p-6">
+        <ul class="divide-y divide-gray-200">
+            {% for business in businesses %}
+            <li class="py-3 flex justify-between items-center">
+                <span class="font-medium text-gray-800">{{ business.name }}</span>
+                <div class="space-x-2">
+                    <a href="{% url 'laundry:edit_business' business.id %}"
+                        class="text-blue-600 hover:underline">Edit</a>
+                    <a href="{% url 'laundry:delete_business' business.id %}"
+                        class="text-red-600 hover:underline">Delete</a>
+                </div>
+            </li>
+            {% empty %}
+            <li class="py-3 text-gray-600">No businesses found.</li>
+            {% endfor %}
+        </ul>
+    </div>
+</div>
+{% endblock %}

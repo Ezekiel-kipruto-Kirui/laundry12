@@ -1,0 +1,1173 @@
+{% extends "../home.html" %}
+{% load static %}
+
+{% block extrahead %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<script
+    src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0/dist/chartjs-plugin-datalabels.min.js"></script>
+<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+<link href="https://fonts.googleapis/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+    /* Modern Dashboard Styles */
+    .dashboard-container {
+        --primary: #EC407A;
+        /* Vibrant pink */
+        --secondary: #F59E0B;
+        /* Orange-yellow */
+        --accent: #FBBF24;
+        /* Lighter orange */
+        --light-bg: #F8FAFC;
+        --dark-bg: #0F172A;
+        --card-light: #FFFFFF;
+        --card-dark: #1E293B;
+        --text-light: #1E293B;
+        --text-dark: #F1F5F9;
+        --border-light: #E2E8F0;
+        --border-dark: #334155;
+        --success: #10B981;
+        --warning: #F59E0B;
+        --danger: #EF4444;
+        --info: #3B82F6;
+        --navy-blue: #1E3A8A;
+    }
+
+    body {
+        font-family: 'Inter', sans-serif;
+        background: var(--light-bg);
+        transition: all 0.3s ease;
+    }
+
+    body.dark {
+        background: var(--dark-bg);
+    }
+
+    .dashboard-container {
+        padding: 1.5rem;
+        max-width: 100%;
+        overflow-x: hidden;
+    }
+
+    /* Header Styles */
+    .dashboard-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 2rem;
+        flex-wrap: wrap;
+        gap: 1rem;
+    }
+
+    .dashboard-title {
+        font-size: 1.875rem;
+        font-weight: 700;
+        color: var(--text-light);
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+    }
+
+    .dark .dashboard-title {
+        color: var(--text-dark);
+    }
+
+    /* Month Selector */
+    .month-selector {
+        background: var(--card-light);
+        border: 1px solid var(--border-light);
+        border-radius: 12px;
+        padding: 0.75rem 1rem;
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+    }
+
+    .dark .month-selector {
+        background: var(--card-dark);
+        border-color: var(--border-dark);
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.2);
+    }
+
+    .month-selector label {
+        font-size: 0.875rem;
+        font-weight: 500;
+        color: var(--text-light);
+    }
+
+    .dark .month-selector label {
+        color: var(--text-dark);
+    }
+
+    .month-selector input {
+        background: transparent;
+        border: none;
+        font-weight: 500;
+        color: var(--text-light);
+        padding: 0.25rem 0;
+    }
+
+    .dark .month-selector input {
+        color: var(--text-dark);
+    }
+
+    /* Card Styles - Made smaller and more compact */
+    .stat-card {
+        background: var(--card-light);
+        border-radius: 12px;
+        padding: 0.75rem;
+        box-shadow: 0 2px 4px -1px rgba(0, 0, 0, 0.05), 0 1px 2px -1px rgba(0, 0, 0, 0.03);
+        transition: all 0.3s ease;
+        position: relative;
+        overflow: hidden;
+        height: 100%;
+    }
+
+    .dark .stat-card {
+        background: var(--card-dark);
+        box-shadow: 0 2px 4px -1px rgba(0, 0, 0, 0.2), 0 1px 2px -1px rgba(0, 0, 0, 0.1);
+    }
+
+    .stat-card:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+    }
+
+    .dark .stat-card:hover {
+        box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.3), 0 4px 6px -2px rgba(0, 0, 0, 0.2);
+    }
+
+    .stat-card::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 3px;
+        background: linear-gradient(90deg, var(--primary), var(--secondary));
+        border-radius: 6px 6px 0 0;
+    }
+
+    .icon-wrapper {
+        width: 32px;
+        height: 32px;
+        border-radius: 8px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin-bottom: 0.5rem;
+        background: rgba(236, 64, 122, 0.1);
+        color: var(--primary);
+    }
+
+    .shop-a-theme .icon-wrapper {
+        background: rgba(236, 64, 122, 0.1);
+        color: var(--primary);
+    }
+
+    .shop-b-theme .icon-wrapper {
+        background: rgba(245, 158, 11, 0.1);
+        color: var(--secondary);
+    }
+
+    .stat-card h3 {
+        font-size: 0.7rem;
+        font-weight: 500;
+        color: #64748B;
+        margin-bottom: 0.25rem;
+    }
+
+    .dark .stat-card h3 {
+        color: #94A3B8;
+    }
+
+    .stat-card .value {
+        font-size: 1.1rem;
+        font-weight: 700;
+        color: var(--text-light);
+        margin-bottom: 0.25rem;
+    }
+
+    .dark .stat-card .value {
+        color: var(--text-dark);
+    }
+
+    .stat-card .subtext {
+        font-size: 0.6rem;
+        color: #94A3B8;
+    }
+
+    /* Chart Containers */
+    .chart-container {
+        background: var(--card-light);
+        border-radius: 16px;
+        padding: 1.5rem;
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
+        transition: all 0.3s ease;
+    }
+
+    .dark .chart-container {
+        background: var(--card-dark);
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.2), 0 2px 4px -1px rgba(0, 0, 0, 0.1);
+    }
+
+    .chart-container:hover {
+        box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+    }
+
+    .dark .chart-container:hover {
+        box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.3), 0 10px 10px -5px rgba(0, 0, 0, 0.2);
+    }
+
+    .chart-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 1.5rem;
+    }
+
+    .chart-title {
+        font-size: 1.125rem;
+        font-weight: 600;
+        color: var(--text-light);
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+
+    .dark .chart-title {
+        color: var(--text-dark);
+    }
+
+    .chart-badge {
+        padding: 0.25rem 0.75rem;
+        border-radius: 9999px;
+        font-size: 0.75rem;
+        font-weight: 500;
+        background: rgba(236, 64, 122, 0.1);
+        color: var(--primary);
+    }
+
+    /* Customer Cards */
+    .customer-card {
+        display: flex;
+        align-items: center;
+        padding: 0.75rem;
+        border-radius: 12px;
+        background: var(--card-light);
+        margin-bottom: 0.5rem;
+        transition: all 0.3s ease;
+        box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.05);
+    }
+
+    .dark .customer-card {
+        background: var(--card-dark);
+        box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.2);
+    }
+
+    .customer-card:hover {
+        transform: translateX(5px);
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+    }
+
+    .dark .customer-card:hover {
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.2);
+    }
+
+    .customer-avatar {
+        width: 36px;
+        height: 36px;
+        border-radius: 10px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: 600;
+        background: linear-gradient(135deg, var(--primary), var(--secondary));
+        color: white;
+        margin-right: 0.75rem;
+    }
+
+    .customer-info {
+        flex: 1;
+    }
+
+    .customer-name {
+        font-size: 0.8rem;
+        font-weight: 600;
+        color: var(--text-light);
+        margin-bottom: 0.25rem;
+    }
+
+    .dark .customer-name {
+        color: var(--text-dark);
+    }
+
+    .customer-stats {
+        font-size: 0.7rem;
+        color: #64748B;
+    }
+
+    .customer-amount {
+        font-size: 0.8rem;
+        font-weight: 700;
+        color: var(--primary);
+    }
+
+    /* Section Headers */
+    .section-header {
+        font-size: 1.25rem;
+        font-weight: 600;
+        color: var(--text-light);
+        margin: 1.5rem 0 1rem 0;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+
+    .dark .section-header {
+        color: var(--text-dark);
+    }
+
+    /* Grid Layout */
+    .grid {
+        display: grid;
+        gap: 1rem;
+    }
+
+    .grid-cols-1 {
+        grid-template-columns: repeat(1, minmax(0, 1fr));
+    }
+
+    .grid-cols-2 {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .grid-cols-3 {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+
+    .grid-cols-4 {
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+    }
+
+    @media (max-width: 1024px) {
+        .grid-cols-4 {
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+
+        .grid-cols-3 {
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+    }
+
+    @media (max-width: 768px) {
+
+        .grid-cols-2,
+        .grid-cols-3,
+        .grid-cols-4 {
+            grid-template-columns: repeat(1, minmax(0, 1fr));
+        }
+
+        .dashboard-header {
+            flex-direction: column;
+            align-items: flex-start;
+        }
+
+        .month-selector {
+            width: 100%;
+        }
+    }
+
+    /* Empty States */
+    .empty-state {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        text-align: center;
+        padding: 2rem;
+        height: 100%;
+    }
+
+    .empty-state i {
+        font-size: 2.5rem;
+        color: #CBD5E1;
+        margin-bottom: 1rem;
+    }
+
+    .dark .empty-state i {
+        color: #475569;
+    }
+
+    .empty-state h3 {
+        font-size: 1rem;
+        font-weight: 500;
+        color: #64748B;
+        margin-bottom: 0.5rem;
+    }
+
+    .empty-state p {
+        font-size: 0.875rem;
+        color: #94A3B8;
+    }
+
+    /* Animation */
+    @keyframes fadeIn {
+        from {
+            opacity: 0;
+            transform: translateY(10px);
+        }
+
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+
+    .stat-card,
+    .chart-container {
+        animation: fadeIn 0.5s ease-out;
+    }
+
+    /* Custom scrollbar for customer list */
+    .custom-scroll {
+        scrollbar-width: thin;
+        scrollbar-color: rgba(236, 64, 122, 0.3) transparent;
+    }
+
+    .custom-scroll::-webkit-scrollbar {
+        width: 6px;
+    }
+
+    .custom-scroll::-webkit-scrollbar-track {
+        background: transparent;
+        border-radius: 3px;
+    }
+
+    .custom-scroll::-webkit-scrollbar-thumb {
+        background-color: rgba(236, 64, 122, 0.3);
+        border-radius: 3px;
+    }
+
+    .dark .custom-scroll::-webkit-scrollbar-thumb {
+        background-color: rgba(255, 255, 255, 0.2);
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div id="content-main" class="dashboard-container">
+    <!-- Dashboard Header -->
+    <div class="dashboard-header">
+
+
+        <!-- Month Selector Section -->
+        <div class="month-selector">
+            <form method="get" class="flex items-center gap-3">
+                <!-- Year Input -->
+                <label for="year">Year:</label>
+                <div class="relative">
+                    <input type="number" id="year" name="year" value="{{ current_year }}" min="2000" max="2100"
+                        onchange="this.form.submit()">
+                    <i
+                        class="fas fa-chevron-down absolute right-2 top-1/2 transform -translate-y-1/2 text-xs text-gray-400 pointer-events-none"></i>
+                </div>
+
+                <!-- Month Selector -->
+                <label for="month">Month:</label>
+                <div class="relative">
+                    <input type="month" id="month" name="month"
+                        value="{% if selected_month %}{{ current_year }}-{{ selected_month }}{% endif %}"
+                        onchange="this.form.submit()">
+                    <i
+                        class="fas fa-calendar-alt absolute right-2 top-1/2 transform -translate-y-1/2 text-xs text-gray-400 pointer-events-none"></i>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Shop A Stats -->
+    <h5 class="m-2 font-light">
+
+        Shop A Performance
+    </h5>
+    <div class="grid grid-cols-4 mb-6 shop-a-theme">
+        <!-- Revenue Card -->
+        <div class="stat-card flex flex-row items-center space-x-4 justify-between">
+            <div class="icon-wrapper">
+                <i class="fas fa-wallet text-lg"></i>
+            </div>
+            <div class="flex flex-col">
+                <div class="value m-0">ksh{{ shop_a_revenue|floatformat:2|default:"0.00" }}</div>
+                <p class="font-light m-0 text-sm text-gray-500">Shop A Revenue</p>
+            </div>
+
+        </div>
+
+        <!-- Orders Card -->
+        <div class="stat-card flex flex-row items-center space-x-4 justify-between">
+            <div class="icon-wrapper">
+                <i class="fas fa-shopping-bag text-lg"></i>
+            </div>
+            <h4>Total Orders</h4>
+            <div class="value">{{ shop_a_total_orders }}</div>
+
+        </div>
+
+        <!-- Pending Card -->
+        <div class="stat-card flex flex-row items-center space-x-4 justify-between">
+            <div class="icon-wrapper">
+                <i class="fas fa-clock text-lg"></i>
+            </div>
+            <h4>Pending</h4>
+            <div class="value">{{ shop_a_pending_orders }}</div>
+
+        </div>
+
+        <!-- Completed Card -->
+        <div class="stat-card flex flex-row items-center space-x-4 justify-between">
+            <div class="icon-wrapper">
+                <i class="fas fa-check-circle text-lg"></i>
+            </div>
+            <h4>Completed</h4>
+            <div class="value">{{ shop_a_completed_orders }}</div>
+
+        </div>
+    </div>
+
+    <!-- Shop B Stats -->
+    <h5 class="m-2 font-normal">
+
+        Shop B Performance
+    </h5>
+    <div class="grid grid-cols-4 mb-6 shop-b-theme">
+        <!-- Revenue Card -->
+        <div class="stat-card flex flex-row items-center space-x-4 justify-between">
+            <div class="icon-wrapper">
+                <i class="fas fa-wallet text-lg"></i>
+            </div>
+            <div class="flex flex-col ">
+                <div class="value m-0">ksh{{ shop_b_revenue|floatformat:2|default:"0.00" }}</div>
+                <p class="font-light m-0 text-sm  text-gray-500">Shop B Revenue</p>
+            </div>
+
+
+        </div>
+
+        <!-- Orders Card -->
+        <div class="stat-card flex flex-row items-center space-x-4 justify-between">
+            <div class="icon-wrapper">
+                <i class="fas fa-shopping-bag text-lg"></i>
+            </div>
+            <h4>Total Orders</h4>
+            <div class="value">{{ shop_b_total_orders }}</div>
+
+        </div>
+
+        <!-- Pending Card -->
+        <div class="stat-card flex flex-row  items-center space-x-4 justify-between">
+            <div class="icon-wrapper">
+                <i class="fas fa-clock text-lg"></i>
+            </div>
+            <h4>Pending</h4>
+            <div class="value">{{ shop_b_pending_orders }}</div>
+
+        </div>
+
+        <!-- Completed Card -->
+        <div class="stat-card flex flex-row items-center space-x-4 justify-between">
+            <div class="icon-wrapper">
+                <i class="fas fa-check-circle text-lg"></i>
+            </div>
+            <h4>Completed</h4>
+            <div class="value">{{ shop_b_completed_orders }}</div>
+
+        </div>
+    </div>
+
+    <!-- Main Charts Section -->
+    <div class="grid grid-cols-2 gap-6 mb-6">
+        <!-- Revenue Distribution -->
+        <div class="chart-container">
+            <div class="chart-header">
+                <h4 class="chart-title">
+                    <i class="fas fa-chart-pie" style="color: var(--secondary);"></i>
+                    Revenue Distribution
+                </h4>
+                <span class="chart-badge">{{total_revenue_percentage}}%</span>
+            </div>
+            <div style="height: 250px;">
+                <canvas id="revenueChart"></canvas>
+            </div>
+        </div>
+
+        <!-- Revenue Trend -->
+        <div class="chart-container">
+            <div class="chart-header">
+                <h2 class="chart-title">
+                    <i class="fas fa-chart-line" style="color: var(--primary);"></i>
+                    Revenue Trend
+                </h2>
+                <span class="chart-badge">{{ current_year }}</span>
+            </div>
+            <div style="height: 250px;">
+                {% if not selected_month %}
+                <canvas id="trendChart"></canvas>
+                {% else %}
+                <div class="empty-state">
+                    <i class="fas fa-calendar-week"></i>
+                    <h3>Switch to yearly view</h3>
+                    <p>Monthly trends are available in the annual overview</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Insights Section -->
+    <div class="grid grid-cols-3 gap-6 mb-6">
+        <!-- Top Services -->
+        <div class="chart-container">
+            <div class="chart-header">
+                <h2 class="chart-title">
+                    <i class="fas fa-spa" style="color: var(--success);"></i>
+                    Top Services
+                </h2>
+                <span class="chart-badge">{{ current_year }}</span>
+            </div>
+            <div style="height: 288px;">
+                {% if services_labels and services_labels|length > 0 %}
+                <canvas id="servicesChart"></canvas>
+                {% else %}
+                <div class="empty-state">
+                    <i class="fas fa-concierge-bell"></i>
+                    <p>No service data available</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Popular Products -->
+        <div class="chart-container">
+            <div class="chart-header">
+                <h2 class="chart-title">
+                    <i class="fas fa-box-open" style="color: var(--warning);"></i>
+                    Common Items
+                </h2>
+                <span class="chart-badge">{{ current_year }}</span>
+            </div>
+            <div style="height: 288px;">
+                {% if item_labels and item_labels|length > 0 %}
+                <canvas id="productsChart"></canvas>
+                {% else %}
+                <div class="empty-state">
+                    <i class="fas fa-box"></i>
+                    <p>No product data available</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- VIP Customers -->
+        <div class="chart-container">
+            <div class="chart-header">
+                <h2 class="chart-title">
+                    <i class="fas fa-crown" style="color: var(--secondary);"></i>
+                    Top Customers
+                </h2>
+                <span class="chart-badge">Top Spenders</span>
+            </div>
+            <div class="custom-scroll" style="height: 288px; overflow-y: auto;">
+                {% for customer in common_customers %}
+                <div class="customer-card">
+                    <div class="customer-avatar">
+                        {{ forloop.counter }}
+                    </div>
+                    <div class="customer-info">
+                        <div class="customer-name">{{ customer.customer__name }}</div>
+                        <div class="customer-stats">{{ customer.order_count }} orders</div>
+                    </div>
+                    <div class="customer-amount">
+                        ksh{{ customer.total_spent|floatformat:2 }}
+                    </div>
+                </div>
+                {% empty %}
+                <div class="empty-state">
+                    <i class="fas fa-user-slash"></i>
+                    <p>No customer data available</p>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+</div>
+<script>
+    // Wait for Chart.js to be fully loaded
+    function initializeCharts() {
+        // Check if Chart is available
+        if (typeof Chart === 'undefined') {
+            console.error('Chart.js is not loaded');
+            setTimeout(initializeCharts, 100);
+            return;
+        }
+
+        // Color palette using navy blue and orange-yellow for charts
+        const COLOR_PALETTE = {
+            navyBlue: '#1E3A8A',      // Navy blue
+            orangeYellow: '#F59E0B',  // Orange-yellow
+            lightOrange: '#FBBF24',   // Lighter orange
+            pink: '#EC407A',          // Vibrant pink
+            lightPink: '#F48FB1',     // Lighter pink
+            success: '#10B981',
+            warning: '#F59E0B',
+            danger: '#EF4444',
+            info: '#3B82F6',
+            light: '#F8FAFC',
+            dark: '#0F172A'
+        };
+
+        function getChartOptions() {
+            const isDark = document.documentElement.classList.contains('dark');
+            const textColor = isDark ? '#F1F5F9' : '#1E293B';
+            const tooltipBg = isDark ? '#1E293B' : '#FFFFFF';
+            const tooltipBorder = isDark ? '#334155' : '#E2E8F0';
+            const tooltipText = isDark ? '#F1F5F9' : '#1E293B';
+
+            return {
+                maintainAspectRatio: false,
+                responsive: true,
+                plugins: {
+                    legend: {
+                        labels: {
+                            color: textColor,
+                            font: {
+                                size: 11,
+                                weight: '500'
+                            }
+                        }
+                    },
+                    tooltip: {
+                        backgroundColor: tooltipBg,
+                        borderColor: tooltipBorder,
+                        borderWidth: 1,
+                        borderRadius: 12,
+                        padding: 12,
+                        titleColor: tooltipText,
+                        bodyColor: tooltipText,
+                        bodyFont: {
+                            size: 14,
+                            weight: '600'
+                        },
+                        titleFont: {
+                            size: 12,
+                            weight: '500'
+                        },
+                        callbacks: {
+                            title: function (context) {
+                                return context[0].label || '';
+                            },
+                            label: function (context) {
+                                if (context.parsed.y !== undefined) {
+                                    return context.parsed.y.toLocaleString('en-US');
+                                } else if (context.parsed !== undefined) {
+                                    return context.parsed.toLocaleString('en-US');
+                                }
+                                return '';
+                            }
+                        }
+                    }
+                },
+                scales: {
+                    x: {
+                        display: false,
+                        grid: { display: false },
+                        ticks: { color: textColor, font: { size: 11 } },
+                        border: { display: false }
+                    },
+                    y: {
+                        display: false,
+                        grid: { display: false },
+                        ticks: { color: textColor, font: { size: 11 } },
+                        border: { display: false }
+                    }
+                }
+            };
+        }
+
+        // Safe JSON parse with better error handling
+        function safeJsonParse(jsonString, fallback = []) {
+            try {
+                if (!jsonString || jsonString === 'None' || jsonString === 'null' ||
+                    jsonString === '""' || jsonString === "''") {
+                    return fallback;
+                }
+
+                // Handle the case where Django might output Python lists as strings
+                let parsedString = jsonString;
+                if (typeof jsonString === 'string') {
+                    // Replace Python-style None with JavaScript null
+                    parsedString = jsonString.replace(/None/g, 'null');
+                    // Replace single quotes with double quotes for proper JSON
+                    parsedString = parsedString.replace(/'/g, '"');
+                }
+
+                const parsed = JSON.parse(parsedString);
+                return Array.isArray(parsed) ? parsed : fallback;
+            } catch (error) {
+                console.error('Error parsing JSON:', jsonString, error);
+                return fallback;
+            }
+        }
+
+        // Function to sort data in descending order (highest first)
+        function sortDataDescending(labels, data) {
+            // Create an array of objects to keep labels and data together
+            const combined = labels.map((label, index) => ({
+                label,
+                value: data[index] || 0
+            }));
+
+            // Sort by value in descending order
+            combined.sort((a, b) => b.value - a.value);
+
+            // Extract the sorted labels and values
+            const sortedLabels = combined.map(item => item.label);
+            const sortedData = combined.map(item => item.value);
+
+            return { sortedLabels, sortedData };
+        }
+
+        // ---------------- Pie/Doughnut Chart ----------------
+        const revenueCanvas = document.getElementById('revenueChart');
+        if (revenueCanvas) {
+            // Get the data from Django template variables
+            const revenueLabels = safeJsonParse('{{ pie_chart_labels|safe }}');
+            const revenueValues = safeJsonParse('{{ pie_chart_values|safe }}');
+
+            console.log('Revenue Labels:', revenueLabels);
+            console.log('Revenue Values:', revenueValues);
+
+            if (revenueLabels.length > 0 && revenueValues.length > 0 &&
+                revenueLabels.length === revenueValues.length) {
+
+                const revenueCtx = revenueCanvas.getContext('2d');
+
+                new Chart(revenueCtx, {
+                    type: 'doughnut',
+                    data: {
+                        labels: revenueLabels,
+                        datasets: [{
+                            data: revenueValues,
+                            backgroundColor: [
+                                COLOR_PALETTE.navyBlue,
+                                COLOR_PALETTE.orangeYellow,
+                                COLOR_PALETTE.lightOrange,
+                                COLOR_PALETTE.pink,
+                                COLOR_PALETTE.lightPink,
+                                COLOR_PALETTE.success,
+                                COLOR_PALETTE.info
+                            ],
+                            borderWidth: 0,
+                            cutout: '70%',
+                            spacing: 0,
+                            hoverOffset: 4,
+                            borderRadius: 0
+                        }]
+                    },
+                    options: {
+                        ...getChartOptions(),
+                        plugins: {
+                            ...getChartOptions().plugins,
+                            legend: {
+                                position: 'bottom',
+                                labels: {
+                                    padding: 10,
+                                    usePointStyle: true,
+                                    pointStyle: 'circle',
+                                    boxWidth: 8,
+                                    boxHeight: 8,
+                                    font: {
+                                        size: 11,
+                                        weight: '500'
+                                    }
+                                }
+                            }
+                        }
+                    }
+                });
+            } else {
+                console.warn('No valid data for revenue chart');
+                revenueCanvas.style.display = 'none';
+                // Create a message element
+                const message = document.createElement('div');
+                message.className = 'empty-state';
+                message.innerHTML = '<i class="fas fa-chart-pie"></i><p>No revenue data available</p>';
+                revenueCanvas.parentNode.appendChild(message);
+            }
+        }
+
+        // ---------------- Line/Trend Chart ----------------
+        const trendCanvas = document.getElementById('trendChart');
+        if (trendCanvas) {
+            const lineData = safeJsonParse('{{ line_chart_data|safe }}');
+            console.log('Line Data:', lineData);
+
+            if (lineData && lineData.length > 0 && lineData[0] && lineData[0].months) {
+                const trendCtx = trendCanvas.getContext('2d');
+                const lineColors = [
+                    COLOR_PALETTE.pink,
+                    COLOR_PALETTE.orangeYellow,
+                    COLOR_PALETTE.navyBlue,
+                    COLOR_PALETTE.success,
+                    COLOR_PALETTE.info
+                ];
+
+                const datasets = lineData.map((series, index) => ({
+                    label: series.label || `Series ${index + 1}`,
+                    data: series.data || [],
+                    borderColor: lineColors[index % lineColors.length],
+                    backgroundColor: `${lineColors[index % lineColors.length]}20`,
+                    borderWidth: 1,
+                    tension: 0.4,
+                    pointRadius: 0,
+                    pointHoverRadius: 6,
+                    pointBackgroundColor: lineColors[index % lineColors.length],
+                    fill: true,
+                    cubicInterpolationMode: 'monotone'
+                }));
+
+                new Chart(trendCtx, {
+                    type: 'line',
+                    data: {
+                        labels: lineData[0].months,
+                        datasets: datasets
+                    },
+                    options: {
+                        ...getChartOptions(),
+                        scales: {
+                            x: {
+                                display: true,
+                                grid: { display: false },
+                                ticks: {
+                                    color: getChartOptions().scales.x.ticks.color,
+                                    maxRotation: 0,
+                                    padding: 10
+                                }
+                            },
+                            y: {
+                                display: false,
+                                grid: { display: false }
+                            }
+                        },
+                        interaction: {
+                            mode: 'index',
+                            intersect: false
+                        }
+                    }
+                });
+            } else {
+                console.warn('No valid data for trend chart');
+                trendCanvas.style.display = 'none';
+                const message = document.createElement('div');
+                message.className = 'empty-state';
+                message.innerHTML = '<i class="fas fa-chart-line"></i><p>No trend data available</p>';
+                trendCanvas.parentNode.appendChild(message);
+            }
+        }
+
+        // ---------------- Bar Charts (Services & Products) ----------------
+        const createBarChart = (id, labels, data, title) => {
+            const canvas = document.getElementById(id);
+            if (!canvas) return;
+
+            console.log(`${title} Labels:`, labels);
+            console.log(`${title} Data:`, data);
+
+            if (labels.length > 0 && data.length > 0 && labels.length === data.length) {
+                // Sort the data in descending order (highest first)
+                const { sortedLabels, sortedData } = sortDataDescending(labels, data);
+
+                const ctx = canvas.getContext('2d');
+                const barColors = [
+                    COLOR_PALETTE.navyBlue,
+                    COLOR_PALETTE.orangeYellow,
+                    COLOR_PALETTE.pink,
+                    COLOR_PALETTE.lightPink,
+                    COLOR_PALETTE.success,
+                    COLOR_PALETTE.info,
+                    COLOR_PALETTE.warning
+                ];
+
+                // Custom tooltip for services chart
+                const customTooltip = {
+                    callbacks: {
+                        title: function (context) {
+                            return context[0].label || '';
+                        },
+                        label: function (context) {
+                            if (id === 'servicesChart') {
+                                // Show "X orders" for services chart
+                                return `${context.parsed.x.toLocaleString('en-US')} orders`;
+                            }
+                            return context.parsed.x.toLocaleString('en-US');
+                        }
+                    }
+                };
+
+                new Chart(ctx, {
+                    type: 'bar',
+                    data: {
+                        labels: sortedLabels,
+                        datasets: [{
+                            data: sortedData,
+                            backgroundColor: sortedLabels.map((_, index) => barColors[index % barColors.length]),
+                            borderRadius: 8,
+                            borderWidth: 0,
+                            barThickness: 10,
+                            categoryPercentage: 0.8,
+                            barPercentage: 0.9
+                        }]
+                    },
+                    options: {
+                        ...getChartOptions(),
+                        indexAxis: 'y',
+                        plugins: {
+                            ...getChartOptions().plugins,
+                            legend: {
+                                display: false
+                            },
+                            // Disable tooltips for products chart, use custom for services
+                            tooltip: id === 'productsChart' ? { enabled: false } : {
+                                ...getChartOptions().plugins.tooltip,
+                                callbacks: customTooltip.callbacks
+                            }
+                        },
+                        scales: {
+                            y: {
+                                display: true,
+                                grid: { display: false },
+                                ticks: {
+                                    color: getChartOptions().scales.x.ticks.color,
+                                    font: {
+                                        size: 11,
+                                        weight: '500'
+                                    },
+                                    padding: 8
+                                }
+                            },
+                            x: {
+                                display: true,
+                                grid: { display: false },
+                                ticks: {
+                                    color: getChartOptions().scales.x.ticks.color,
+                                    font: { size: 10 }
+                                }
+                            }
+                        }
+                    }
+                });
+            } else {
+                console.warn(`No valid data for ${title} chart`);
+                canvas.style.display = 'none';
+                const message = document.createElement('div');
+                message.className = 'empty-state';
+                message.innerHTML = `<i class="fas ${id === 'servicesChart' ? 'fa-concierge-bell' : 'fa-box'}"></i><p>No ${title.toLowerCase()} data available</p>`;
+                canvas.parentNode.appendChild(message);
+            }
+        };
+
+        // Initialize bar charts - FIXED VARIABLE NAMES
+        createBarChart('servicesChart',
+            safeJsonParse('{{ services_labels|safe }}'),
+            safeJsonParse('{{ services_counts|safe }}'),  // Changed from services_data to services_counts
+            'Services');
+
+        createBarChart('productsChart',
+            safeJsonParse('{{ item_labels|safe }}'),
+            safeJsonParse('{{ item_counts|safe }}'),      // Changed from item_data to item_counts
+            'Products');
+
+        // ---------------- Payment Methods Chart ----------------
+        const paymentCanvas = document.getElementById('paymentChart');
+        if (paymentCanvas) {
+            const paymentLabels = safeJsonParse('{{ payment_method_labels|safe }}');
+            const paymentData = safeJsonParse('{{ payment_method_counts|safe }}');
+
+            console.log('Payment Labels:', paymentLabels);
+            console.log('Payment Data:', paymentData);
+
+            if (paymentLabels.length > 0 && paymentData.length > 0 &&
+                paymentLabels.length === paymentData.length) {
+
+                const paymentCtx = paymentCanvas.getContext('2d');
+                const paymentColors = [
+                    COLOR_PALETTE.success,
+                    COLOR_PALETTE.info,
+                    COLOR_PALETTE.warning,
+                    COLOR_PALETTE.navyBlue,
+                    COLOR_PALETTE.orangeYellow
+                ];
+
+                new Chart(paymentCtx, {
+                    type: 'doughnut',
+                    data: {
+                        labels: paymentLabels,
+                        datasets: [{
+                            data: paymentData,
+                            backgroundColor: paymentLabels.map((_, index) =>
+                                paymentColors[index % paymentColors.length]),
+                            borderWidth: 0,
+                            cutout: '75%',
+                            spacing: 2,
+                            hoverOffset: 8,
+                            borderRadius: 6
+                        }]
+                    },
+                    options: {
+                        ...getChartOptions(),
+                        plugins: {
+                            ...getChartOptions().plugins,
+                            legend: {
+                                position: 'bottom',
+                                labels: {
+                                    padding: 12,
+                                    usePointStyle: true,
+                                    pointStyle: 'circle',
+                                    boxWidth: 6,
+                                    boxHeight: 6,
+                                    font: {
+                                        size: 10,
+                                        weight: '500'
+                                    }
+                                }
+                            }
+                        }
+                    }
+                });
+            } else {
+                console.warn('No valid data for payment methods chart');
+                paymentCanvas.style.display = 'none';
+                const message = document.createElement('div');
+                message.className = 'empty-state';
+                message.innerHTML = '<i class="fas fa-credit-card"></i><p>No payment data available</p>';
+                paymentCanvas.parentNode.appendChild(message);
+            }
+        }
+    }
+
+    // Start initializing charts when DOM is loaded
+    document.addEventListener("DOMContentLoaded", function () {
+        // Check if Chart.js is already loaded, if not wait for it
+        if (typeof Chart !== 'undefined') {
+            initializeCharts();
+        } else {
+            // Wait for Chart.js to load
+            const checkChart = setInterval(function () {
+                if (typeof Chart !== 'undefined') {
+                    clearInterval(checkChart);
+                    initializeCharts();
+                }
+            }, 100);
+        }
+    });
+</script>
+{% endblock %}

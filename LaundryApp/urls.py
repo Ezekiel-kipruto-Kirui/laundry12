@@ -2,6 +2,7 @@ from django.contrib import admin
 from django.urls import path,include
 from . import views
 from django.views.decorators.cache import cache_page
+from . businesses import *
 
 # Create an instance of the admin class to access its methods
 
@@ -58,4 +59,10 @@ urlpatterns = [
    
     path('debug/shop-values/', views.debug_shop_values, name='debug_shop_values'),
     path("debug-users/", views.debug_users, name="debug_users"),
+
+    
+    path("businesses/", business_list, name="business_list"),
+    path("businesses/create/", create_business, name="create_business"),
+    path("businesses/<int:business_id>/edit/", edit_business, name="edit_business"),
+    path("businesses/<int:business_id>/delete/", delete_business, name="delete_business"),
 ]

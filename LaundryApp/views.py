@@ -4,6 +4,7 @@ from django.http import HttpResponse, JsonResponse
 from django_daraja.mpesa.core import MpesaClient
 import json
 import logging
+import datetime
 from functools import wraps
 from datetime import datetime, date, timedelta
 
@@ -29,7 +30,15 @@ from django.contrib.auth import get_user_model
 from django.db import transaction
 
 # Local imports
-from .models import Customer, Order, OrderItem, UserProfile, ExpenseField, ExpenseRecord, LaundryProfile
+from .models import (
+    Customer, 
+    Order, 
+    OrderItem, 
+    ExpenseField, 
+    ExpenseRecord, 
+    LaundryProfile,
+    Business
+    )
 from .forms import ( 
     CustomerForm, 
     OrderForm,
@@ -235,7 +244,19 @@ def dashboard_view(request):
         except (ValueError, IndexError):
             selected_month = None
 
-    # Initialize DashboardAnalytics with a mock admin instance
+    # Handle date range
+    from_date = request.GET.get('from_date')
+    to_date = request.GET.get('to_date')
+
+    try:
+        if from_date:
+            from_date = datetime.strptime(from_date, "%Y-%m-%d").date()
+        if to_date:
+            to_date = datetime.strptime(to_date, "%Y-%m-%d").date()
+    except ValueError:
+        from_date = None
+        to_date = None
+
     class MockAdmin:
         def get_user_shops(self, request):
             return get_user_shops(request)
@@ -243,16 +264,14 @@ def dashboard_view(request):
     mock_admin = MockAdmin()
     analytics = DashboardAnalytics(mock_admin)
     
-    # Get dashboard data using the analytics class
-    data = analytics.get_dashboard_data(request, selected_year, selected_month)
+    data = analytics.get_dashboard_data(request, selected_year, selected_month, from_date, to_date)
+    context = analytics.prepare_dashboard_context(request, data, selected_year, selected_month, from_date, to_date)
     
-    # Prepare context using the analytics class
-    context = analytics.prepare_dashboard_context(request, data, selected_year, selected_month)
-    
-    # Add any additional context you need
     context.update({
         'selected_year': selected_year,
         'selected_month': selected_month,
+        'from_date': from_date,
+        'to_date': to_date,
     })
     
     return render(request, 'Admin/reports.html', context)
@@ -1539,7 +1558,6 @@ def customer_orders(request, pk):
 
 @login_required
 def create_expense_field(request):
-    # Default expense categories
     default_expenses = [
         "Electricity Token",
         "Soap",
@@ -1555,25 +1573,31 @@ def create_expense_field(request):
         "Tags",
         "Machine service fee"
     ]
-    
+
     if request.method == "POST":
-        # Check if user wants to create default expenses
+        # Case 1: Create default categories for a specific business
         if 'create_defaults' in request.POST:
+            business_id = request.POST.get("business")  # business must be selected
+            if not business_id:
+                messages.error(request, "Please select a business first.")
+                return redirect("laundry:create_expense_field")
+
+            business = get_object_or_404(Business, id=business_id)
+
             created_count = 0
             for expense_name in default_expenses:
-                # Check if expense field already exists
-                if not ExpenseField.objects.filter(label=expense_name).exists():
-                    ExpenseField.objects.create(label=expense_name)
+                if not ExpenseField.objects.filter(business=business, label=expense_name).exists():
+                    ExpenseField.objects.create(business=business, label=expense_name)
                     created_count += 1
-        
+
             if created_count > 0:
-                messages.success(request, f"Successfully created {created_count} default expense categories!")
+                messages.success(request, f"Successfully created {created_count} default expense categories for {business.name}!")
             else:
-                messages.info(request, "All default expense categories already exist.")
-            
+                messages.info(request, f"All default expense categories already exist for {business.name}.")
+
             return redirect("laundry:expense_field_list")
-        
-        # Process the regular form submission
+
+        # Case 2: Manual form submission
         form = ExpenseFieldForm(request.POST)
         if form.is_valid():
             form.save()
@@ -1581,7 +1605,7 @@ def create_expense_field(request):
             return redirect("laundry:expense_field_list")
     else:
         form = ExpenseFieldForm()
-    
+
     return render(request, "expenses/create_expense_field.html", {
         "form": form,
         "default_expenses": default_expenses
@@ -1590,7 +1614,11 @@ def create_expense_field(request):
 @login_required
 def expense_field_list(request):
     fields = ExpenseField.objects.all()
-    return render(request, "expenses/expense_field_list.html", {"fields": fields})
+    businesses = Business.objects.all().order_by("name")
+    context = {
+        ""
+    }
+    return render(request, "expenses/expense_field_list.html", {"fields": fields,"businesses":businesses})
 
 @login_required
 def edit_expense_field(request, field_id):
@@ -1611,7 +1639,7 @@ def delete_expense_field(request, field_id):
     if request.method == "POST":
         field.delete()
         messages.success(request, "Expense field deleted successfully!")
-        return redirect("expense_field_list")
+        return redirect("laundry:expense_field_list")
     return render(request, "expenses/delete_expense_field.html", {"field": field})
 
 @login_required

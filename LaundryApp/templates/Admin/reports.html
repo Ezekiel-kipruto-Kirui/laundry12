@@ -6,617 +6,291 @@
 <script
     src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0/dist/chartjs-plugin-datalabels.min.js"></script>
 <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
-<link href="https://fonts.googleapis/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-<style>
-    /* Modern Dashboard Styles */
-    .dashboard-container {
-        --primary: #EC407A;
-        /* Vibrant pink */
-        --secondary: #F59E0B;
-        /* Orange-yellow */
-        --accent: #FBBF24;
-        /* Lighter orange */
-        --light-bg: #F8FAFC;
-        --dark-bg: #0F172A;
-        --card-light: #FFFFFF;
-        --card-dark: #1E293B;
-        --text-light: #1E293B;
-        --text-dark: #F1F5F9;
-        --border-light: #E2E8F0;
-        --border-dark: #334155;
-        --success: #10B981;
-        --warning: #F59E0B;
-        --danger: #EF4444;
-        --info: #3B82F6;
-        --navy-blue: #1E3A8A;
-    }
-
-    body {
-        font-family: 'Inter', sans-serif;
-        background: var(--light-bg);
-        transition: all 0.3s ease;
-    }
-
-    body.dark {
-        background: var(--dark-bg);
-    }
-
-    .dashboard-container {
-        padding: 1.5rem;
-        max-width: 100%;
-        overflow-x: hidden;
-    }
-
-    /* Header Styles */
-    .dashboard-header {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        margin-bottom: 2rem;
-        flex-wrap: wrap;
-        gap: 1rem;
-    }
-
-    .dashboard-title {
-        font-size: 1.875rem;
-        font-weight: 700;
-        color: var(--text-light);
-        display: flex;
-        align-items: center;
-        gap: 0.75rem;
-    }
-
-    .dark .dashboard-title {
-        color: var(--text-dark);
-    }
-
-    /* Month Selector */
-    .month-selector {
-        background: var(--card-light);
-        border: 1px solid var(--border-light);
-        border-radius: 12px;
-        padding: 0.75rem 1rem;
-        display: flex;
-        align-items: center;
-        gap: 0.75rem;
-        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
-    }
-
-    .dark .month-selector {
-        background: var(--card-dark);
-        border-color: var(--border-dark);
-        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.2);
-    }
-
-    .month-selector label {
-        font-size: 0.875rem;
-        font-weight: 500;
-        color: var(--text-light);
-    }
-
-    .dark .month-selector label {
-        color: var(--text-dark);
-    }
-
-    .month-selector input {
-        background: transparent;
-        border: none;
-        font-weight: 500;
-        color: var(--text-light);
-        padding: 0.25rem 0;
-    }
-
-    .dark .month-selector input {
-        color: var(--text-dark);
-    }
-
-    /* Card Styles - Made smaller and more compact */
-    .stat-card {
-        background: var(--card-light);
-        border-radius: 12px;
-        padding: 0.75rem;
-        box-shadow: 0 2px 4px -1px rgba(0, 0, 0, 0.05), 0 1px 2px -1px rgba(0, 0, 0, 0.03);
-        transition: all 0.3s ease;
-        position: relative;
-        overflow: hidden;
-        height: 100%;
-    }
-
-    .dark .stat-card {
-        background: var(--card-dark);
-        box-shadow: 0 2px 4px -1px rgba(0, 0, 0, 0.2), 0 1px 2px -1px rgba(0, 0, 0, 0.1);
-    }
-
-    .stat-card:hover {
-        transform: translateY(-3px);
-        box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
-    }
-
-    .dark .stat-card:hover {
-        box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.3), 0 4px 6px -2px rgba(0, 0, 0, 0.2);
-    }
-
-    .stat-card::before {
-        content: '';
-        position: absolute;
-        top: 0;
-        left: 0;
-        right: 0;
-        height: 3px;
-        background: linear-gradient(90deg, var(--primary), var(--secondary));
-        border-radius: 6px 6px 0 0;
-    }
-
-    .icon-wrapper {
-        width: 32px;
-        height: 32px;
-        border-radius: 8px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        margin-bottom: 0.5rem;
-        background: rgba(236, 64, 122, 0.1);
-        color: var(--primary);
-    }
-
-    .shop-a-theme .icon-wrapper {
-        background: rgba(236, 64, 122, 0.1);
-        color: var(--primary);
-    }
-
-    .shop-b-theme .icon-wrapper {
-        background: rgba(245, 158, 11, 0.1);
-        color: var(--secondary);
-    }
-
-    .stat-card h3 {
-        font-size: 0.7rem;
-        font-weight: 500;
-        color: #64748B;
-        margin-bottom: 0.25rem;
-    }
-
-    .dark .stat-card h3 {
-        color: #94A3B8;
-    }
-
-    .stat-card .value {
-        font-size: 1.1rem;
-        font-weight: 700;
-        color: var(--text-light);
-        margin-bottom: 0.25rem;
-    }
-
-    .dark .stat-card .value {
-        color: var(--text-dark);
-    }
-
-    .stat-card .subtext {
-        font-size: 0.6rem;
-        color: #94A3B8;
-    }
-
-    /* Chart Containers */
-    .chart-container {
-        background: var(--card-light);
-        border-radius: 16px;
-        padding: 1.5rem;
-        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
-        transition: all 0.3s ease;
-    }
-
-    .dark .chart-container {
-        background: var(--card-dark);
-        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.2), 0 2px 4px -1px rgba(0, 0, 0, 0.1);
-    }
-
-    .chart-container:hover {
-        box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
-    }
-
-    .dark .chart-container:hover {
-        box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.3), 0 10px 10px -5px rgba(0, 0, 0, 0.2);
-    }
-
-    .chart-header {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        margin-bottom: 1.5rem;
-    }
-
-    .chart-title {
-        font-size: 1.125rem;
-        font-weight: 600;
-        color: var(--text-light);
-        display: flex;
-        align-items: center;
-        gap: 0.5rem;
-    }
-
-    .dark .chart-title {
-        color: var(--text-dark);
-    }
-
-    .chart-badge {
-        padding: 0.25rem 0.75rem;
-        border-radius: 9999px;
-        font-size: 0.75rem;
-        font-weight: 500;
-        background: rgba(236, 64, 122, 0.1);
-        color: var(--primary);
-    }
-
-    /* Customer Cards */
-    .customer-card {
-        display: flex;
-        align-items: center;
-        padding: 0.75rem;
-        border-radius: 12px;
-        background: var(--card-light);
-        margin-bottom: 0.5rem;
-        transition: all 0.3s ease;
-        box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.05);
-    }
-
-    .dark .customer-card {
-        background: var(--card-dark);
-        box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.2);
-    }
-
-    .customer-card:hover {
-        transform: translateX(5px);
-        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
-    }
-
-    .dark .customer-card:hover {
-        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.2);
-    }
-
-    .customer-avatar {
-        width: 36px;
-        height: 36px;
-        border-radius: 10px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-weight: 600;
-        background: linear-gradient(135deg, var(--primary), var(--secondary));
-        color: white;
-        margin-right: 0.75rem;
-    }
-
-    .customer-info {
-        flex: 1;
-    }
-
-    .customer-name {
-        font-size: 0.8rem;
-        font-weight: 600;
-        color: var(--text-light);
-        margin-bottom: 0.25rem;
-    }
-
-    .dark .customer-name {
-        color: var(--text-dark);
-    }
-
-    .customer-stats {
-        font-size: 0.7rem;
-        color: #64748B;
-    }
-
-    .customer-amount {
-        font-size: 0.8rem;
-        font-weight: 700;
-        color: var(--primary);
-    }
-
-    /* Section Headers */
-    .section-header {
-        font-size: 1.25rem;
-        font-weight: 600;
-        color: var(--text-light);
-        margin: 1.5rem 0 1rem 0;
-        display: flex;
-        align-items: center;
-        gap: 0.5rem;
-    }
-
-    .dark .section-header {
-        color: var(--text-dark);
-    }
-
-    /* Grid Layout */
-    .grid {
-        display: grid;
-        gap: 1rem;
-    }
-
-    .grid-cols-1 {
-        grid-template-columns: repeat(1, minmax(0, 1fr));
-    }
-
-    .grid-cols-2 {
-        grid-template-columns: repeat(2, minmax(0, 1fr));
-    }
-
-    .grid-cols-3 {
-        grid-template-columns: repeat(3, minmax(0, 1fr));
-    }
-
-    .grid-cols-4 {
-        grid-template-columns: repeat(4, minmax(0, 1fr));
-    }
-
-    @media (max-width: 1024px) {
-        .grid-cols-4 {
-            grid-template-columns: repeat(2, minmax(0, 1fr));
-        }
-
-        .grid-cols-3 {
-            grid-template-columns: repeat(2, minmax(0, 1fr));
-        }
-    }
-
-    @media (max-width: 768px) {
-
-        .grid-cols-2,
-        .grid-cols-3,
-        .grid-cols-4 {
-            grid-template-columns: repeat(1, minmax(0, 1fr));
-        }
-
-        .dashboard-header {
-            flex-direction: column;
-            align-items: flex-start;
-        }
-
-        .month-selector {
-            width: 100%;
-        }
-    }
-
-    /* Empty States */
-    .empty-state {
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        justify-content: center;
-        text-align: center;
-        padding: 2rem;
-        height: 100%;
-    }
-
-    .empty-state i {
-        font-size: 2.5rem;
-        color: #CBD5E1;
-        margin-bottom: 1rem;
-    }
-
-    .dark .empty-state i {
-        color: #475569;
-    }
-
-    .empty-state h3 {
-        font-size: 1rem;
-        font-weight: 500;
-        color: #64748B;
-        margin-bottom: 0.5rem;
-    }
-
-    .empty-state p {
-        font-size: 0.875rem;
-        color: #94A3B8;
-    }
-
-    /* Animation */
-    @keyframes fadeIn {
-        from {
-            opacity: 0;
-            transform: translateY(10px);
-        }
-
-        to {
-            opacity: 1;
-            transform: translateY(0);
-        }
-    }
-
-    .stat-card,
-    .chart-container {
-        animation: fadeIn 0.5s ease-out;
-    }
-
-    /* Custom scrollbar for customer list */
-    .custom-scroll {
-        scrollbar-width: thin;
-        scrollbar-color: rgba(236, 64, 122, 0.3) transparent;
-    }
-
-    .custom-scroll::-webkit-scrollbar {
-        width: 6px;
-    }
-
-    .custom-scroll::-webkit-scrollbar-track {
-        background: transparent;
-        border-radius: 3px;
-    }
-
-    .custom-scroll::-webkit-scrollbar-thumb {
-        background-color: rgba(236, 64, 122, 0.3);
-        border-radius: 3px;
-    }
-
-    .dark .custom-scroll::-webkit-scrollbar-thumb {
-        background-color: rgba(255, 255, 255, 0.2);
-    }
-</style>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 {% endblock %}
 
 {% block content %}
-<div id="content-main" class="dashboard-container">
+<div id="content-main" class="min-h-screen bg-gray-50 dark:bg-gray-900 p-6">
     <!-- Dashboard Header -->
-    <div class="dashboard-header">
-       
+    <div class="flex justify-between items-center mb-8 flex-wrap gap-4">
+        <h1 class="text-3xl font-bold text-gray-800 dark:text-white flex items-center gap-3">
+            <i class="fas fa-chart-line text-pink-500"></i>
+            Business Dashboard
+        </h1>
+    </div>
 
-        <!-- Month Selector Section -->
-        <div class="month-selector">
-            <form method="get" class="flex items-center gap-3">
-                <!-- Year Input -->
-                <label for="year">Year:</label>
-                <div class="relative">
-                    <input type="number" id="year" name="year" value="{{ current_year }}" min="2000" max="2100"
-                        onchange="this.form.submit()">
-                    <i
-                        class="fas fa-chevron-down absolute right-2 top-1/2 transform -translate-y-1/2 text-xs text-gray-400 pointer-events-none"></i>
-                </div>
+    <!-- Date Range Filter Section -->
+    <div class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-4 shadow-sm mb-6">
+        <form method="get" id="filterForm" class="flex items-center gap-4 flex-wrap">
+            <!-- Year Input -->
+            <div class="flex items-center gap-2">
+                <label for="year"
+                    class="text-sm font-medium text-gray-700 dark:text-gray-300 whitespace-nowrap">Year:</label>
+                <input type="number" id="year" name="year" value="{{ selected_year }}" min="2020" max="2100"
+                    class="bg-transparent border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 text-gray-700 dark:text-gray-300 w-24 focus:outline-none focus:ring-2 focus:ring-pink-500">
+            </div>
 
-                <!-- Month Selector -->
-                <label for="month">Month:</label>
-                <div class="relative">
-                    <input type="month" id="month" name="month"
-                        value="{% if selected_month %}{{ current_year }}-{{ selected_month }}{% endif %}"
-                        onchange="this.form.submit()">
-                    <i
-                        class="fas fa-calendar-alt absolute right-2 top-1/2 transform -translate-y-1/2 text-xs text-gray-400 pointer-events-none"></i>
+            <!-- Month Selector -->
+            <div class="flex items-center gap-2">
+                <label for="month"
+                    class="text-sm font-medium text-gray-700 dark:text-gray-300 whitespace-nowrap">Month:</label>
+                <input type="month" id="month" name="month"
+                    value="{% if selected_month %}{{ selected_year }}-{{ selected_month|stringformat:'02d' }}{% endif %}"
+                    class="bg-transparent border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 text-gray-700 dark:text-gray-300 focus:outline-none focus:ring-2 focus:ring-pink-500">
+            </div>
+            <!-- Date Range -->
+            <div class="flex items-center gap-2">
+                <label for="from_date"
+                    class="text-sm font-medium text-gray-700 dark:text-gray-300 whitespace-nowrap">From:</label>
+                <input type="date" id="from_date" name="from_date" value="{% if from_date %}{{ from_date }}{% endif %}"
+                    class="bg-transparent border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 text-gray-700 dark:text-gray-300 focus:outline-none focus:ring-2 focus:ring-pink-500">
+            </div>
+            <div class="flex items-center gap-2">
+                <label for="to_date"
+                    class="text-sm font-medium text-gray-700 dark:text-gray-300 whitespace-nowrap">To:</label>
+                <input type="date" id="to_date" name="to_date" value="{% if to_date %}{{ to_date }}{% endif %}"
+                    class="bg-transparent border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 text-gray-700 dark:text-gray-300 focus:outline-none focus:ring-2 focus:ring-pink-500">
+            </div>
+
+            <div class="flex gap-2 ml-auto">
+                <button type="submit"
+                    class="bg-pink-500 hover:bg-pink-600 text-white px-4 py-2 rounded-md font-medium transition-all duration-300 flex items-center gap-2">
+                    <i class="fas fa-filter"></i> Apply Filters
+                </button>
+                <button type="button" id="resetFilters"
+                    class="bg-transparent border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 px-4 py-2 rounded-md font-medium transition-all duration-300 flex items-center gap-2">
+                    <i class="fas fa-redo"></i> Reset
+                </button>
+            </div>
+        </form>
+    </div>
+
+    <!-- Overall Stats -->
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+        <!-- Total Orders -->
+        <div
+            class="bg-white dark:bg-gray-800 rounded-xl p-4 shadow-sm transition-all duration-300 hover:shadow-md border-t-4 border-pink-500">
+            <div class="flex items-center justify-between mb-4">
+                <div class="w-10 h-10 rounded-lg bg-pink-50 dark:bg-pink-900/20 flex items-center justify-center">
+                    <i class="fas fa-shopping-bag text-pink-500 text-lg"></i>
                 </div>
-            </form>
+            </div>
+            <div>
+                <h3 class="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">Total Orders
+                </h3>
+                <div class="text-2xl font-bold text-gray-800 dark:text-white mt-1">{{ total_orders }}</div>
+                <div class="text-xs text-gray-500 dark:text-gray-400 mt-1">All time orders</div>
+            </div>
+        </div>
+
+        <!-- Total Revenue -->
+        <div
+            class="bg-white dark:bg-gray-800 rounded-xl p-4 shadow-sm transition-all duration-300 hover:shadow-md border-t-4 border-green-500">
+            <div class="flex items-center justify-between mb-4">
+                <div class="w-10 h-10 rounded-lg bg-green-50 dark:bg-green-900/20 flex items-center justify-center">
+                    <i class="fas fa-wallet text-green-500 text-lg"></i>
+                </div>
+            </div>
+            <div>
+                <h3 class="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">Total Revenue
+                </h3>
+                <div class="text-2xl font-bold text-gray-800 dark:text-white mt-1">Ksh {{total_revenue|floatformat:2|default:"0.00" }}</div>
+                <div class="text-xs text-gray-500 dark:text-gray-400 mt-1">Total earnings</div>
+            </div>
+        </div>
+
+        <!-- Pending Orders -->
+        <div
+            class="bg-white dark:bg-gray-800 rounded-xl p-4 shadow-sm transition-all duration-300 hover:shadow-md border-t-4 border-yellow-500">
+            <div class="flex items-center justify-between mb-4">
+                <div class="w-10 h-10 rounded-lg bg-yellow-50 dark:bg-yellow-900/20 flex items-center justify-center">
+                    <i class="fas fa-clock text-yellow-500 text-lg"></i>
+                </div>
+            </div>
+            <div>
+                <h3 class="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">Pending
+                    Orders</h3>
+                <div class="text-2xl font-bold text-gray-800 dark:text-white mt-1">{{ pending_orders }}</div>
+                <div class="text-xs text-gray-500 dark:text-gray-400 mt-1">Awaiting processing</div>
+            </div>
+        </div>
+
+        <!-- Completed Orders -->
+        <div
+            class="bg-white dark:bg-gray-800 rounded-xl p-4 shadow-sm transition-all duration-300 hover:shadow-md border-t-4 border-blue-500">
+            <div class="flex items-center justify-between mb-4">
+                <div class="w-10 h-10 rounded-lg bg-blue-50 dark:bg-blue-900/20 flex items-center justify-center">
+                    <i class="fas fa-check-circle text-blue-500 text-lg"></i>
+                </div>
+            </div>
+            <div>
+                <h3 class="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">Completed
+                    Orders</h3>
+                <div class="text-2xl font-bold text-gray-800 dark:text-white mt-1">{{ completed_orders }}</div>
+                <div class="text-xs text-gray-500 dark:text-gray-400 mt-1">Successfully delivered</div>
+            </div>
         </div>
     </div>
 
     <!-- Shop A Stats -->
-    <h5 class="m-2 font-light">
-       
-        Shop A Performance
-    </h5>
-    <div class="grid grid-cols-4 mb-6 shop-a-theme">
-        <!-- Revenue Card -->
-        <div class="stat-card flex flex-row items-center space-x-4 justify-between">
-            <div class="icon-wrapper">
-                <i class="fas fa-wallet text-lg"></i>
+    <div class="mb-8">
+        <h2
+            class="text-xl font-semibold text-gray-800 dark:text-white mb-4 pl-3 border-l-4 border-pink-500 flex items-center gap-2">
+            <i class="fas fa-store text-pink-500"></i> Shop A Performance
+        </h2>
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <!-- Shop A Revenue -->
+            <div
+                class="bg-white dark:bg-gray-800 rounded-xl p-4 shadow-sm transition-all duration-300 hover:shadow-md border-t-4 border-green-500">
+                <div class="flex items-center justify-between mb-4">
+                    <div class="w-10 h-10 rounded-lg bg-green-50 dark:bg-green-900/20 flex items-center justify-center">
+                        <i class="fas fa-wallet text-green-500 text-lg"></i>
+                    </div>
+                </div>
+                <div>
+                    <h3 class="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">Total
+                        Revenue</h3>
+                    <div class="text-2xl font-bold text-gray-800 dark:text-white mt-1">Ksh {{ shop_a_revenue|floatformat:2|default:"0.00" }}</div>
+                    <div class="text-xs text-gray-500 dark:text-gray-400 mt-1">Shop A earnings</div>
+                </div>
             </div>
-            <div class="flex flex-col">
-                <div class="value m-0">ksh{{ shop_a_revenue|floatformat:2|default:"0.00" }}</div>
-                <p class="font-light m-0 text-sm text-gray-500">Shop A Revenue</p>
-            </div>
-           
-        </div>
 
-        <!-- Orders Card -->
-        <div class="stat-card flex flex-row items-center space-x-4 justify-between">
-            <div class="icon-wrapper">
-                <i class="fas fa-shopping-bag text-lg"></i>
+            <!-- Shop A Orders -->
+            <div
+                class="bg-white dark:bg-gray-800 rounded-xl p-4 shadow-sm transition-all duration-300 hover:shadow-md border-t-4 border-pink-500">
+                <div class="flex items-center justify-between mb-4">
+                    <div class="w-10 h-10 rounded-lg bg-pink-50 dark:bg-pink-900/20 flex items-center justify-center">
+                        <i class="fas fa-shopping-bag text-pink-500 text-lg"></i>
+                    </div>
+                </div>
+                <div>
+                    <h3 class="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">Order
+                        Statistics</h3>
+                    <div class="text-2xl font-bold text-gray-800 dark:text-white mt-1">{{ shop_a_total_orders }}</div>
+                    <div class="text-xs text-gray-500 dark:text-gray-400 mt-1 flex gap-2">
+                        <span class="text-yellow-500">{{ shop_a_pending_orders }} pending</span> •
+                        <span class="text-blue-500">{{ shop_a_completed_orders }} completed</span>
+                    </div>
+                </div>
             </div>
-            <h4>Total Orders</h4>
-            <div class="value">{{ shop_a_total_orders }}</div>
-            
-        </div>
 
-        <!-- Pending Card -->
-        <div class="stat-card flex flex-row items-center space-x-4 justify-between">
-            <div class="icon-wrapper">
-                <i class="fas fa-clock text-lg"></i>
+            <!-- Shop A Partial Payment -->
+            <div
+                class="bg-white dark:bg-gray-800 rounded-xl p-4 shadow-sm transition-all duration-300 hover:shadow-md border-t-4 border-indigo-900">
+                <div class="flex items-center justify-between mb-4">
+                    <div
+                        class="w-10 h-10 rounded-lg bg-indigo-50 dark:bg-indigo-900/20 flex items-center justify-center">
+                        <i class="fas fa-money-bill-wave text-indigo-900 text-lg"></i>
+                    </div>
+                </div>
+                <div>
+                    <h3 class="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">Partial
+                        Payments</h3>
+                    <div class="text-2xl font-bold text-gray-800 dark:text-white mt-1">{{ shop_a_completed_order }}
+                    </div>
+                    <div class="text-xs text-gray-500 dark:text-gray-400 mt-1">Advanced payments</div>
+                </div>
             </div>
-            <h4>Pending</h4>
-            <div class="value">{{ shop_a_pending_orders }}</div>
-           
-        </div>
-
-        <!-- Completed Card -->
-        <div class="stat-card flex flex-row items-center space-x-4 justify-between">
-            <div class="icon-wrapper">
-                <i class="fas fa-check-circle text-lg"></i>
-            </div>
-            <h4>Completed</h4>
-            <div class="value">{{ shop_a_completed_orders }}</div>
-           
         </div>
     </div>
 
     <!-- Shop B Stats -->
-    <h5 class="m-2 font-normal">
-       
-        Shop B Performance
-    </h5>
-    <div class="grid grid-cols-4 mb-6 shop-b-theme">
-        <!-- Revenue Card -->
-        <div class="stat-card flex flex-row items-center space-x-4 justify-between">
-            <div class="icon-wrapper">
-                <i class="fas fa-wallet text-lg"></i>
+    <div class="mb-8">
+        <h2
+            class="text-xl font-semibold text-gray-800 dark:text-white mb-4 pl-3 border-l-4 border-yellow-500 flex items-center gap-2">
+            <i class="fas fa-store text-yellow-500"></i> Shop B Performance
+        </h2>
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <!-- Shop B Revenue -->
+            <div
+                class="bg-white dark:bg-gray-800 rounded-xl p-4 shadow-sm transition-all duration-300 hover:shadow-md border-t-4 border-green-500">
+                <div class="flex items-center justify-between mb-4">
+                    <div class="w-10 h-10 rounded-lg bg-green-50 dark:bg-green-900/20 flex items-center justify-center">
+                        <i class="fas fa-wallet text-green-500 text-lg"></i>
+                    </div>
+                </div>
+                <div>
+                    <h3 class="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">Total
+                        Revenue</h3>
+                    <div class="text-2xl font-bold text-gray-800 dark:text-white mt-1">Ksh {{shop_b_revenue|floatformat:2|default:"0.00" }}</div>
+                    <div class="text-xs text-gray-500 dark:text-gray-400 mt-1">Shop B earnings</div>
+                </div>
             </div>
-            <div class="flex flex-col ">
-                <div class="value m-0">ksh{{ shop_b_revenue|floatformat:2|default:"0.00" }}</div>
-                <p class="font-light m-0 text-sm  text-gray-500">Shop B Revenue</p>
+
+            <!-- Shop B Orders -->
+            <div
+                class="bg-white dark:bg-gray-800 rounded-xl p-4 shadow-sm transition-all duration-300 hover:shadow-md border-t-4 border-pink-500">
+                <div class="flex items-center justify-between mb-4">
+                    <div class="w-10 h-10 rounded-lg bg-pink-50 dark:bg-pink-900/20 flex items-center justify-center">
+                        <i class="fas fa-shopping-bag text-pink-500 text-lg"></i>
+                    </div>
+                </div>
+                <div>
+                    <h3 class="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">Order
+                        Statistics</h3>
+                    <div class="text-2xl font-bold text-gray-800 dark:text-white mt-1">{{ shop_b_total_orders }}</div>
+                    <div class="text-xs text-gray-500 dark:text-gray-400 mt-1 flex gap-2">
+                        <span class="text-yellow-500">{{ shop_b_pending_orders }} pending</span> •
+                        <span class="text-blue-500">{{ shop_b_completed_orders }} completed</span>
+                    </div>
+                </div>
             </div>
-            
-            
-        </div>
 
-        <!-- Orders Card -->
-        <div class="stat-card flex flex-row items-center space-x-4 justify-between">
-            <div class="icon-wrapper">
-                <i class="fas fa-shopping-bag text-lg"></i>
+            <!-- Shop B Partial Payment -->
+            <div
+                class="bg-white dark:bg-gray-800 rounded-xl p-4 shadow-sm transition-all duration-300 hover:shadow-md border-t-4 border-indigo-900">
+                <div class="flex items-center justify-between mb-4">
+                    <div
+                        class="w-10 h-10 rounded-lg bg-indigo-50 dark:bg-indigo-900/20 flex items-center justify-center">
+                        <i class="fas fa-money-bill-wave text-indigo-900 text-lg"></i>
+                    </div>
+                </div>
+                <div>
+                    <h3 class="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">Partial
+                        Payments</h3>
+                    <div class="text-2xl font-bold text-gray-800 dark:text-white mt-1">{{ shop_b_completed_orders }}
+                    </div>
+                    <div class="text-xs text-gray-500 dark:text-gray-400 mt-1">Advanced payments</div>
+                </div>
             </div>
-            <h4>Total Orders</h4>
-            <div class="value">{{ shop_b_total_orders }}</div>
-
-        </div>
-
-        <!-- Pending Card -->
-        <div class="stat-card flex flex-row  items-center space-x-4 justify-between">
-            <div class="icon-wrapper">
-                <i class="fas fa-clock text-lg"></i>
-            </div>
-            <h4>Pending</h4>
-            <div class="value">{{ shop_b_pending_orders }}</div>
-
-        </div>
-
-        <!-- Completed Card -->
-        <div class="stat-card flex flex-row items-center space-x-4 justify-between">
-            <div class="icon-wrapper">
-                <i class="fas fa-check-circle text-lg"></i>
-            </div>
-            <h4>Completed</h4>
-            <div class="value">{{ shop_b_completed_orders }}</div>
-            
         </div>
     </div>
 
     <!-- Main Charts Section -->
-    <div class="grid grid-cols-2 gap-6 mb-6">
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
         <!-- Revenue Distribution -->
-        <div class="chart-container">
-            <div class="chart-header">
-                <h4 class="chart-title">
-                    <i class="fas fa-chart-pie" style="color: var(--secondary);"></i>
+        <div class="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-sm">
+            <div class="flex justify-between items-center mb-6">
+                <h4 class="text-lg font-semibold text-gray-800 dark:text-white flex items-center gap-2">
+                    <i class="fas fa-chart-pie text-yellow-500"></i>
                     Revenue Distribution
                 </h4>
-                <span class="chart-badge">{{total_revenue_percentage}}%</span>
+                <span
+                    class="bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-200 px-3 py-1 rounded-full text-sm font-medium">Total</span>
             </div>
-            <div style="height: 250px;">
+            <div class="h-64">
                 <canvas id="revenueChart"></canvas>
             </div>
         </div>
 
         <!-- Revenue Trend -->
-        <div class="chart-container">
-            <div class="chart-header">
-                <h2 class="chart-title">
-                    <i class="fas fa-chart-line" style="color: var(--primary);"></i>
+        <div class="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-sm">
+            <div class="flex justify-between items-center mb-6">
+                <h2 class="text-lg font-semibold text-gray-800 dark:text-white flex items-center gap-2">
+                    <i class="fas fa-chart-line text-pink-500"></i>
                     Revenue Trend
                 </h2>
-                <span class="chart-badge">{{ current_year }}</span>
+                <span
+                    class="bg-pink-100 dark:bg-pink-900/30 text-pink-800 dark:text-pink-200 px-3 py-1 rounded-full text-sm font-medium">{{ selected_year }}</span>
             </div>
-            <div style="height: 250px;">
+            <div class="h-64">
                 {% if not selected_month %}
                 <canvas id="trendChart"></canvas>
                 {% else %}
-                <div class="empty-state">
-                    <i class="fas fa-calendar-week"></i>
-                    <h3>Switch to yearly view</h3>
-                    <p>Monthly trends are available in the annual overview</p>
+                <div class="flex flex-col items-center justify-center h-full text-center">
+                    <i class="fas fa-calendar-week text-4xl text-gray-400 mb-4"></i>
+                    <h3 class="text-lg font-medium text-gray-700 dark:text-gray-300 mb-2">Switch to yearly view</h3>
+                    <p class="text-gray-500 dark:text-gray-400">Monthly trends are available in the annual overview</p>
                 </div>
                 {% endif %}
             </div>
@@ -624,105 +298,160 @@
     </div>
 
     <!-- Insights Section -->
-    <div class="grid grid-cols-3 gap-6 mb-6">
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
         <!-- Top Services -->
-        <div class="chart-container">
-            <div class="chart-header">
-                <h2 class="chart-title">
-                    <i class="fas fa-spa" style="color: var(--success);"></i>
+        <div class="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-sm">
+            <div class="flex justify-between items-center mb-6">
+                <h2 class="text-lg font-semibold text-gray-800 dark:text-white flex items-center gap-2">
+                    <i class="fas fa-spa text-green-500"></i>
                     Top Services
                 </h2>
-                <span class="chart-badge">{{ current_year }}</span>
+                <span
+                    class="bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-200 px-3 py-1 rounded-full text-sm font-medium">{{ selected_year }}</span>
             </div>
-            <div style="height: 288px;">
+            <div class="h-72">
                 {% if services_labels and services_labels|length > 0 %}
                 <canvas id="servicesChart"></canvas>
                 {% else %}
-                <div class="empty-state">
-                    <i class="fas fa-concierge-bell"></i>
-                    <p>No service data available</p>
+                <div class="flex flex-col items-center justify-center h-full text-center">
+                    <i class="fas fa-concierge-bell text-4xl text-gray-400 mb-4"></i>
+                    <p class="text-gray-500 dark:text-gray-400">No service data available</p>
                 </div>
                 {% endif %}
             </div>
         </div>
 
         <!-- Popular Products -->
-        <div class="chart-container">
-            <div class="chart-header">
-                <h2 class="chart-title">
-                    <i class="fas fa-box-open" style="color: var(--warning);"></i>
+        <div class="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-sm">
+            <div class="flex justify-between items-center mb-6">
+                <h2 class="text-lg font-semibold text-gray-800 dark:text-white flex items-center gap-2">
+                    <i class="fas fa-box-open text-yellow-500"></i>
                     Common Items
                 </h2>
-                <span class="chart-badge">{{ current_year }}</span>
+                <span
+                    class="bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-200 px-3 py-1 rounded-full text-sm font-medium">{{ selected_year }}</span>
             </div>
-            <div style="height: 288px;">
+            <div class="h-72">
                 {% if item_labels and item_labels|length > 0 %}
                 <canvas id="productsChart"></canvas>
                 {% else %}
-                <div class="empty-state">
-                    <i class="fas fa-box"></i>
-                    <p>No product data available</p>
+                <div class="flex flex-col items-center justify-center h-full text-center">
+                    <i class="fas fa-box text-4xl text-gray-400 mb-4"></i>
+                    <p class="text-gray-500 dark:text-gray-400">No product data available</p>
                 </div>
                 {% endif %}
             </div>
         </div>
 
         <!-- VIP Customers -->
-        <div class="chart-container">
-            <div class="chart-header">
-                <h2 class="chart-title">
-                    <i class="fas fa-crown" style="color: var(--secondary);"></i>
+        <div class="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-sm">
+            <div class="flex justify-between items-center mb-6">
+                <h2 class="text-lg font-semibold text-gray-800 dark:text-white flex items-center gap-2">
+                    <i class="fas fa-crown text-yellow-500"></i>
                     Top Customers
                 </h2>
-                <span class="chart-badge">Top Spenders</span>
+                <span
+                    class="bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-200 px-3 py-1 rounded-full text-sm font-medium">{{ selected_year }}</span>
             </div>
-            <div class="custom-scroll" style="height: 288px; overflow-y: auto;">
+            <div
+                class="h-72 overflow-y-auto scrollbar-thin scrollbar-thumb-gray-300 dark:scrollbar-thumb-gray-600 scrollbar-track-transparent">
                 {% for customer in common_customers %}
-                <div class="customer-card">
-                    <div class="customer-avatar">
+                <div
+                    class="flex items-center p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg mb-2 transition-all duration-300 hover:bg-gray-100 dark:hover:bg-gray-700">
+                    <div
+                        class="w-9 h-9 rounded-lg bg-gradient-to-br from-pink-500 to-yellow-500 flex items-center justify-center text-white font-semibold mr-3">
                         {{ forloop.counter }}
                     </div>
-                    <div class="customer-info">
-                        <div class="customer-name">{{ customer.customer__name }}</div>
-                        <div class="customer-stats">{{ customer.order_count }} orders</div>
+                    <div class="flex-1">
+                        <div class="font-medium text-gray-800 dark:text-white">{{ customer.customer__name }}</div>
+                        <div class="text-sm text-gray-500 dark:text-gray-400">{{ customer.order_count }} orders</div>
                     </div>
-                    <div class="customer-amount">
+                    <div class="font-bold text-pink-500">
                         ksh{{ customer.total_spent|floatformat:2 }}
                     </div>
                 </div>
                 {% empty %}
-                <div class="empty-state">
-                    <i class="fas fa-user-slash"></i>
-                    <p>No customer data available</p>
+                <div class="flex flex-col items-center justify-center h-full text-center">
+                    <i class="fas fa-user-slash text-4xl text-gray-400 mb-4"></i>
+                    <p class="text-gray-500 dark:text-gray-400">No customer data available</p>
                 </div>
                 {% endfor %}
             </div>
         </div>
     </div>
 </div>
+
 <script>
-    // Wait for Chart.js to be fully loaded
+    // Date Range Filter Functionality
+    document.addEventListener('DOMContentLoaded', function () {
+        const filterForm = document.getElementById('filterForm');
+        const resetButton = document.getElementById('resetFilters');
+
+        // Set today's date as max for date inputs
+        const today = new Date().toISOString().split('T')[0];
+        document.getElementById('from_date').max = today;
+        document.getElementById('to_date').max = today;
+
+        // Reset filters functionality
+        resetButton.addEventListener('click', function () {
+            // Clear all filter inputs
+            document.getElementById('year').value = new Date().getFullYear();
+            document.getElementById('month').value = '';
+            document.getElementById('from_date').value = '';
+            document.getElementById('to_date').value = '';
+
+            // Submit the form to reset filters
+            filterForm.submit();
+        });
+
+        // Validate date range
+        const fromDateInput = document.getElementById('from_date');
+        const toDateInput = document.getElementById('to_date');
+
+        fromDateInput.addEventListener('change', function () {
+            if (this.value && toDateInput.value && this.value > toDateInput.value) {
+                toDateInput.value = this.value;
+            }
+        });
+
+        toDateInput.addEventListener('change', function () {
+            if (this.value && fromDateInput.value && this.value < fromDateInput.value) {
+                fromDateInput.value = this.value;
+            }
+        });
+
+        // Auto-submit when year or month changes (optional)
+        document.getElementById('year').addEventListener('change', function () {
+            if (!fromDateInput.value && !toDateInput.value) {
+                filterForm.submit();
+            }
+        });
+
+        document.getElementById('month').addEventListener('change', function () {
+            if (!fromDateInput.value && !toDateInput.value) {
+                filterForm.submit();
+            }
+        });
+    });
+
+    // Chart initialization code
     function initializeCharts() {
-        // Check if Chart is available
         if (typeof Chart === 'undefined') {
             console.error('Chart.js is not loaded');
             setTimeout(initializeCharts, 100);
             return;
         }
 
-        // Color palette using navy blue and orange-yellow for charts
         const COLOR_PALETTE = {
-            navyBlue: '#1E3A8A',      // Navy blue
-            orangeYellow: '#F59E0B',  // Orange-yellow
-            lightOrange: '#FBBF24',   // Lighter orange
-            pink: '#EC407A',          // Vibrant pink
-            lightPink: '#F48FB1',     // Lighter pink
+            navyBlue: '#1E3A8A',
+            orangeYellow: '#F59E0B',
+            lightOrange: '#FBBF24',
+            pink: '#EC407A',
+            lightPink: '#F48FB1',
             success: '#10B981',
             warning: '#F59E0B',
             danger: '#EF4444',
-            info: '#3B82F6',
-            light: '#F8FAFC',
-            dark: '#0F172A'
+            info: '#3B82F6'
         };
 
         function getChartOptions() {
@@ -793,7 +522,6 @@
             };
         }
 
-        // Safe JSON parse with better error handling
         function safeJsonParse(jsonString, fallback = []) {
             try {
                 if (!jsonString || jsonString === 'None' || jsonString === 'null' ||
@@ -801,12 +529,9 @@
                     return fallback;
                 }
 
-                // Handle the case where Django might output Python lists as strings
                 let parsedString = jsonString;
                 if (typeof jsonString === 'string') {
-                    // Replace Python-style None with JavaScript null
                     parsedString = jsonString.replace(/None/g, 'null');
-                    // Replace single quotes with double quotes for proper JSON
                     parsedString = parsedString.replace(/'/g, '"');
                 }
 
@@ -818,33 +543,25 @@
             }
         }
 
-        // Function to sort data in descending order (highest first)
         function sortDataDescending(labels, data) {
-            // Create an array of objects to keep labels and data together
             const combined = labels.map((label, index) => ({
                 label,
                 value: data[index] || 0
             }));
 
-            // Sort by value in descending order
             combined.sort((a, b) => b.value - a.value);
 
-            // Extract the sorted labels and values
             const sortedLabels = combined.map(item => item.label);
             const sortedData = combined.map(item => item.value);
 
             return { sortedLabels, sortedData };
         }
 
-        // ---------------- Pie/Doughnut Chart ----------------
+        // Revenue Chart
         const revenueCanvas = document.getElementById('revenueChart');
         if (revenueCanvas) {
-            // Get the data from Django template variables
             const revenueLabels = safeJsonParse('{{ pie_chart_labels|safe }}');
             const revenueValues = safeJsonParse('{{ pie_chart_values|safe }}');
-
-            console.log('Revenue Labels:', revenueLabels);
-            console.log('Revenue Values:', revenueValues);
 
             if (revenueLabels.length > 0 && revenueValues.length > 0 &&
                 revenueLabels.length === revenueValues.length) {
@@ -897,19 +614,17 @@
             } else {
                 console.warn('No valid data for revenue chart');
                 revenueCanvas.style.display = 'none';
-                // Create a message element
                 const message = document.createElement('div');
-                message.className = 'empty-state';
-                message.innerHTML = '<i class="fas fa-chart-pie"></i><p>No revenue data available</p>';
+                message.className = 'flex flex-col items-center justify-center h-full text-center';
+                message.innerHTML = '<i class="fas fa-chart-pie text-4xl text-gray-400 mb-4"></i><p class="text-gray-500 dark:text-gray-400">No revenue data available</p>';
                 revenueCanvas.parentNode.appendChild(message);
             }
         }
 
-        // ---------------- Line/Trend Chart ----------------
+        // Trend Chart
         const trendCanvas = document.getElementById('trendChart');
         if (trendCanvas) {
             const lineData = safeJsonParse('{{ line_chart_data|safe }}');
-            console.log('Line Data:', lineData);
 
             if (lineData && lineData.length > 0 && lineData[0] && lineData[0].months) {
                 const trendCtx = trendCanvas.getContext('2d');
@@ -968,22 +683,18 @@
                 console.warn('No valid data for trend chart');
                 trendCanvas.style.display = 'none';
                 const message = document.createElement('div');
-                message.className = 'empty-state';
-                message.innerHTML = '<i class="fas fa-chart-line"></i><p>No trend data available</p>';
+                message.className = 'flex flex-col items-center justify-center h-full text-center';
+                message.innerHTML = '<i class="fas fa-chart-line text-4xl text-gray-400 mb-4"></i><p class="text-gray-500 dark:text-gray-400">No trend data available</p>';
                 trendCanvas.parentNode.appendChild(message);
             }
         }
 
-        // ---------------- Bar Charts (Services & Products) ----------------
+        // Bar Charts
         const createBarChart = (id, labels, data, title) => {
             const canvas = document.getElementById(id);
             if (!canvas) return;
 
-            console.log(`${title} Labels:`, labels);
-            console.log(`${title} Data:`, data);
-
             if (labels.length > 0 && data.length > 0 && labels.length === data.length) {
-                // Sort the data in descending order (highest first)
                 const { sortedLabels, sortedData } = sortDataDescending(labels, data);
 
                 const ctx = canvas.getContext('2d');
@@ -997,7 +708,6 @@
                     COLOR_PALETTE.warning
                 ];
 
-                // Custom tooltip for services chart
                 const customTooltip = {
                     callbacks: {
                         title: function (context) {
@@ -1005,7 +715,6 @@
                         },
                         label: function (context) {
                             if (id === 'servicesChart') {
-                                // Show "X orders" for services chart
                                 return `${context.parsed.x.toLocaleString('en-US')} orders`;
                             }
                             return context.parsed.x.toLocaleString('en-US');
@@ -1035,7 +744,6 @@
                             legend: {
                                 display: false
                             },
-                            // Disable tooltips for products chart, use custom for services
                             tooltip: id === 'productsChart' ? { enabled: false } : {
                                 ...getChartOptions().plugins.tooltip,
                                 callbacks: customTooltip.callbacks
@@ -1069,98 +777,29 @@
                 console.warn(`No valid data for ${title} chart`);
                 canvas.style.display = 'none';
                 const message = document.createElement('div');
-                message.className = 'empty-state';
-                message.innerHTML = `<i class="fas ${id === 'servicesChart' ? 'fa-concierge-bell' : 'fa-box'}"></i><p>No ${title.toLowerCase()} data available</p>`;
+                message.className = 'flex flex-col items-center justify-center h-full text-center';
+                message.innerHTML = `<i class="fas ${id === 'servicesChart' ? 'fa-concierge-bell' : 'fa-box'} text-4xl text-gray-400 mb-4"></i><p class="text-gray-500 dark:text-gray-400">No ${title.toLowerCase()} data available</p>`;
                 canvas.parentNode.appendChild(message);
             }
         };
 
-        // Initialize bar charts - FIXED VARIABLE NAMES
+        // Initialize bar charts
         createBarChart('servicesChart',
             safeJsonParse('{{ services_labels|safe }}'),
-            safeJsonParse('{{ services_counts|safe }}'),  // Changed from services_data to services_counts
+            safeJsonParse('{{ services_counts|safe }}'),
             'Services');
 
         createBarChart('productsChart',
             safeJsonParse('{{ item_labels|safe }}'),
-            safeJsonParse('{{ item_counts|safe }}'),      // Changed from item_data to item_counts
+            safeJsonParse('{{ item_counts|safe }}'),
             'Products');
-
-        // ---------------- Payment Methods Chart ----------------
-        const paymentCanvas = document.getElementById('paymentChart');
-        if (paymentCanvas) {
-            const paymentLabels = safeJsonParse('{{ payment_method_labels|safe }}');
-            const paymentData = safeJsonParse('{{ payment_method_counts|safe }}');
-
-            console.log('Payment Labels:', paymentLabels);
-            console.log('Payment Data:', paymentData);
-
-            if (paymentLabels.length > 0 && paymentData.length > 0 &&
-                paymentLabels.length === paymentData.length) {
-
-                const paymentCtx = paymentCanvas.getContext('2d');
-                const paymentColors = [
-                    COLOR_PALETTE.success,
-                    COLOR_PALETTE.info,
-                    COLOR_PALETTE.warning,
-                    COLOR_PALETTE.navyBlue,
-                    COLOR_PALETTE.orangeYellow
-                ];
-
-                new Chart(paymentCtx, {
-                    type: 'doughnut',
-                    data: {
-                        labels: paymentLabels,
-                        datasets: [{
-                            data: paymentData,
-                            backgroundColor: paymentLabels.map((_, index) =>
-                                paymentColors[index % paymentColors.length]),
-                            borderWidth: 0,
-                            cutout: '75%',
-                            spacing: 2,
-                            hoverOffset: 8,
-                            borderRadius: 6
-                        }]
-                    },
-                    options: {
-                        ...getChartOptions(),
-                        plugins: {
-                            ...getChartOptions().plugins,
-                            legend: {
-                                position: 'bottom',
-                                labels: {
-                                    padding: 12,
-                                    usePointStyle: true,
-                                    pointStyle: 'circle',
-                                    boxWidth: 6,
-                                    boxHeight: 6,
-                                    font: {
-                                        size: 10,
-                                        weight: '500'
-                                    }
-                                }
-                            }
-                        }
-                    }
-                });
-            } else {
-                console.warn('No valid data for payment methods chart');
-                paymentCanvas.style.display = 'none';
-                const message = document.createElement('div');
-                message.className = 'empty-state';
-                message.innerHTML = '<i class="fas fa-credit-card"></i><p>No payment data available</p>';
-                paymentCanvas.parentNode.appendChild(message);
-            }
-        }
     }
 
-    // Start initializing charts when DOM is loaded
+    // Initialize charts when DOM is loaded
     document.addEventListener("DOMContentLoaded", function () {
-        // Check if Chart.js is already loaded, if not wait for it
         if (typeof Chart !== 'undefined') {
             initializeCharts();
         } else {
-            // Wait for Chart.js to load
             const checkChart = setInterval(function () {
                 if (typeof Chart !== 'undefined') {
                     clearInterval(checkChart);

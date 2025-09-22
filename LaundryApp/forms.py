@@ -230,20 +230,30 @@ class OrderItemForm(forms.ModelForm):
 from django import forms
 from .models import ExpenseField, ExpenseRecord, Business
 
+class BusinessForm(forms.ModelForm):
+    class Meta:
+        model = Business
+        fields = ['name']
+        widgets = {
+            'name': forms.TextInput(attrs={
+                'class': 'w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500',
+                'placeholder': 'Enter business name'
+            }),
+        }
+
 class ExpenseFieldForm(forms.ModelForm):
     def __init__(self, *args, **kwargs):
-        user = kwargs.pop('user', None)
         super().__init__(*args, **kwargs)
-        
-        if user:
-            self.fields['business'] = forms.ModelChoiceField(
-                queryset=Business.objects.filter(owner=user),
-                empty_label="Select Business",
-                widget=forms.Select(attrs={
-                    'class': 'w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500'
-                })
-            )
-    
+
+        # Show all businesses, since this system is for one client
+        self.fields['business'] = forms.ModelChoiceField(
+            queryset=Business.objects.all(),
+            empty_label="Select Business",
+            widget=forms.Select(attrs={
+                'class': 'w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500'
+            })
+        )
+
     class Meta:
         model = ExpenseField
         fields = ['business', 'label']
@@ -281,7 +291,7 @@ class ExpenseRecordForm(forms.ModelForm):
     
     class Meta:
         model = ExpenseRecord
-        fields = ['business', 'field', 'amount', 'date', 'notes']
+        fields = ['business', 'field', 'amount', 'date']
         widgets = {
             'amount': forms.NumberInput(attrs={
                 'class': 'w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500',
