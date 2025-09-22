@@ -71,7 +71,6 @@
         <i class="fas fa-store text-pink-500"></i> General
     </h2>
     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-        
 <!-- Total Revenue -->
 <div
     class="bg-white dark:bg-gray-800 rounded-xl p-4 shadow-sm transition-all duration-300 hover:shadow-md border-t-4 border-green-500">
@@ -105,7 +104,7 @@
             </div>
         </div>
 
-       
+
 
         <!-- Pending Orders -->
         <div
@@ -191,15 +190,32 @@
                         <i class="fas fa-money-bill-wave text-indigo-900 text-lg"></i>
                     </div>
                 </div>
-                <div>
-                    <h3 class="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">Payments</h3>
-                    <div class="text-2xl font-bold text-gray-800 dark:text-white mt-1">{{ shop_a_completed_order }}
-                    </div>
-                    <span class="text-yellow-500">{{ pending_payments }} pending</span> •
-                    <span class="text-blue-500">{{ partial_payments }} Partial</span>
-                    <span class="text-blue-500">{{ partial_payments }} completed</span>
-                    <div class="text-xs text-gray-500 dark:text-gray-400 mt-1">Advanced payments</div>
-                </div>
+            <div>
+                <h3 class="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">Payments</h3>
+            <!-- Total Completed Payments -->
+            <div class="text-2xl font-bold text-gray-800 dark:text-white mt-1">
+            
+                
+            </div>
+            <!-- Payment Status Summary -->
+            <div class="flex flex-wrap items-center gap-2 mt-1">
+                <span class="text-yellow-500 text-sm">{{ shop_a_pending_payments }} pending</span>
+                <span class="text-blue-500 text-sm">{{ shop_a_partial_payments }} partial</span>
+                <span class="text-green-500 text-sm">{{ shop_a_complete_payments }} completed</span>
+                {% if shop_a_overdue_orders_list %}
+                <span class="text-red-500 text-sm">{{ shop_a_overdue_orders_list|length }} overdue</span>
+                {% endif %}
+            </div>
+            
+            <!-- Amount Summary -->
+            <div class="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                Ksh {{ shop_a_stats.total_collected_amount|default:0 }} collected •
+                Ksh {{ shop_a_stats.total_pending_amount|default:0 }} pending
+            </div>
+            
+            <!-- Quick View Links -->
+            
+            </div>
             </div>
         </div>
     </div>
@@ -222,7 +238,8 @@
                 <div>
                     <h3 class="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">Total
                         Revenue</h3>
-                    <div class="text-2xl font-bold text-gray-800 dark:text-white mt-1">Ksh {{shop_b_revenue|floatformat:2|default:"0.00" }}</div>
+                    <div class="text-2xl font-bold text-gray-800 dark:text-white mt-1">Ksh
+                        {{shop_b_revenue|floatformat:2|default:"0.00" }}</div>
                     <div class="text-xs text-gray-500 dark:text-gray-400 mt-1">Shop B earnings</div>
                 </div>
             </div>
@@ -257,14 +274,28 @@
                 </div>
                 <div>
                     <h3 class="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">Payments</h3>
-                    <div class="text-2xl font-bold text-gray-800 dark:text-white mt-1">{{ shop_b_completed_orders }}
-
-                    </div>{% for shop, stats in shop_payment_stats.items %}
-                    <span class="text-yellow-500"> {{ stats.pending }} (KSh {{ stats.pending_amount }}) pending</span> •
-                    <span class="text-blue-500">{{ stats.partial }} (KSh {{ stats.partial_amount }}) Partial</span>•
-                    <span class="text-blue-500">{{ stats.complete }} (KSh {{ stats.collected_amount }}) completed</span>
-                    {% endfor %}
-                    <div class="text-xs text-gray-500 dark:text-gray-400 mt-1">Advanced payments</div>
+                <!-- Total Completed Payments -->
+                <div class="text-2xl font-bold text-gray-800 dark:text-white mt-1">
+                    
+                </div>
+                
+                <!-- Payment Status Summary -->
+                <div class="flex flex-wrap items-center gap-2 mt-1">
+                    <span class="text-yellow-500 text-sm">{{ shop_b_pending_payments }} pending</span>
+                    <span class="text-blue-500 text-sm">{{ shop_b_partial_payments }} partial</span>
+                    <span class="text-green-500 text-sm">{{ shop_b_complete_payments }} completed</span>
+                    {% if shop_b_overdue_orders_list %}
+                    <span class="text-red-500 text-sm">{{ shop_b_overdue_orders_list|length }} overdue</span>
+                    {% endif %}
+                </div>
+                
+                <!-- Amount Summary -->
+                <div class="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                    Ksh {{ shop_b_stats.total_collected_amount|default:0 }} collected •
+                    Ksh {{ shop_b_stats.total_pending_amount|default:0 }} pending
+                </div>
+                
+                <!-- Quick View Links -->
                 </div>
             </div>
         </div>
