@@ -12,7 +12,7 @@ app_name = "laundry"
 urlpatterns = [
     path('djadmin', admin.site.urls),
     path('home',views.home, name='home'),
-    path('sd',views.dashboard,name='dashboardg'),
+    path('sd',views.Reportsdashboard,name='dashboardg'),
     path('accounts/', include('django_registration.backends.activation.urls')),
     path('accounts/', include('django.contrib.auth.urls')),
     path('logout',views.logout_view, name='logout'),
@@ -22,7 +22,8 @@ urlpatterns = [
     path('Report/', cache_page(60 * 5)(views.dashboard_view), 
          name='laundryapp_dashboard'),
     
-    path('', views.generaldashboard, name='dashboard'),
+    path('Laundry-dashboard', views.laundrydashboard, name='Laundrydashboard'),
+    path('', views.get_laundry_profit_and_hotel, name='dashboard'),
 
     path('search-customers/', views.search_customers, name='search_customers'),
     path('createorder/', views.createorder, name='createorder'),

@@ -17,7 +17,7 @@ from django.urls import reverse
 from django.utils import timezone
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_POST
-from django.db.models import Q, Prefetch, Sum, Count, Avg
+from django.db.models import Q, Prefetch, Sum, Count, Avg,F,ExpressionWrapper, DecimalField, Value
 from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
 from django.contrib.auth import login as auth_login, logout as auth_logout
 from django.contrib.auth.forms import AuthenticationForm
@@ -26,6 +26,8 @@ from django.db import IntegrityError
 from django.contrib.auth.forms import PasswordChangeForm
 from django.contrib.auth import update_session_auth_hash
 from django.contrib.auth import get_user_model
+from django.db.models.functions import Coalesce
+from django.utils.timezone import now
 
 from django.db import transaction
 
@@ -50,7 +52,7 @@ from .forms import (
     ExpenseRecordForm,
     LaundryProfileForm 
 )
-
+from HotelApp.models import HotelExpenseRecord
 from .resource import OrderResource
 from .analytics import DashboardAnalytics
 
@@ -170,7 +172,7 @@ def admin_required(view_func):
     def _wrapped_view(request, *args, **kwargs):
         if not is_admin(request.user):
             messages.error(request, "You don't have admin privileges.")
-            return redirect('dashboard')
+            return redirect('laundry:dashboard')
         return view_func(request, *args, **kwargs)
     return _wrapped_view
 
@@ -180,7 +182,7 @@ def staff_required(view_func):
     def _wrapped_view(request, *args, **kwargs):
         if not is_staff(request.user):
             messages.error(request, "You don't have staff privileges.")
-            return redirect('dashboard')
+            return redirect('laundry:Laundrydashboard')
         return view_func(request, *args, **kwargs)
     return _wrapped_view
 
@@ -848,7 +850,7 @@ def search_customers(request):
     return JsonResponse({'error': 'Invalid request'}, status=400)
 
 @login_required
-def generaldashboard(request):
+def laundrydashboard(request):
     if not request.user.is_authenticated:
         return redirect('login')
 
@@ -905,7 +907,229 @@ def generaldashboard(request):
     }
     return render(request, 'Admin/dashboard.html', context)
 
-def dashboard(request):
+
+
+
+
+def get_hotel_financial_summary():
+    # ✅ Calculate total revenue
+    #HOTEL PROFIT
+    revenue = OrderItem.objects.aggregate(
+        total=Coalesce(
+            Sum(F('quantity') * F('food_item__price'), output_field=DecimalField()),
+            0
+        )
+    )['total']
+
+    # ✅ Calculate total expenses
+    expenses = HotelExpenseRecord.objects.aggregate(
+        total=Coalesce(Sum('amount'), 0)
+    )['total']
+
+    # ✅ Profit = Revenue - Expenses
+    profit = revenue - expenses
+
+    return {
+        'revenue': revenue,
+        'expenses': expenses,
+        'profit': profit
+    }
+
+# OR: from datetime import datetime
+from django.db.models import Sum, F, DecimalField
+from django.db.models.functions import Coalesce
+from django.utils.timezone import now
+import logging
+
+logger = logging.getLogger(__name__)
+
+def get_laundry_profit_and_hotel(request, selected_year=None):
+    """
+    Get the total profit for both laundry and hotel businesses
+    """
+    try:
+        # HOTEL PROFIT CALCULATION
+        hotel_revenue = OrderItem.objects.aggregate(
+            total=Coalesce(
+                Sum(F('quantity') * F('food_item__price'), output_field=DecimalField()),
+                0
+            )
+        )['total']
+        
+        hotel_expenses = HotelExpenseRecord.objects.aggregate(
+            total=Coalesce(Sum('amount'), 0)
+        )['total']
+        
+        hotel_profit = hotel_revenue - hotel_expenses
+        
+        # LAUNDRY PROFIT CALCULATION
+        from .analytics import DashboardAnalytics
+        
+        analytics = DashboardAnalytics(None)
+        
+        if selected_year is None:
+            selected_year = now().year
+            
+        laundry_data = analytics.get_dashboard_data(request, selected_year)
+        
+        laundry_revenue = laundry_data['order_stats']['total_revenue']
+        laundry_expenses = laundry_data['expense_stats']['total_expenses']
+        laundry_profit = laundry_revenue - laundry_expenses
+        
+        # TOTAL REVENUE (Hotel + Laundry)
+        total_revenue = hotel_revenue + laundry_revenue
+        
+        context = {
+            'total_revenue': total_revenue,
+            'laundry_profit': laundry_profit,
+            'hotel_profit': hotel_profit,
+            'total_profit': laundry_profit + hotel_profit,  # Optional: combined profit
+        }
+        
+        return render(request, 'AGeneraldashboard.html', context)
+        
+    except Exception as e:
+        logger.error(f"Error in get_laundry_profit_and_hotel: {e}")
+        # Fallback context in case of error
+        context = {
+            'total_revenue': 0,
+            'laundry_profit': 0,
+            'hotel_profit': 0,
+            'total_profit': 0,
+        }
+        return render(request, 'Admin/Generaldashboard.html', context)
+
+@login_required
+def generaldashboard(request):
+    if not request.user.is_authenticated:
+        return redirect('login')
+
+    # Get user's shops
+    user_shops = get_user_shops(request)
+
+    # ===== HOTEL BUSINESS DATA =====
+    revenue_expression = ExpressionWrapper(
+        F('items__quantity') * F('items__food_item__price'),
+        output_field=DecimalField(max_digits=12, decimal_places=2)
+    )
+
+   
+    hotel_total_revenue = OrderItem.objects.aggregate(
+        total_revenue=Coalesce(
+            Sum(F('quantity') * F('food_item__price')),
+            Value(0)
+        )
+    )['total_revenue'] or 0
+
+    # Calculate hotel expenses
+    hotel_expenses = HotelExpenseRecord.objects.aggregate(
+        total_expenses=Coalesce(Sum('amount'), Value(0))
+    )['total_expenses'] or 0
+
+    # Calculate hotel profit
+    hotel_profit = hotel_total_revenue - hotel_expenses
+
+    # Hotel order statistics
+    hotel_total_orders = Order.objects.count()
+    hotel_served_orders = Order.objects.filter(order_status='Served').count()
+    hotel_in_progress_orders = Order.objects.filter(order_status='In Progress').count()
+
+    # Recent hotel orders
+    recent_hotel_orders = Order.objects.select_related('created_by').prefetch_related(
+        'items', 'items__food_item'
+    ).order_by('-created_at')[:10]
+
+    # ===== LAUNDRY BUSINESS DATA =====
+    class MockAdmin:
+        def get_user_shops(self, request):
+            return get_user_shops(request)
+
+    mock_admin = MockAdmin()
+    analytics = DashboardAnalytics(mock_admin)
+    current_year = timezone.now().year
+    laundry_data = analytics.get_dashboard_data(request, current_year)
+
+    # Laundry stats
+    laundry_total_revenue = laundry_data['order_stats']['total_revenue']
+    laundry_total_expenses = laundry_data['expense_stats']['total_expenses']
+    laundry_profit = laundry_total_revenue - laundry_total_expenses
+    laundry_total_orders = laundry_data['order_stats']['total_orders']
+    laundry_pending_orders = laundry_data['order_stats']['pending_orders']
+    laundry_completed_orders = laundry_data['order_stats']['completed_orders']
+
+    # Recent laundry orders
+    recent_laundry_orders = []
+    for status_orders in laundry_data['orders_by_payment_status'].values():
+        recent_laundry_orders.extend(status_orders[:5])
+    recent_laundry_orders = recent_laundry_orders[:10]
+
+    # ===== COMBINED BUSINESS DATA =====
+    total_combined_revenue = hotel_total_revenue + laundry_total_revenue
+    total_combined_expenses = hotel_expenses + laundry_total_expenses
+    total_combined_profit = hotel_profit + laundry_profit
+
+    # ===== SHOP PERFORMANCE =====
+    shop_performance = None
+    if request.user.is_superuser:
+        shop_performance = {}
+
+        # Laundry performance
+        if 'shop_a_stats' in laundry_data:
+            shop_performance['Shop A'] = {
+                'total_orders': laundry_data['shop_a_stats'].get('total_orders', 0),
+                'completed_orders': laundry_data['shop_a_stats'].get('completed_orders', 0),
+                'total_revenue': laundry_data['shop_a_stats'].get('revenue', 0),
+                'total_expenses': laundry_data['shop_a_stats'].get('total_expenses', 0),
+                'net_profit': laundry_data['shop_a_stats'].get('net_profit', 0),
+                'business_type': 'Laundry'
+            }
+        if 'shop_b_stats' in laundry_data:
+            shop_performance['Shop B'] = {
+                'total_orders': laundry_data['shop_b_stats'].get('total_orders', 0),
+                'completed_orders': laundry_data['shop_b_stats'].get('completed_orders', 0),
+                'total_revenue': laundry_data['shop_b_stats'].get('revenue', 0),
+                'total_expenses': laundry_data['shop_b_stats'].get('total_expenses', 0),
+                'net_profit': laundry_data['shop_b_stats'].get('net_profit', 0),
+                'business_type': 'Laundry'
+            }
+
+        # Hotel performance
+        shop_performance['Hotel'] = {
+            'total_orders': hotel_total_orders,
+            'completed_orders': hotel_served_orders,
+            'total_revenue': hotel_total_revenue,
+            'total_expenses': hotel_expenses,
+            'net_profit': hotel_profit,
+            'business_type': 'Hotel'
+        }
+
+    # ===== CONTEXT =====
+    context = {
+        'user_shops': user_shops,
+        'hotel_total_revenue': hotel_total_revenue,
+        'hotel_expenses': hotel_expenses,
+        'hotel_profit': hotel_profit,
+        'hotel_total_orders': hotel_total_orders,
+        'hotel_served_orders': hotel_served_orders,
+        'hotel_in_progress_orders': hotel_in_progress_orders,
+        'recent_hotel_orders': recent_hotel_orders,
+        'laundry_total_revenue': laundry_total_revenue,
+        'laundry_total_expenses': laundry_total_expenses,
+        'laundry_profit': laundry_profit,
+        'laundry_total_orders': laundry_total_orders,
+        'laundry_pending_orders': laundry_pending_orders,
+        'laundry_completed_orders': laundry_completed_orders,
+        'recent_laundry_orders': recent_laundry_orders,
+        'total_combined_revenue': total_combined_revenue,
+        'total_combined_expenses': total_combined_expenses,
+        'total_combined_profit': total_combined_profit,
+        'shop_performance': shop_performance,
+        'laundry_analytics_data': laundry_data,
+    }
+
+    return render(request, 'Admin/Generaldashboard.html', context)
+
+def Reportsdashboard(request):
     # Initialize DashboardAnalytics with a mock admin instance
     class MockAdmin:
         def get_user_shops(self, request):
@@ -1661,19 +1885,31 @@ def delete_expense_field(request, field_id):
 @shop_required
 def expense_form(request):
     user_shops = get_user_shops(request)
-    
+
     if request.method == "POST":
-        form = ExpenseRecordForm(request.POST, request=request)
-        
+        form = ExpenseRecordForm(request.POST)
+
         if form.is_valid():
-            # Create expense record but don't save yet
             expense_record = form.save(commit=False)
-            
-            # Handle shop assignment based on user type
+
+            # Auto-assign shop based on user type
             if request.user.is_superuser:
-                # Superuser - use the shop they selected in the form
-                # The shop should be saved from the form field
-                pass  # Form will handle it automatically since it's included
+                # For superuser, check if shop is provided in form data
+                shop = request.POST.get('shop')
+                if shop:
+                    expense_record.shop = shop
+                else:
+                    # If no shop provided, use the first available shop or show error
+                    if user_shops and len(user_shops) == 1:
+                        expense_record.shop = user_shops[0]
+                    else:
+                        messages.error(request, "Please select a shop for this expense.")
+                        context = {
+                            "form": form,
+                            "user_shop": user_shops[0] if user_shops else '',
+                            "is_superuser": request.user.is_superuser,
+                        }
+                        return render(request, "expenses/expense_form.html", context)
             else:
                 # Staff user - auto-assign their shop
                 if user_shops and len(user_shops) == 1:
@@ -1681,22 +1917,20 @@ def expense_form(request):
                 else:
                     messages.error(request, "Unable to determine your shop assignment.")
                     return redirect("laundry:expense_list")
-            
+
             expense_record.save()
             messages.success(request, "Expense recorded successfully!")
             return redirect("laundry:expense_list")
     else:
-        form = ExpenseRecordForm(request=request)
-        # Pre-fill the shop for superusers if they have a default shop
-        if request.user.is_superuser and user_shops and len(user_shops) == 1:
-            form.fields['business'].initial = user_shops[0]
-    
+        form = ExpenseRecordForm()
+
     context = {
         "form": form,
         "user_shop": user_shops[0] if user_shops else '',
         "is_superuser": request.user.is_superuser,
     }
     return render(request, "expenses/expense_form.html", context)
+
 @login_required
 def expense_list(request):
     records = ExpenseRecord.objects.select_related("field").order_by("-date")

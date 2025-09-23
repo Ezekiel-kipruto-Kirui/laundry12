@@ -257,12 +257,14 @@ class OrderItemForm(forms.ModelForm):
 from .models import ExpenseField, ExpenseRecord
 
 
-# forms.py - Update ExpenseRecordForm
 class ExpenseRecordForm(forms.ModelForm):
     class Meta:
         model = ExpenseRecord
-        fields = ['field', 'amount', 'notes']  # Remove 'shop' from fields
+        fields = ['shop', 'field', 'amount', 'notes']  # shop included
         widgets = {
+            'shop': forms.Select(attrs={
+                'class': 'w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500'
+            }),
             'field': forms.Select(attrs={
                 'class': 'w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500'
             }),
@@ -275,14 +277,16 @@ class ExpenseRecordForm(forms.ModelForm):
                 'rows': 3
             }),
         }
-    
+
     def __init__(self, *args, **kwargs):
-        self.request = kwargs.pop('request', None)
+        request = kwargs.pop('request', None)
         super().__init__(*args, **kwargs)
-        
-        # Remove shop field from the form since it will be auto-assigned
-        if 'shop' in self.fields:
-            del self.fields['shop']
+
+        if request:
+            if not request.user.is_superuser:
+                # Hide shop from staff, enforce their shop
+                if 'shop' in self.fields:
+                    self.fields['shop'].widget = forms.HiddenInput()
 
 class ExpenseFieldForm(forms.ModelForm):
     class Meta:

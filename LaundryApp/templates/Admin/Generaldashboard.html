@@ -1,0 +1,369 @@
+{% extends "../home.html" %}
+{% load static %}
+{% load humanize %}
+
+{% block extrahead %}
+<style>
+    :root {
+        --primary: #4f46e5;
+        --primary-light: #6366f1;
+        --primary-dark: #4338ca;
+        --success: #10b981;
+        --warning: #f59e0b;
+        --info: #3b82f6;
+        --danger: #ef4444;
+        --secondary: #8b5cf6;
+        --gray-50: #f9fafb;
+        --gray-100: #f3f4f6;
+        --gray-200: #e5e7eb;
+        --gray-300: #d1d5db;
+        --gray-700: #374151;
+        --gray-900: #111827;
+    }
+
+    .dashboard-container {
+        margin: 0 auto;
+        padding: 1.5rem 1rem;
+    }
+
+    .stats-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+        gap: 1.5rem;
+        margin-bottom: 2rem;
+    }
+
+    .stat-card {
+        background: white;
+        border-radius: 16px;
+        padding: 1.5rem;
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
+        transition: all 0.3s ease;
+        position: relative;
+        overflow: hidden;
+        border-left: 4px solid;
+        display: flex;
+        align-items: center;
+        height: 100%;
+    }
+
+    .stat-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.08), 0 10px 10px -5px rgba(0, 0, 0, 0.02);
+    }
+
+    .stat-card::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 4px;
+        background: linear-gradient(90deg, rgba(255, 255, 255, 0.3) 0%, rgba(255, 255, 255, 0.1) 100%);
+    }
+
+    .stat-icon {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 60px;
+        height: 60px;
+        border-radius: 12px;
+        margin-right: 1rem;
+        flex-shrink: 0;
+    }
+
+    .stat-content {
+        flex: 1;
+    }
+
+    .stat-label {
+        font-size: 0.875rem;
+        font-weight: 500;
+        color: #6b7280;
+        margin-bottom: 0.25rem;
+    }
+
+    .stat-value {
+        font-size: 1.875rem;
+        font-weight: 700;
+        color: #1f2937;
+        line-height: 1;
+    }
+
+    .revenue {
+        border-left-color: #4f46e5;
+    }
+
+    .revenue .stat-icon {
+        background-color: rgba(79, 70, 229, 0.1);
+    }
+
+    .laundry-profit {
+        border-left-color: #f59e0b;
+    }
+
+    .laundry-profit .stat-icon {
+        background-color: rgba(245, 158, 11, 0.1);
+    }
+
+    .hotel-profit {
+        border-left-color: #10b981;
+    }
+
+    .hotel-profit .stat-icon {
+        background-color: rgba(16, 185, 129, 0.1);
+    }
+
+    .total-profit {
+        border-left-color: #8b5cf6;
+    }
+
+    .total-profit .stat-icon {
+        background-color: rgba(139, 92, 246, 0.1);
+    }
+
+    .content-grid {
+        display: grid;
+        grid-template-columns: 1fr;
+        gap: 2rem;
+    }
+
+    @media (min-width: 1024px) {
+        .content-grid {
+            grid-template-columns: 1fr 2fr;
+        }
+    }
+
+    .card {
+        background: white;
+        border-radius: 16px;
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
+        overflow: hidden;
+    }
+
+    .card-header {
+        padding: 1.25rem 1.5rem;
+        border-bottom: 1px solid #f3f4f6;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        background-color: #f9fafb;
+    }
+
+    .card-title {
+        font-size: 1.125rem;
+        font-weight: 600;
+        color: #111827;
+    }
+
+    .card-body {
+        padding: 0;
+    }
+
+    .quick-action {
+        display: flex;
+        align-items: center;
+        padding: 1rem 1.5rem;
+        transition: all 0.2s ease;
+        border-bottom: 1px solid #f9fafb;
+    }
+
+    .quick-action:last-child {
+        border-bottom: none;
+    }
+
+    .quick-action:hover {
+        background-color: #f9fafb;
+        transform: translateX(4px);
+    }
+
+    .quick-action-icon {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 40px;
+        height: 40px;
+        border-radius: 10px;
+        margin-right: 1rem;
+        flex-shrink: 0;
+    }
+
+    .quick-action-content {
+        flex: 1;
+    }
+
+    .quick-action-title {
+        font-size: 0.875rem;
+        font-weight: 500;
+        color: #111827;
+        margin-bottom: 0.25rem;
+    }
+
+    .quick-action-desc {
+        font-size: 0.75rem;
+        color: #6b7280;
+    }
+
+    .profit-positive {
+        color: #10b981;
+    }
+
+    .profit-negative {
+        color: #ef4444;
+    }
+
+    @media (max-width: 768px) {
+        .dashboard-container {
+            padding: 1rem 0.5rem;
+        }
+
+        .stats-grid {
+            grid-template-columns: 1fr;
+            gap: 1rem;
+        }
+
+        .stat-card {
+            padding: 1.25rem;
+        }
+
+        .stat-icon {
+            width: 50px;
+            height: 50px;
+        }
+
+        .stat-value {
+            font-size: 1.5rem;
+        }
+
+        .card-header {
+            padding: 1rem 1.25rem;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="dashboard-container">
+    <!-- Stats Section -->
+    <div class="stats-grid">
+        <!-- Total Revenue Card -->
+        <div class="stat-card revenue">
+            <div class="stat-icon">
+                <svg class="h-6 w-6 text-indigo-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
+                    stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+            </div>
+            <div class="stat-content">
+                <div class="stat-label">Total Revenue</div>
+                <div class="stat-value">Ksh {{ total_revenue|default:0|floatformat:2|intcomma }}</div>
+            </div>
+        </div>
+
+        <!-- Laundry Profit Card -->
+        <div class="stat-card laundry-profit">
+            <div class="stat-icon">
+                <svg class="h-6 w-6 text-amber-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
+                    stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
+                </svg>
+            </div>
+            <div class="stat-content">
+                <div class="stat-label">Laundry Profit</div>
+                <div class="stat-value {% if laundry_profit >= 0 %}profit-positive{% else %}profit-negative{% endif %}">
+                    Ksh {{ laundry_profit|default:0|floatformat:2|intcomma }}
+                </div>
+            </div>
+        </div>
+
+        <!-- Hotel Profit Card -->
+        <div class="stat-card hotel-profit">
+            <div class="stat-icon">
+                <svg class="h-6 w-6 text-green-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
+                    stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M8 14v3m4-3v3m4-3v3M3 21h18M3 10h18M3 7l9-4 9 4M4 10h16v11H4V10z" />
+                </svg>
+            </div>
+            <div class="stat-content">
+                <div class="stat-label">Hotel Profit</div>
+                <div class="stat-value {% if hotel_profit >= 0 %}profit-positive{% else %}profit-negative{% endif %}">
+                    Ksh {{ hotel_profit|default:0|floatformat:2|intcomma }}
+                </div>
+            </div>
+        </div>
+
+        <!-- Total Profit Card -->
+        <div class="stat-card total-profit">
+            <div class="stat-icon">
+                <svg class="h-6 w-6 text-purple-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
+                    stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                </svg>
+            </div>
+            <div class="stat-content">
+                <div class="stat-label">Total Profit</div>
+                <div class="stat-value {% if total_profit >= 0 %}profit-positive{% else %}profit-negative{% endif %}">
+                    Ksh {{ total_profit|default:0|floatformat:2|intcomma }}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Quick Actions -->
+    <div class="content-grid">
+        <div class="card">
+            <div class="card-header">
+                <h3 class="card-title">Quick Actions</h3>
+            </div>
+            <div class="card-body">
+                <a href="{% url 'laundry:createorder' %}" class="quick-action">
+                    <div class="quick-action-icon bg-blue-100">
+                        <svg class="h-5 w-5 text-blue-600" xmlns="http://www.w3.org/2000/svg" fill="none"
+                            viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                        </svg>
+                    </div>
+                    <div class="quick-action-content">
+                        <p class="quick-action-title">Create New Order</p>
+                        <p class="quick-action-desc">Add a new laundry order</p>
+                    </div>
+                </a>
+
+                <a href="{% url 'laundry:customordertable' %}" class="quick-action">
+                    <div class="quick-action-icon bg-amber-100">
+                        <svg class="h-5 w-5 text-amber-600" xmlns="http://www.w3.org/2000/svg" fill="none"
+                            viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+                        </svg>
+                    </div>
+                    <div class="quick-action-content">
+                        <p class="quick-action-title">View Orders</p>
+                        <p class="quick-action-desc">Manage all laundry orders</p>
+                    </div>
+                </a>
+
+                <a href="{% url 'laundry:customer_management' %}" class="quick-action">
+                    <div class="quick-action-icon bg-green-100">
+                        <svg class="h-5 w-5 text-green-600" xmlns="http://www.w3.org/2000/svg" fill="none"
+                            viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+                        </svg>
+                    </div>
+                    <div class="quick-action-content">
+                        <p class="quick-action-title">Manage Customers</p>
+                        <p class="quick-action-desc">View and edit customer information</p>
+                    </div>
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
