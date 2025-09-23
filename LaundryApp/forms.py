@@ -15,7 +15,7 @@ from .models import (
     ExpenseField,
     ExpenseRecord,
     LaundryProfile,
-    Business
+ 
 )
 
 User = get_user_model()
@@ -227,80 +227,21 @@ class OrderItemForm(forms.ModelForm):
 # forms.py
 
 
-from django import forms
-from .models import ExpenseField, ExpenseRecord, Business
 
-class BusinessForm(forms.ModelForm):
-    class Meta:
-        model = Business
-        fields = ['name']
-        widgets = {
-            'name': forms.TextInput(attrs={
-                'class': 'w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500',
-                'placeholder': 'Enter business name'
-            }),
-        }
+from .models import ExpenseField, ExpenseRecord
 
-class ExpenseFieldForm(forms.ModelForm):
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-
-        # Show all businesses, since this system is for one client
-        self.fields['business'] = forms.ModelChoiceField(
-            queryset=Business.objects.all(),
-            empty_label="Select Business",
-            widget=forms.Select(attrs={
-                'class': 'w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500'
-            })
-        )
-
-    class Meta:
-        model = ExpenseField
-        fields = ['business', 'label']
-        widgets = {
-            'label': forms.TextInput(attrs={
-                'class': 'w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500'
-            }),
-        }
 
 class ExpenseRecordForm(forms.ModelForm):
-    def __init__(self, *args, **kwargs):
-        user = kwargs.pop('user', None)
-        super().__init__(*args, **kwargs)
-        
-        if user:
-            # Filter fields by user's businesses
-            business_id = self.data.get('business') if self.data else None
-            if business_id:
-                self.fields['field'] = forms.ModelChoiceField(
-                    queryset=ExpenseField.objects.filter(business_id=business_id),
-                    empty_label="Select Expense Category",
-                    widget=forms.Select(attrs={
-                        'class': 'w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500'
-                    })
-                )
-            
-            self.fields['business'] = forms.ModelChoiceField(
-                queryset=Business.objects.filter(owner=user),
-                empty_label="Select Business",
-                widget=forms.Select(attrs={
-                    'class': 'w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500',
-                    'onchange': 'this.form.submit()'  # Auto-submit when business changes
-                })
-            )
-    
+  
     class Meta:
         model = ExpenseRecord
-        fields = ['business', 'field', 'amount', 'date']
+        fields = [ 'field', 'amount']
         widgets = {
             'amount': forms.NumberInput(attrs={
                 'class': 'w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500',
                 'step': '0.01'
             }),
-            'date': forms.DateInput(attrs={
-                'class': 'w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500',
-                'type': 'date'
-            }),
+           
             'notes': forms.Textarea(attrs={
                 'class': 'w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500',
                 'rows': 3
@@ -308,47 +249,14 @@ class ExpenseRecordForm(forms.ModelForm):
         }
 
 
-# class ExpenseFieldForm(forms.ModelForm):
-#     class Meta:
-#         model = ExpenseField
-#         fields = ['label',]
-#         widgets = {
-#             'label': forms.TextInput(attrs={
-#                 'class': 'w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500'
-#             }),
-           
-#         }
-
-# class ExpenseRecordForm(forms.ModelForm):
-    business = forms.ModelChoiceField(
-        queryset=Business.objects.all(),
-        widget=forms.Select(attrs={
-            'class': 'w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500'
-        })
-    )
-    
+class ExpenseFieldForm(forms.ModelForm):
     class Meta:
-        model = ExpenseRecord
-        fields = ['business', 'field', 'amount']
+        model = ExpenseField
+        fields = ['label',]
         widgets = {
-            'field': forms.Select(attrs={
+            'label': forms.TextInput(attrs={
                 'class': 'w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500'
             }),
-            'amount': forms.NumberInput(attrs={
-                'class': 'w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500',
-                'step': '0.01'
-            }),
+           
         }
-    
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        # Filter businesses to only show those owned by the current user
-        self.fields['business'].queryset = Business.objects.filter(owner=self.initial.get('owner'))
-        
-        # Filter fields based on selected business (if any)
-        if 'business' in self.data:
-            try:
-                business_id = int(self.data.get('business'))
-                self.fields['field'].queryset = ExpenseField.objects.filter(business_id=business_id)
-            except (ValueError, TypeError):
-                pass
+

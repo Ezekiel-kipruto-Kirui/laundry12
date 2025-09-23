@@ -1,6 +1,6 @@
 from django import forms
 from django.core.exceptions import ValidationError
-from .models import FoodCategory, FoodItem, Order, OrderItem,Business,ExpenseField,ExpenseRecord
+from .models import FoodCategory, FoodItem, Order, OrderItem,HotelExpenseField,HotelExpenseRecord
 
 class FoodCategoryForm(forms.ModelForm):
     class Meta:
@@ -150,117 +150,36 @@ class BulkOrderForm(forms.Form):
         super().__init__(*args, **kwargs)
         # Customize the display of each checkbox
         self.fields['items'].label_from_instance = lambda obj: f"{obj.name} - ${obj.price} ({obj.quantity} available)"
-class BusinessForm(forms.ModelForm):
-    class Meta:
-        model = Business
-        fields = ['name']
-        widgets = {
-            'name': forms.TextInput(attrs={
-                'class': 'w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500',
-                'placeholder': 'Enter business name'
-            }),
-        }
-from django import forms
-from .models import Business, ExpenseField, ExpenseRecord
 
-class BusinessForm(forms.ModelForm):
+   
+
+
+class HotelExpenseRecordForm(forms.ModelForm):
+  
     class Meta:
-        model = Business
-        fields = ['name']
+        model = HotelExpenseRecord
+        fields = [ 'field', 'amount']
         widgets = {
-            'name': forms.TextInput(attrs={
+            'amount': forms.NumberInput(attrs={
                 'class': 'w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500',
-                'placeholder': 'Enter business name'
+                'step': '0.01'
+            }),
+           
+            'notes': forms.Textarea(attrs={
+                'class': 'w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500',
+                'rows': 3
             }),
         }
+
 
 class ExpenseFieldForm(forms.ModelForm):
-    def __init__(self, *args, **kwargs):
-        business_id = kwargs.pop('business_id', None)
-        super().__init__(*args, **kwargs)
-        
-        if business_id:
-            self.fields['business'].queryset = Business.objects.filter(id=business_id)
-            self.fields['business'].initial = business_id
-
     class Meta:
-        model = ExpenseField
-        fields = ['business', 'label']
+        model = HotelExpenseField
+        fields = ['label',]
         widgets = {
-            'business': forms.Select(attrs={
-                'class': 'w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500'
-            }),
             'label': forms.TextInput(attrs={
-                'class': 'w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500',
-                'placeholder': 'Enter field name (e.g., Rent, Utilities)'
+                'class': 'w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500'
             }),
+           
         }
 
-class ExpenseRecordForm(forms.ModelForm):
-    def __init__(self, *args, **kwargs):
-        business_id = kwargs.pop('business_id', None)
-        super().__init__(*args, **kwargs)
-        
-        if business_id:
-            self.fields['business'].queryset = Business.objects.filter(id=business_id)
-            self.fields['business'].initial = business_id
-            self.fields['expense_field'].queryset = ExpenseField.objects.filter(business_id=business_id)
-
-    class Meta:
-        model = ExpenseRecord
-        fields = ['business', 'expense_field', 'amount', 'description', 'date']
-        widgets = {
-            'business': forms.Select(attrs={
-                'class': 'w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500'
-            }),
-            'expense_field': forms.Select(attrs={
-                'class': 'w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500'
-            }),
-            'amount': forms.NumberInput(attrs={
-                'class': 'w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500',
-                'placeholder': '0.00',
-                'step': '0.01'
-            }),
-            'description': forms.Textarea(attrs={
-                'class': 'w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500',
-                'placeholder': 'Enter description (optional)',
-                'rows': 3
-            }),
-            'date': forms.DateInput(attrs={
-                'class': 'w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500',
-                'type': 'date'
-            }),
-        }
-    def __init__(self, *args, **kwargs):
-        business_id = kwargs.pop('business_id', None)
-        super().__init__(*args, **kwargs)
-        
-        if business_id:
-            self.fields['expense_field'].queryset = ExpenseField.objects.filter(business_id=business_id)
-            self.fields['business'].initial = business_id
-
-    class Meta:
-        model = ExpenseRecord
-        fields = ['business', 'expense_field', 'amount', 'description', 'expense_date']
-        widgets = {
-            'business': forms.Select(attrs={
-                'class': 'w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500'
-            }),
-            'expense_field': forms.Select(attrs={
-                'class': 'w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500'
-            }),
-            'amount': forms.NumberInput(attrs={
-                'class': 'w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500',
-                'placeholder': 'Enter amount',
-                'step': '0.01'
-            }),
-            'description': forms.Textarea(attrs={
-                'class': 'w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500',
-                'placeholder': 'Enter description (optional)',
-                'rows': 3
-            }),
-            'expense_date': forms.DateInput(attrs={
-                'class': 'w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500',
-                'type': 'date'
-            }),
-        }

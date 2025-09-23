@@ -23,7 +23,7 @@
                 {% endfor %}
             </div>
 
-        <form method="post">
+        <form method="post" action="">
             {% csrf_token %}
         
             <!-- Business dropdown -->
@@ -42,24 +42,18 @@
             <h3 class="text-lg font-semibold text-gray-800 mb-4">Create Custom Expense Category</h3>
 
             <form method="post">
-                {% csrf_token %}
-                <label for="business" class="block text-sm font-medium text-gray-700 mb-1">Select Business</label>
-              
-                <input
-                
-                type="text"  class="w-full px-3 py-2 mb-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
-                   
-                  
-                    
-                    
-                    
-                
+                {% csrf_token %}           
+                <!-- Input for one or multiple expense fields -->
+                <label for="labels" class="block text-sm font-medium text-gray-700 mb-1">Expense Field(s)</label>
+                <input type="text" name="labels" id="labels" placeholder="e.g. Rent, Electricity, Water" required
+                    class="w-full px-3 py-2 mb-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
             
-                <button type="submit" name="create_defaults"
+                <button type="submit"
                     class="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700">
-                   Add Category
+                    Add Category
                 </button>
             </form>
+
 
         </div>
     </div>

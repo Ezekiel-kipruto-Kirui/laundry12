@@ -66,7 +66,7 @@
     <h2 class="text-xl font-semibold text-gray-800 mb-4 pl-3 border-l-4 border-pink-500 flex items-center gap-2">
         <i class="fas fa-store text-pink-500"></i> General
     </h2>
-    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+    <div class="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-4 mb-8">
 
         <!-- Total Revenue -->
         <div
@@ -93,8 +93,16 @@
                 </div>
             </div>
             <div>
-                <h3 class="text-sm font-semibold text-gray-500 uppercase tracking-wide">Total Orders</h3>
-                <div class="text-2xl font-bold text-gray-800 mt-1">{{ total_orders }}</div>
+                <h3 class="text-sm font-semibold text-gray-500 uppercase tracking-wide">Orders</h3>
+                <div>
+                   
+                    <div class="text-2xl font-bold text-gray-800 mt-1">{{ total_orders }}</div>
+                    <span class="text-yellow-500">{{ pending_orders }} pending</span> •
+                    <span class="text-blue-500">{{ completed_orders }} Completed</span>
+                    
+                    
+                </div>
+                <div class="text-2xl font-bold text-gray-800 mt-1"></div>
                 <div class="text-xs text-gray-500 mt-1">All time orders</div>
             </div>
         </div>
@@ -108,26 +116,15 @@
                 </div>
             </div>
             <div>
-                <h3 class="text-sm font-semibold text-gray-500 uppercase tracking-wide">Pending Orders</h3>
-                <div class="text-2xl font-bold text-gray-800 mt-1">{{ pending_orders }}</div>
+                <h3 class="text-sm font-semibold text-gray-500 uppercase tracking-wide">Pending payment Balance</h3>
+                <div class="text-2xl font-bold text-gray-800 mt-1">{{ total_balance_amount }}</div>
+                
                 <div class="text-xs text-gray-500 mt-1">Awaiting processing</div>
             </div>
         </div>
 
         <!-- Completed Orders -->
-        <div
-            class="bg-white rounded-xl p-4 shadow-sm transition-all duration-300 hover:shadow-md border-l-4 border-blue-500">
-            <div class="flex items-center justify-between mb-4">
-                <div class="w-10 h-10 rounded-lg bg-blue-50 flex items-center justify-center">
-                    <i class="fas fa-check-circle text-blue-500 text-lg"></i>
-                </div>
-            </div>
-            <div>
-                <h3 class="text-sm font-semibold text-gray-500 uppercase tracking-wide">Completed Orders</h3>
-                <div class="text-2xl font-bold text-gray-800 mt-1">{{ completed_orders }}</div>
-                <div class="text-xs text-gray-500 mt-1">Successfully delivered</div>
-            </div>
-        </div>
+        
     </div>
 
     <!-- Shop A Stats -->
@@ -179,10 +176,10 @@
                 </div>
                 <div>
                     <h3 class="text-sm font-semibold text-gray-500 uppercase tracking-wide">Payments</h3>
-                    <div class="text-2xl font-bold text-gray-800 mt-1">{{ shop_a_completed_order }}</div>
-                    <span class="text-yellow-500">{{ pending_payments }} pending</span> •
-                    <span class="text-blue-500">{{ partial_payments }} Partial</span>
-                    <span class="text-blue-500">{{ partial_payments }} completed</span>
+                    <div class="text-2xl font-bold text-gray-800 mt-1">{{ shop_a_total_balance }}</div>
+                    <span class="text-yellow-500">{{ shop_a_pending_payments }} pending</span> •
+                    <span class="text-blue-500">{{ shop_a_partial_payments }} Partial</span>
+                    <span class="text-blue-500">{{ shop_a_complete_payments }} completed</span>
                     <div class="text-xs text-gray-500 mt-1">Advanced payments</div>
                 </div>
             </div>
@@ -239,12 +236,12 @@
                 </div>
                 <div>
                     <h3 class="text-sm font-semibold text-gray-500 uppercase tracking-wide">Payments</h3>
-                    <div class="text-2xl font-bold text-gray-800 mt-1">{{ shop_b_completed_orders }}</div>
-                    {% for shop, stats in shop_payment_stats.items %}
-                    <span class="text-yellow-500"> {{ stats.pending }} (KSh {{ stats.pending_amount }}) pending</span> •
-                    <span class="text-blue-500">{{ stats.partial }} (KSh {{ stats.partial_amount }}) Partial</span>•
-                    <span class="text-blue-500">{{ stats.complete }} (KSh {{ stats.collected_amount }}) completed</span>
-                    {% endfor %}
+                    <div class="text-2xl font-bold text-gray-800 mt-1">{{ shop_b_total_balanc }}</div>
+                    
+                    <span class="text-yellow-500"> {{ shop_b_pending_payments }} pending</span> •
+                    <span class="text-blue-500">{{ shop_b_partial_payments }} Partial</span>•
+                    <span class="text-blue-500">{{ shop_b_complete_payments }} completed</span>
+                   
                     <div class="text-xs text-gray-500 mt-1">Advanced payments</div>
                 </div>
             </div>

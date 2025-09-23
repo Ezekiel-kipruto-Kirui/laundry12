@@ -214,9 +214,7 @@ class Order(models.Model):
 
 class OrderItem(models.Model):
     """Individual items/services within an order"""
-    order = models.ForeignKey(Order, on_delete=models.CASCADE,
-                              related_name='items', db_index=True)
-
+    order = models.ForeignKey(Order, on_delete=models.CASCADE,related_name='items', db_index=True)
     SERVICE_TYPES = (
         ('Washing', 'Washing'),
         ('Folding', 'Folding'),
@@ -288,33 +286,28 @@ class OrderItem(models.Model):
         return f"{self.quantity} x {', '.join(items)} ({self.servicetype})"
 
 
-class Business(models.Model):
-    name = models.CharField(max_length=150, unique=True, db_index=True)
-    created_at = models.DateTimeField(auto_now_add=True)
-
-    def __str__(self):
-        return self.name
-
 class ExpenseField(models.Model):
-    business = models.ForeignKey(Business, on_delete=models.CASCADE, related_name="expense_fields")
     label = models.CharField(max_length=100, db_index=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
-        unique_together = ('business', 'label')  # Prevent duplicate labels per business
+        unique_together = ('label',)  # Prevent duplicate labels
 
     def __str__(self):
-        return f"{self.label} ({self.business.name})"
+        return self.label
+
 
 class ExpenseRecord(models.Model):
-    field = models.ForeignKey(ExpenseField, on_delete=models.CASCADE, db_index=True)
+    field = models.ForeignKey(
+        ExpenseField, on_delete=models.CASCADE, related_name="records", db_index=True
+    )
     amount = models.DecimalField(max_digits=10, decimal_places=2)
     date = models.DateField(auto_now_add=True, db_index=True)
-    notes = models.CharField(max_length=150,null=True)
-    business = models.ForeignKey(Business, on_delete=models.CASCADE, related_name='expense_records')
+    notes = models.CharField(max_length=150, null=True, blank=True)
 
     def __str__(self):
-        return f"{self.field.label}: {self.amount} ({self.business.name})"
+        return f"{self.field.label}: {self.amount}"
+
 
 class Payment(models.Model):
     order = models.OneToOneField(Order, on_delete=models.CASCADE,

@@ -1,0 +1,43 @@
+{% extends "../home.html" %}
+
+{% block title %}{% if field %}Edit{% else %}Create{% endif %} Expense Field - Expense Manager{% endblock %}
+
+{% block content %}
+<div class="max-w-md mx-auto">
+    <h1 class="text-2xl font-bold text-gray-800 mb-6">{% if field %}Edit{% else %}Create{% endif %} Expense Field</h1>
+
+    <div class="bg-white shadow-md rounded-lg p-6">
+        <form method="post">
+            {% csrf_token %}
+
+            <div class="mb-4">
+                <label for="{{ form.label.id_for_label }}"
+                    class="block text-sm font-medium text-gray-700 mb-1">Label</label>
+                {{ form.label }}
+                {% if form.label.errors %}
+                <p class="text-red-500 text-xs mt-1">{{ form.label.errors.0 }}</p>
+                {% endif %}
+            </div>
+
+            <div class="mb-4">
+                <label for="{{ form.description.id_for_label }}"
+                    class="block text-sm font-medium text-gray-700 mb-1">Description</label>
+                {{ form.description }}
+                {% if form.description.errors %}
+                <p class="text-red-500 text-xs mt-1">{{ form.description.errors.0 }}</p>
+                {% endif %}
+            </div>
+
+            <div class="flex space-x-3">
+                <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg">
+                    {% if field %}Update{% else %}Create{% endif %} Field
+                </button>
+                <a href="{% url 'hotel:expense_field_list' %}"
+                    class="bg-gray-300 hover:bg-gray-400 text-gray-800 px-4 py-2 rounded-lg">
+                    Cancel
+                </a>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

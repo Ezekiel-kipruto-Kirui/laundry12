@@ -37,7 +37,7 @@ from .models import (
     ExpenseField, 
     ExpenseRecord, 
     LaundryProfile,
-    Business
+  
     )
 from .forms import ( 
     CustomerForm, 
@@ -1042,28 +1042,22 @@ def user_add(request):
                         user.is_staff = False
                         user.is_superuser = False
 
-                    # Assign app_type and user_type directly on the user
                     user.user_type = user_type
                     user.app_type = app_type
                     user.save()
 
-                    # Create LaundryProfile only if app_type is laundry and user is not superuser
+                    # ✅ Enforce laundry shop assignment
                     if app_type == 'laundry' and not user.is_superuser:
                         if laundry_form.is_valid():
-                            LaundryProfile.objects.create(
-                                user=user,
-                                shop=laundry_form.cleaned_data['shop']
-                            )
+                            laundry_profile = laundry_form.save(commit=False)
+                            laundry_profile.user = user
+                            laundry_profile.save()
                         else:
-                            raise Exception("Please select a valid shop for laundry users")
-                    
-                    # For hotel users, you might want to create a HotelProfile or handle differently
-                    # Add this section for hotel users:
+                            # Debug: show why it's invalid
+                            messages.error(request, f"Laundry form errors: {laundry_form.errors}")
+                            raise Exception("Please select a valid shop for laundry users.")
+
                     elif app_type == 'hotel':
-                        # Create HotelProfile or perform any hotel-specific setup
-                        # Example: HotelProfile.objects.create(user=user, hotel=...)
-                        # If you don't have a HotelProfile model yet, you can just pass
-                        # or add any hotel-specific initialization here
                         pass
 
                 messages.success(request, f"User {user.email} created successfully!")
@@ -1085,6 +1079,8 @@ def user_add(request):
         "laundry_form": laundry_form,
         "title": "Add New User"
     })
+
+
 @login_required
 @admin_required
 def user_edit(request, pk):
@@ -1556,6 +1552,7 @@ def customer_orders(request, pk):
     
     return render(request, 'Admin/customer_orders.html', context) 
 
+
 @login_required
 def create_expense_field(request):
     default_expenses = [
@@ -1571,29 +1568,22 @@ def create_expense_field(request):
         "Salaries",
         "Delivery fees",
         "Tags",
-        "Machine service fee"
+        "Machine service fee",
     ]
 
     if request.method == "POST":
-        # Case 1: Create default categories for a specific business
+        # Case 1: Create default categories (for single business)
         if 'create_defaults' in request.POST:
-            business_id = request.POST.get("business")  # business must be selected
-            if not business_id:
-                messages.error(request, "Please select a business first.")
-                return redirect("laundry:create_expense_field")
-
-            business = get_object_or_404(Business, id=business_id)
-
             created_count = 0
-            for expense_name in default_expenses:
-                if not ExpenseField.objects.filter(business=business, label=expense_name).exists():
-                    ExpenseField.objects.create(business=business, label=expense_name)
+            for label in default_expenses:
+                obj, created = ExpenseField.objects.get_or_create(label=label)
+                if created:
                     created_count += 1
 
             if created_count > 0:
-                messages.success(request, f"Successfully created {created_count} default expense categories for {business.name}!")
+                messages.success(request, f"Successfully created {created_count} default expense categories!")
             else:
-                messages.info(request, f"All default expense categories already exist for {business.name}.")
+                messages.info(request, "All default expense categories already exist.")
 
             return redirect("laundry:expense_field_list")
 
@@ -1611,14 +1601,12 @@ def create_expense_field(request):
         "default_expenses": default_expenses
     })
 
+
 @login_required
 def expense_field_list(request):
     fields = ExpenseField.objects.all()
-    businesses = Business.objects.all().order_by("name")
-    context = {
-        ""
-    }
-    return render(request, "expenses/expense_field_list.html", {"fields": fields,"businesses":businesses})
+    return render(request, "expenses/expense_field_list.html", {"fields": fields})
+
 
 @login_required
 def edit_expense_field(request, field_id):
@@ -1628,10 +1616,11 @@ def edit_expense_field(request, field_id):
         if form.is_valid():
             form.save()
             messages.success(request, "Expense field updated successfully!")
-            return redirect("expense_field_list")
+            return redirect("laundry:expense_field_list")
     else:
         form = ExpenseFieldForm(instance=field)
     return render(request, "expenses/edit_expense_field.html", {"form": form, "field": field})
+
 
 @login_required
 def delete_expense_field(request, field_id):
@@ -1642,28 +1631,29 @@ def delete_expense_field(request, field_id):
         return redirect("laundry:expense_field_list")
     return render(request, "expenses/delete_expense_field.html", {"field": field})
 
+
 @login_required
 def expense_form(request):
     if request.method == "POST":
         form = ExpenseRecordForm(request.POST)
         if form.is_valid():
-            expense_record = form.save(commit=False)
-            expense_record.save()
+            form.save()
             messages.success(request, "Expense recorded successfully!")
             return redirect("laundry:expense_list")
     else:
         form = ExpenseRecordForm()
     return render(request, "expenses/expense_form.html", {"form": form})
 
+
 @login_required
 def expense_list(request):
     records = ExpenseRecord.objects.select_related("field").order_by("-date")
-    
+
     # Calculate stats for the cards
     total_amount = records.aggregate(Sum('amount'))['amount__sum'] or 0
     record_count = records.count()
     average_expense = records.aggregate(Avg('amount'))['amount__avg'] or 0
-    
+
     context = {
         "records": records,
         "total_amount": total_amount,
@@ -1671,6 +1661,7 @@ def expense_list(request):
         "average_expense": round(average_expense, 2),
     }
     return render(request, "expenses/expense_list.html", context)
+
 
 @login_required
 def edit_expense_record(request, record_id):
@@ -1684,6 +1675,7 @@ def edit_expense_record(request, record_id):
     else:
         form = ExpenseRecordForm(instance=record)
     return render(request, "expenses/edit_expense_record.html", {"form": form, "record": record})
+
 
 @login_required
 def delete_expense_record(request, record_id):

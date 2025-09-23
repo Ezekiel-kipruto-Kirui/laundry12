@@ -1,0 +1,244 @@
+{% extends "../home.html" %}
+
+{% block title %}Expense Records - Expense Manager{% endblock %}
+
+{% block content %}
+<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-6 lg:py-8">
+    <!-- Header Section -->
+    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-6 sm:mb-8">
+        <h1 class="text-2xl sm:text-3xl font-bold text-gray-900 mb-4 sm:mb-0">Expense Records</h1>
+
+        <div class="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-3">
+            <a href="{% url 'hotel:expense_field_list' %}"
+                class="inline-flex items-center justify-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+                <svg class="-ml-1 mr-2 h-5 w-5 text-gray-500" xmlns="http://www.w3.org/2000/svg" fill="none"
+                    viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
+                </svg>
+                <span class="hidden xs:inline">Manage Fields</span>
+                <span class="xs:hidden">Fields</span>
+            </a>
+            <div class="flex space-x-2 sm:space-x-3">
+                <a href="{% url 'hotel:expense_form' %}"
+                    class="flex-1 inline-flex items-center justify-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+                    <svg class="-ml-1 mr-2 h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20"
+                        fill="currentColor">
+                        <path fill-rule="evenodd"
+                            d="M10 5a1 1 0 011 1v3h3a1 1 0 110 2h-3v3a1 1 0 11-2 0v-3H6a1 1 0 110-2h3V6a1 1 0 011-1z"
+                            clip-rule="evenodd" />
+                    </svg>
+                    <span class="hidden xs:inline">Add Expense</span>
+                    <span class="xs:hidden">Expense</span>
+                </a>
+                <a href="{% url 'hotel:createhotel_expense_field' %}"
+                    class="flex-1 inline-flex items-center justify-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+                    <svg class="-ml-1 mr-2 h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20"
+                        fill="currentColor">
+                        <path fill-rule="evenodd"
+                            d="M10 5a1 1 0 011 1v3h3a1 1 0 110 2h-3v3a1 1 0 11-2 0v-3H6a1 1 0 110-2h3V6a1 1 0 011-1z"
+                            clip-rule="evenodd" />
+                    </svg>
+                    <span class="hidden xs:inline">Add Field</span>
+                    <span class="xs:hidden">Field</span>
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Stats Cards - Improved with blue theme -->
+    <div class="grid grid-cols-2 xs:grid-cols-1 gap-3 sm:gap-5 mb-6 sm:mb-8">
+        <!-- Total Expenses Card -->
+        <div class="bg-gradient-to-r from-blue-500 to-blue-600 overflow-hidden shadow rounded-lg text-white">
+            <div class="px-4 py-4 sm:p-5">
+                <div class="flex items-center">
+                    <div class="flex-shrink-0 bg-blue-700 rounded-md p-2 sm:p-3">
+                        <svg class="h-5 w-5 sm:h-6 sm:w-6 text-white" xmlns="http://www.w3.org/2000/svg" fill="none"
+                            viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                    </div>
+                    <div class="ml-4 flex-1 min-w-0">
+                        <dl>
+                            <dt class="text-xs sm:text-sm font-medium text-blue-100 truncate">Total Expenses</dt>
+                            <dd class="flex items-baseline">
+                                <div class="text-lg sm:text-xl font-semibold">Ksh {{ total_amount|default:"0.00" }}
+                                </div>
+                            </dd>
+                        </dl>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Number of Records Card -->
+        <div class="bg-gradient-to-r from-blue-500 to-blue-600 overflow-hidden shadow rounded-lg text-white">
+            <div class="px-4 py-4 sm:p-5">
+                <div class="flex items-center">
+                    <div class="flex-shrink-0 bg-blue-700 rounded-md p-2 sm:p-3">
+                        <svg class="h-5 w-5 sm:h-6 sm:w-6 text-white" xmlns="http://www.w3.org/2000/svg" fill="none"
+                            viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                        </svg>
+                    </div>
+                    <div class="ml-4 flex-1 min-w-0">
+                        <dl>
+                            <dt class="text-xs sm:text-sm font-medium text-blue-100 truncate">Number of Expenses</dt>
+                            <dd class="flex items-baseline">
+                                <div class="text-lg sm:text-xl font-semibold">{{ records.count }}</div>
+                            </dd>
+                        </dl>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Expenses Table - Responsive design -->
+    {% if records %}
+    <div class="bg-white shadow overflow-hidden rounded-lg w-full">
+        <div class="overflow-x-auto w-full">
+            <table class="w-full divide-y divide-gray-200">
+                <thead class="bg-blue-50">
+                    <tr>
+                        <th scope="col"
+                            class="px-4 py-3 text-left text-xs font-medium text-blue-700 uppercase tracking-wider">
+                            Date
+                        </th>
+                        <th scope="col"
+                            class="px-4 py-3 text-left text-xs font-medium text-blue-700 uppercase tracking-wider hidden sm:table-cell">
+                            Category
+                        </th>
+                        <th scope="col"
+                            class="px-4 py-3 text-left text-xs font-medium text-blue-700 uppercase tracking-wider">
+                            Amount
+                        </th>
+                        <th scope="col"
+                            class="px-4 py-3 text-left text-xs font-medium text-blue-700 uppercase tracking-wider hidden md:table-cell">
+                            Notes
+                        </th>
+                        <th scope="col"
+                            class="px-4 py-3 text-right text-xs font-medium text-blue-700 uppercase tracking-wider">
+                            Actions
+                        </th>
+                    </tr>
+                </thead>
+                <tbody class="bg-white divide-y divide-gray-200">
+                    {% for record in records %}
+                    <tr class="hover:bg-blue-50 transition-colors duration-150">
+                        <td class="px-4 py-4 whitespace-nowrap">
+                            <div class="text-sm font-medium text-gray-900">{{ record.date|date:"M d, Y" }}</div>
+                            <div class="text-xs text-gray-500 sm:hidden">{{ record.field.label }}</div>
+                        </td>
+                        <td class="px-4 py-4 whitespace-nowrap hidden sm:table-cell">
+                            <div class="flex items-center">
+                                <div class="flex-shrink-0 h-8 w-8 sm:h-10 sm:w-10">
+                                    <div class="h-8 w-8 sm:h-10 sm:w-10 rounded-full flex items-center justify-center 
+                                        {% if record.field.label == 'Food' %}bg-blue-100 text-blue-800
+                                        {% elif record.field.label == 'Transport' %}bg-blue-200 text-blue-800
+                                        {% elif record.field.label == 'Entertainment' %}bg-blue-300 text-blue-800
+                                        {% elif record.field.label == 'Utilities' %}bg-blue-400 text-blue-800
+                                        {% else %}bg-blue-500 text-white{% endif %}">
+                                        {{ record.field.label|slice:":1" }}
+                                    </div>
+                                </div>
+                                <div class="ml-2 sm:ml-4">
+                                    <div class="text-sm font-medium text-gray-900">{{ record.field.label }}</div>
+                                    <div class="text-xs text-gray-500 hidden md:block">
+                                        <a href="{% url 'hotel:edit_expense_field' record.field.id %}"
+                                            class="text-blue-600 hover:text-blue-800">
+                                            Edit Category
+                                        </a>
+                                    </div>
+                                </div>
+                            </div>
+                        </td>
+                        <td class="px-4 py-4 whitespace-nowrap">
+                            <div class="text-sm font-semibold text-blue-700">Ksh {{ record.amount }}</div>
+                        </td>
+                        <td class="px-4 py-4 hidden md:table-cell">
+                            <div class="text-sm text-gray-500 max-w-xs truncate">{{ record.notes|default:"-" }}</div>
+                        </td>
+                        <td class="px-4 py-4 whitespace-nowrap text-right text-sm font-medium">
+                            <div class="flex justify-center space-x-2">
+                                <a href="{% url 'hotel:edit_expense_record' record.id %}"
+                                    class="text-blue-600 hover:text-blue-800 p-1 rounded-full hover:bg-blue-100 transition-colors duration-150"
+                                    title="Edit">
+                                    <svg class="w-4 h-4 sm:w-5 sm:h-5" fill="none" stroke="currentColor"
+                                        viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                            d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z">
+                                        </path>
+                                    </svg>
+                                </a>
+                                <a href="{% url 'hotel:delete_expense_record' record.id %}"
+                                    class="text-red-600 hover:text-red-800 p-1 rounded-full hover:bg-red-100 transition-colors duration-150"
+                                    title="Delete">
+                                    <svg class="w-4 h-4 sm:w-5 sm:h-5" fill="none" stroke="currentColor"
+                                        viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                            d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16">
+                                        </path>
+                                    </svg>
+                                </a>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Table Footer with Summary -->
+        <div class="bg-blue-50 px-4 py-3 flex items-center justify-between border-t border-blue-200">
+            <div class="text-sm text-blue-700">
+                <p class="sm:hidden">Showing {{ records.paginator.count }} items</p>
+                <p class="hidden sm:block">
+                    Showing <span class="font-medium">{{ records.start_index }}</span> to
+                    <span class="font-medium"> {{ records.end_index }}</span> of
+                    <span class="font-medium">{{ records.paginator.count }}</span>
+                    results
+                </p>
+            </div>
+            <!-- Pagination would go here if implemented -->
+        </div>
+    </div>
+    {% else %}
+    <div class="bg-white overflow-hidden shadow rounded-lg">
+        <div class="px-4 py-8 sm:px-6 text-center">
+            <svg class="mx-auto h-10 w-10 sm:h-12 sm:w-12 text-gray-400" xmlns="http://www.w3.org/2000/svg" fill="none"
+                viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                    d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+            </svg>
+            <h3 class="mt-2 text-sm font-medium text-gray-900">No expenses recorded yet</h3>
+            <p class="mt-1 text-sm text-gray-500 hidden sm:block">Get started by creating expense categories and
+                recording your first expense.</p>
+            <div class="mt-6 space-y-2 sm:space-y-0 sm:space-x-3 sm:flex sm:justify-center">
+                <a href="{% url 'hotel:createhotel_expense_field' %}"
+                    class="w-full sm:w-auto inline-flex items-center justify-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+                    <svg class="-ml-1 mr-2 h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
+                        stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
+                    </svg>
+                    Create Category
+                </a>
+                <a href="{% url 'hotel:expense_form' %}"
+                    class="w-full sm:w-auto inline-flex items-center justify-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+                    <svg class="-ml-1 mr-2 h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20"
+                        fill="currentColor">
+                        <path fill-rule="evenodd"
+                            d="M10 5a1 1 0 011 1v3h3a1 1 0 110 2h-3v3a1 1 0 11-2 0v-3H6a1 1 0 110-2h3V6a1 1 0 011-1z"
+                            clip-rule="evenodd" />
+                    </svg>
+                    Record Expense
+                </a>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

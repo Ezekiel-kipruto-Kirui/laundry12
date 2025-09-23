@@ -1,210 +1,151 @@
-from django.shortcuts import render, get_object_or_404, redirect
+
+from decimal import Decimal
+from django.shortcuts import render, redirect, get_object_or_404
+import logging
+
+
+# Django imports
+from django import forms
 from django.contrib import messages
-from django.db import DatabaseError
-from django.db.models import Sum
-from django.http import JsonResponse, Http404
-from django.views.generic import ListView, CreateView, UpdateView, DeleteView
-from django.urls import reverse_lazy
-from django.core.exceptions import PermissionDenied, ValidationError
-from ..models import Business, ExpenseField, ExpenseRecord
-from ..forms import ExpenseFieldForm, ExpenseRecordForm
+from django.contrib.auth.decorators import login_required
 
-class BusinessListView(ListView):
-    model = Business
-    template_name = 'expenses/business_list.html'
-    context_object_name = 'businesses'
+from django.db.models import Q, Prefetch, Sum, Count, Avg
 
-    def get_queryset(self):
-        try:
-            # Ensure Hotel and Laundry shops exist
-            default_businesses = ['Hotel', 'Laundry Shop']
-            for business_name in default_businesses:
-                Business.objects.get_or_create(name=business_name)
-            return Business.objects.all()
-        except DatabaseError as e:
-            messages.error(self.request, f'Database error: {str(e)}')
-            return Business.objects.none()
-        except Exception as e:
-            messages.error(self.request, f'Unexpected error: {str(e)}')
-            return Business.objects.none()
+from django.contrib.auth import login as auth_login, logout as auth_logout
 
-class ExpenseDashboardView(ListView):
-    model = ExpenseRecord
-    template_name = 'expenses/expense_dashboard.html'
-    context_object_name = 'expense_records'
 
-    def get_queryset(self):
-        try:
-            self.business = get_object_or_404(Business, pk=self.kwargs['business_id'])
-            return ExpenseRecord.objects.filter(
-                business=self.business
-            ).select_related('expense_field').order_by('-expense_date')
-        except DatabaseError as e:
-            messages.error(self.request, f'Database error while loading expenses: {str(e)}')
-            return ExpenseRecord.objects.none()
-        except Exception as e:
-            messages.error(self.request, f'Unexpected error: {str(e)}')
-            return ExpenseRecord.objects.none()
 
-    def get_context_data(self, **kwargs):
-        try:
-            context = super().get_context_data(**kwargs)
-            business = self.business
-            
-            # Total expenses for the business
-            total_expenses = self.get_queryset().aggregate(total=Sum('amount'))['total'] or 0
-            
-            # Expenses by category
-            expenses_by_category = ExpenseRecord.objects.filter(business=business).values(
-                'expense_field__label'
-            ).annotate(
-                total=Sum('amount')
-            ).order_by('-total')
-            
-            # Expense fields for this business
-            expense_fields = ExpenseField.objects.filter(business=business)
-            
-            context.update({
-                'business': business,
-                'total_expenses': total_expenses,
-                'expenses_by_category': expenses_by_category,
-                'expense_fields': expense_fields,
-                'expense_form': ExpenseRecordForm(business_id=business.id),
-                'field_form': ExpenseFieldForm(initial={'business': business})
-            })
-            return context
-        except DatabaseError as e:
-            messages.error(self.request, f'Database error while loading dashboard: {str(e)}')
-            # Return basic context even if there are database errors
-            return {
-                'business': get_object_or_404(Business, pk=self.kwargs['business_id']),
-                'total_expenses': 0,
-                'expenses_by_category': [],
-                'expense_fields': [],
-                'expense_form': ExpenseRecordForm(),
-                'field_form': ExpenseFieldForm()
-            }
-        except Exception as e:
-            messages.error(self.request, f'Unexpected error: {str(e)}')
-            raise Http404("Page not available due to technical issues")
+from django.contrib.auth import get_user_model
 
-class ExpenseFieldCreateView(CreateView):
-    model = ExpenseField
-    form_class = ExpenseFieldForm
-    template_name = 'expenses/expense_field_form.html'
 
-    def form_valid(self, form):
-        try:
-            response = super().form_valid(form)
-            messages.success(self.request, 'Expense category created successfully!')
-            return response
-        except DatabaseError as e:
-            messages.error(self.request, f'Database error: {str(e)}')
-            return self.form_invalid(form)
-        except Exception as e:
-            messages.error(self.request, f'Unexpected error: {str(e)}')
-            return self.form_invalid(form)
 
-    def form_invalid(self, form):
-        messages.error(self.request, 'Please correct the errors below.')
-        return super().form_invalid(form)
-
-    def get_success_url(self):
-        return reverse_lazy('expense_dashboard', kwargs={'business_id': self.object.business.id})
-
-class ExpenseRecordCreateView(CreateView):
-    model = ExpenseRecord
-    form_class = ExpenseRecordForm
-    template_name = 'expenses/expense_record_form.html'
-
-    def get_form_kwargs(self):
-        kwargs = super().get_form_kwargs()
-        kwargs['business_id'] = self.kwargs['business_id']
-        return kwargs
-
-    def form_valid(self, form):
-        try:
-            # Set the business before saving
-            form.instance.business_id = self.kwargs['business_id']
-            response = super().form_valid(form)
-            messages.success(self.request, 'Expense record added successfully!')
-            return response
-        except DatabaseError as e:
-            messages.error(self.request, f'Database error: {str(e)}')
-            return self.form_invalid(form)
-        except Exception as e:
-            messages.error(self.request, f'Unexpected error: {str(e)}')
-            return self.form_invalid(form)
-
-    def form_invalid(self, form):
-        messages.error(self.request, 'Please correct the errors below.')
-        return super().form_invalid(form)
-
-    def get_success_url(self):
-        return reverse_lazy('expense_dashboard', kwargs={'business_id': self.kwargs['business_id']})
-
-class ExpenseRecordUpdateView(UpdateView):
-    model = ExpenseRecord
-    form_class = ExpenseRecordForm
-    template_name = 'expenses/expense_record_form.html'
-
-    def get_form_kwargs(self):
-        kwargs = super().get_form_kwargs()
-        kwargs['business_id'] = self.object.business.id
-        return kwargs
-
-    def form_valid(self, form):
-        try:
-            response = super().form_valid(form)
-            messages.success(self.request, 'Expense record updated successfully!')
-            return response
-        except DatabaseError as e:
-            messages.error(self.request, f'Database error: {str(e)}')
-            return self.form_invalid(form)
-        except Exception as e:
-            messages.error(self.request, f'Unexpected error: {str(e)}')
-            return self.form_invalid(form)
-
-    def form_invalid(self, form):
-        messages.error(self.request, 'Please correct the errors below.')
-        return super().form_invalid(form)
-
-    def get_success_url(self):
-        return reverse_lazy('expense_dashboard', kwargs={'business_id': self.object.business.id})
-
-class ExpenseRecordDeleteView(DeleteView):
-    model = ExpenseRecord
-    template_name = 'expenses/expense_record_confirm_delete.html'
-
-    def delete(self, request, *args, **kwargs):
-        try:
-            messages.success(self.request, 'Expense record deleted successfully!')
-            return super().delete(request, *args, **kwargs)
-        except DatabaseError as e:
-            messages.error(self.request, f'Database error: {str(e)}')
-            return redirect('expense_dashboard', business_id=self.get_object().business.id)
-        except Exception as e:
-            messages.error(self.request, f'Unexpected error: {str(e)}')
-            return redirect('expense_dashboard', business_id=self.get_object().business.id)
-
-    def get_success_url(self):
-        return reverse_lazy('expense_dashboard', kwargs={'business_id': self.object.business.id})
-
-def delete_expense_field(request, pk):
-    try:
-        expense_field = get_object_or_404(ExpenseField, pk=pk)
-        business_id = expense_field.business.id
-        
-        # Check if there are any expense records using this field
-        if expense_field.expense_records.exists():
-            messages.error(request, 'Cannot delete category that has expense records. Please delete the records first.')
-            return redirect('expense_dashboard', business_id=business_id)
-            
-        expense_field.delete()
-        messages.success(request, 'Expense category deleted successfully!')
-    except DatabaseError as e:
-        messages.error(request, f'Database error: {str(e)}')
-    except Exception as e:
-        messages.error(request, f'Unexpected error: {str(e)}')
+# Local imports
+from ..models import (    
+    HotelExpenseRecord ,
+    HotelExpenseField, 
     
-    return redirect('expense_dashboard', business_id=business_id)
+  
+    )
+from ..forms import ( 
+    ExpenseFieldForm,
+    HotelExpenseRecordForm,
+    
+)
+
+
+
+# Setup logger
+logger = logging.getLogger(__name__)
+User = get_user_model()
+
+@login_required
+def create_expense_field(request):
+    if request.method == "POST":
+        raw_labels = request.POST.get("labels", "").strip()
+
+        if not raw_labels:  # Nothing entered at all
+            messages.error(request, "Please enter at least one expense field.")
+            return redirect("hotel:createhotel_expense_field")
+
+        # Split by comma, clean up whitespace, remove empties
+        labels = [lbl.strip() for lbl in raw_labels.split(",") if lbl.strip()]
+
+        created_count = 0
+        for label in labels:
+            obj, created = HotelExpenseField.objects.get_or_create(label=label)
+            if created:
+                created_count += 1
+
+        if created_count > 0:
+            messages.success(request, f"Successfully created {created_count} expense field(s)!")
+        else:
+            messages.info(request, "All entered expense fields already exist.")
+
+        return redirect("hotel:expense_field_list")
+
+    return render(request, "Hotelexpenses/create_expense_field.html")
+
+
+@login_required
+def expense_field_list(request):
+    fields = HotelExpenseField.objects.all()
+    return render(request, "Hotelexpenses/expense_field_list.html", {"fields": fields})
+
+
+@login_required
+def edit_expense_field(request, field_id):
+    field = get_object_or_404(HotelExpenseField, id=field_id)
+    if request.method == "POST":
+        form = ExpenseFieldForm(request.POST, instance=field)
+        if form.is_valid():
+            form.save()
+            messages.success(request, "Expense field updated successfully!")
+            return redirect("hotel:expense_field_list")
+    else:
+        form = ExpenseFieldForm(instance=field)
+    return render(request, "Hotelexpenses/edit_expense_field.html", {"form": form, "field": field})
+
+
+@login_required
+def delete_expense_field(request, field_id):
+    field = get_object_or_404(HotelExpenseField, id=field_id)
+    if request.method == "POST":
+        field.delete()
+        messages.success(request, "Expense field deleted successfully!")
+        return redirect("hotel:expense_field_list")
+    return render(request, "Hotelexpenses/delete_expense_field.html", {"field": field})
+
+
+@login_required
+def expense_form(request):
+    if request.method == "POST":
+        form = HotelExpenseRecordForm(request.POST)
+        if form.is_valid():
+            form.save()
+            messages.success(request, "Expense recorded successfully!")
+            return redirect("hotel:expense_list")
+    else:
+        form = HotelExpenseRecordForm()
+    return render(request, "Hotelexpenses/expense_form.html", {"form": form})
+
+
+@login_required
+def expense_list(request):
+    records = HotelExpenseRecord.objects.select_related("field").order_by("-date")
+
+    # Calculate stats for the cards
+    total_amount = records.aggregate(Sum('amount'))['amount__sum'] or 0
+    record_count = records.count()
+    average_expense = records.aggregate(Avg('amount'))['amount__avg'] or 0
+
+    context = {
+        "records": records,
+        "total_amount": total_amount,
+        "record_count": record_count,
+        "average_expense": round(average_expense, 2),
+    }
+    return render(request, "Hotelexpenses/expense_list.html", context)
+
+
+@login_required
+def edit_expense_record(request, record_id):
+    record = get_object_or_404(HotelExpenseRecord, id=record_id)
+    if request.method == "POST":
+        form = HotelExpenseRecordForm(request.POST, instance=record)
+        if form.is_valid():
+            form.save()
+            messages.success(request, "Expense record updated successfully!")
+            return redirect("hotel:expense_list")
+    else:
+        form = HotelExpenseRecordForm(instance=record)
+    return render(request, "Hotelexpenses/edit_expense_record.html", {"form": form, "record": record})
+
+
+@login_required
+def delete_expense_record(request, record_id):
+    record = get_object_or_404(HotelExpenseRecord, id=record_id)
+    if request.method == "POST":
+        record.delete()
+        messages.success(request, "Expense record deleted successfully!")
+        return redirect("hotel:expense_list")
+    return render(request, "Hotelexpenses/delete_expense_record.html", {"record": record})

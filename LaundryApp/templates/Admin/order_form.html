@@ -263,7 +263,7 @@
                                 </div>
                                
                                 <!-- Shop Field -->
-                                {% if user_has_single_shop %}
+                                {% if user.is_superuser %}
                                 <div class="relative">
                                     {{ order_form.shop }}
                                     <label for="id_shop" class="form-label absolute left-4 top-3 pointer-events-none">

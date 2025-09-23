@@ -81,41 +81,24 @@ class OrderItem(models.Model):
 
     def __str__(self):
         return f"{self.food_item.name} x {self.quantity}"
-class Business(models.Model):
-    name = models.CharField(max_length=150, unique=True, db_index=True)
-    created_at = models.DateTimeField(auto_now_add=True)
-
-    def __str__(self):
-        return self.name
-
-class ExpenseField(models.Model):
-    business = models.ForeignKey(Business, on_delete=models.CASCADE, related_name="expense_fields")
+class HotelExpenseField(models.Model):
     label = models.CharField(max_length=100, db_index=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
-        unique_together = ('business', 'label')
+        unique_together = ('label',)  # Prevent duplicate labels
 
     def __str__(self):
-        return f"{self.label} ({self.business.name})"
+        return self.label
 
-class ExpenseRecord(models.Model):
-    business = models.ForeignKey(Business, on_delete=models.CASCADE, related_name="expense_records")
-    expense_field = models.ForeignKey(ExpenseField, on_delete=models.CASCADE, related_name="expense_records")
+
+class HotelExpenseRecord(models.Model):
+    field = models.ForeignKey(
+        HotelExpenseField, on_delete=models.CASCADE, related_name="records", db_index=True
+    )
     amount = models.DecimalField(max_digits=10, decimal_places=2)
-    description = models.TextField(blank=True)
-    date = models.DateField()
-    created_at = models.DateTimeField(auto_now_add=True)
+    date = models.DateField(auto_now_add=True, db_index=True)
+    notes = models.CharField(max_length=150, null=True, blank=True)
 
     def __str__(self):
-        return f"{self.expense_field.label} - ${self.amount} - {self.date}"
-    business = models.ForeignKey(Business, on_delete=models.CASCADE, related_name="expense_records")
-    expense_field = models.ForeignKey(ExpenseField, on_delete=models.CASCADE, related_name="expense_records")
-    amount = models.DecimalField(max_digits=10, decimal_places=2)
-    description = models.TextField(blank=True)
-    expense_date = models.DateField()
-    created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
-
-    def __str__(self):
-        return f"{self.expense_field.label} - {self.amount} ({self.expense_date})"
+        return f"{self.field.label}: {self.amount}"
