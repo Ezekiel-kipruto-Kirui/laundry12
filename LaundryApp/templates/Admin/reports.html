@@ -5,7 +5,7 @@
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 <script
     src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0/dist/chartjs-plugin-datalabels.min.js"></script>
-<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 {% endblock %}
 
@@ -66,7 +66,7 @@
     <h2 class="text-xl font-semibold text-gray-800 mb-4 pl-3 border-l-4 border-pink-500 flex items-center gap-2">
         <i class="fas fa-store text-pink-500"></i> General
     </h2>
-    <div class="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-3 gap-4 mb-8">
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
 
         <!-- Total Revenue -->
         <div
@@ -123,7 +123,22 @@
             </div>
         </div>
 
-        <!-- Completed Orders -->
+        <!-- Genral Expenses -->
+        <div class="bg-white rounded-xl p-4 shadow-sm transition-all duration-300 hover:shadow-md border-l-4 border-indigo-900">
+            <div class="flex items-center justify-between mb-4">
+                <div class="w-10 h-10 rounded-lg bg-indigo-50 flex items-center justify-center">
+                    <i class="fas fa-money-bill-wave text-indigo-900 text-lg"></i>
+                </div>
+            </div>
+            <div>
+                <h3 class="text-sm font-semibold text-gray-500 uppercase tracking-wide">Total Expenses</h3>
+                <div class="text-2xl font-bold text-gray-800 mt-1">{{ total_expenses }}</div>
+        
+        
+        
+                <div class="text-xs text-gray-500 mt-1">Advanced payments</div>
+            </div>
+        </div>
         
     </div>
 
@@ -132,7 +147,7 @@
         <h2 class="text-xl font-semibold text-gray-800 mb-4 pl-3 border-l-4 border-pink-500 flex items-center gap-2">
             <i class="fas fa-store text-pink-500"></i> Shop A
         </h2>
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
             <!-- Shop A Revenue -->
             <div
                 class="bg-white rounded-xl p-4 shadow-sm transition-all duration-300 hover:shadow-md border-l-4 border-green-500">
@@ -183,6 +198,23 @@
                     <div class="text-xs text-gray-500 mt-1">Advanced payments</div>
                 </div>
             </div>
+            <!--Shop A Expenses-->
+            <div class="bg-white rounded-xl p-4 shadow-sm transition-all duration-300 hover:shadow-md border-l-4 border-indigo-900">
+                <div class="flex items-center justify-between mb-4">
+                    <div class="w-10 h-10 rounded-lg bg-indigo-50 flex items-center justify-center">
+                        <i class="fas fa-money-bill-wave text-indigo-900 text-lg"></i>
+                    </div>
+                </div>
+                <div>
+                    <h3 class="text-sm font-semibold text-gray-500 uppercase tracking-wide">Shop A Expenses & Profit</h3>
+                    <div class="text-2xl font-bold text-gray-800 mt-1"></div>
+            
+                    <span class="text-yellow-500">{{ shop_a_net_profit }} Profit</span> •
+                    <span class="text-blue-500">{{ shop_a_total_expenses }} Expense</span>
+            
+                    <div class="text-xs text-gray-500 mt-1"></div>
+                </div>
+            </div>
         </div>
     </div>
 
@@ -191,7 +223,7 @@
         <h2 class="text-xl font-semibold text-gray-800 mb-4 pl-3 border-l-4 border-yellow-500 flex items-center gap-2">
             <i class="fas fa-store text-yellow-500"></i> Shop B Performance
         </h2>
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
             <!-- Shop B Revenue -->
             <div
                 class="bg-white rounded-xl p-4 shadow-sm transition-all duration-300 hover:shadow-md border-l-4 border-green-500">
@@ -225,7 +257,6 @@
                     </div>
                 </div>
             </div>
-
             <!-- Shop B Partial Payment -->
             <div
                 class="bg-white rounded-xl p-4 shadow-sm transition-all duration-300 hover:shadow-md border-l-4 border-indigo-900">
@@ -236,13 +267,29 @@
                 </div>
                 <div>
                     <h3 class="text-sm font-semibold text-gray-500 uppercase tracking-wide">Payments</h3>
-                    <div class="text-2xl font-bold text-gray-800 mt-1">{{ shop_b_total_balanc }}</div>
+                    <div class="text-2xl font-bold text-gray-800 mt-1">{{ shop_b_total_balance }}</div>
                     
                     <span class="text-yellow-500"> {{ shop_b_pending_payments }} pending</span> •
                     <span class="text-blue-500">{{ shop_b_partial_payments }} Partial</span>•
                     <span class="text-blue-500">{{ shop_b_complete_payments }} completed</span>
                    
                     <div class="text-xs text-gray-500 mt-1">Advanced payments</div>
+                </div>
+            </div>
+            <!--Shop B Expenses-->
+            <div class="bg-white rounded-xl p-4 shadow-sm transition-all duration-300 hover:shadow-md border-l-4 border-indigo-900">
+                <div class="flex items-center justify-between mb-4">
+                    <div class="w-10 h-10 rounded-lg bg-indigo-50 flex items-center justify-center">
+                        <i class="fas fa-money-bill-wave text-indigo-900 text-lg"></i>
+                    </div>
+                </div>
+                <div>
+                    <h3 class="text-sm font-semibold text-gray-500 uppercase tracking-wide">Shop B Expenses & Profit</h3>
+                    <div class="text-2xl font-bold text-gray-800 mt-1"></div>
+            
+                    <span class="text-yellow-500">{{ shop_b_net_profit }} Profit</span> •
+                    <span class="text-blue-500">{{shop_b_total_expenses}} Expense</span>
+                    <div class="text-xs text-gray-500 mt-1"></div>
                 </div>
             </div>
         </div>

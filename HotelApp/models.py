@@ -96,6 +96,7 @@ class HotelExpenseRecord(models.Model):
     field = models.ForeignKey(
         HotelExpenseField, on_delete=models.CASCADE, related_name="records", db_index=True
     )
+   
     amount = models.DecimalField(max_digits=10, decimal_places=2)
     date = models.DateField(auto_now_add=True, db_index=True)
     notes = models.CharField(max_length=150, null=True, blank=True)

@@ -279,100 +279,124 @@ def dashboard_view(request):
 @login_required
 @shop_required
 def customordertable(request):
-    # Start with base queryset - include ALL orders (including delivered)
-    orders = get_base_order_queryset()
-    orders = orders.exclude(order_status__in=['Delivered_picked'])
-    # Make sure we're not including orders without uniquecode
-    orders = orders.exclude(uniquecode__isnull=True).exclude(uniquecode='')
+    # Start with base queryset - include ALL orders (excluding Delivered_picked)
+    orders = get_base_order_queryset().exclude(
+        order_status__in=['Delivered_picked']
+    ).exclude(
+        Q(uniquecode__isnull=True) | Q(uniquecode='')
+    )
 
     # Apply permission filtering
     orders = apply_order_permissions(orders, request)
 
-    # Apply status filters
+    # Apply shop filter for admin users
+    if request.user.is_superuser:
+        shop_filter = request.GET.get('shop', '')
+        if shop_filter:
+            orders = orders.filter(shop=shop_filter)
+
+    # Apply filters in a single optimized block
+    filters = Q()
+    
     status_filter = request.GET.get('order_status', '')
     if status_filter:
-        orders = orders.filter(order_status=status_filter)
+        filters &= Q(order_status=status_filter)
         
-    # Apply payment status filters
     payment_filter = request.GET.get('payment_status', '')
     if payment_filter:
-        orders = orders.filter(payment_status=payment_filter)
+        filters &= Q(payment_status=payment_filter)
 
-    # Apply search filter
     search_query = request.GET.get('search', '')
     if search_query:
-        orders = orders.filter(
+        filters &= (
             Q(uniquecode__icontains=search_query) |
             Q(customer__name__icontains=search_query) |
             Q(customer__phone__icontains=search_query) |
             Q(items__servicetype__icontains=search_query) |
-            Q(items__itemname__icontains=search_query) 
-        ).distinct()
+            Q(items__itemname__icontains=search_query)
+        )
 
-    # Check if export was requested
+    if filters:
+        orders = orders.filter(filters).distinct()
+
+    # Handle export before pagination
     export_format = request.GET.get('export', '')
     if export_format:
-        dataset = OrderResource().export(queryset=orders)
-        
-        if export_format == 'csv':
-            response = HttpResponse(dataset.csv, content_type='text/csv')
-            response['Content-Disposition'] = 'attachment; filename="orders_export_{}.csv"'.format(
-                timezone.now().strftime('%Y-%m-%d_%H-%M-%S')
-            )
-            return response
-            
-        elif export_format == 'xlsx':
-            # Proper way to handle Excel export
-            xlsx_data = dataset.export('xlsx')
-            response = HttpResponse(
-                xlsx_data, 
-                content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
-            )
-            response['Content-Disposition'] = 'attachment; filename="orders_export_{}.xlsx"'.format(
-                timezone.now().strftime('%Y-%m-%d_%H-%M-%S')
-            )
-            return response
+        return handle_export(orders, export_format)
 
-    # Order by creation date
+    # Order by creation date and paginate
     orders = orders.order_by('-created_at')
+
+    # Get counts for stats cards before pagination
+    stats = get_order_stats(orders)
 
     # Pagination
     paginator = Paginator(orders, 15)
     page_number = request.GET.get('page')
-    try:
-        page_obj = paginator.page(page_number)
-    except PageNotAnInteger:
-        page_obj = paginator.page(1)
-    except EmptyPage:
-        page_obj = paginator.page(paginator.num_pages)
-
-    # Get counts for stats cards - include ALL orders (including delivered)
-    total_orders = orders.count()
-    pending_orders = orders.filter(order_status='pending').count()
-    completed_orders = orders.filter(order_status='Completed').count()
-    delivered_orders = orders.filter(order_status='delivered').count()
-    in_progress_orders = orders.filter(order_status='in_progress').count()
-
-    # Get status choices for filters
-    order_status_choices = Order.ORDER_STATUS_CHOICES
-    payment_status_choices = Order.PAYMENT_STATUS_CHOICES
+    page_obj = get_page_obj(paginator, page_number)
 
     context = {
         'orders': page_obj,
-        'total_orders': total_orders,
-        'pending_orders': pending_orders,
-        'completed_orders': completed_orders,
-        'delivered_orders': delivered_orders,
-        'in_progress_orders': in_progress_orders,
-        'order_status_choices': order_status_choices,
-        'payment_status_choices': payment_status_choices,
+        **stats,
+        'order_status_choices': Order.ORDER_STATUS_CHOICES,
+        'payment_status_choices': Order.PAYMENT_STATUS_CHOICES,
         'today': timezone.now().date(),
         'current_status_filter': status_filter,
         'current_payment_filter': payment_filter,
         'search_query': search_query,
+        'shop_filter': request.GET.get('shop', '') if request.user.is_superuser else '',
     }
     return render(request, 'Admin/orders_table.html', context)
 
+
+# Helper functions for better organization
+def handle_export(orders, export_format):
+    """Handle export functionality"""
+    dataset = OrderResource().export(queryset=orders)
+    timestamp = timezone.now().strftime('%Y-%m-%d_%H-%M-%S')
+    
+    if export_format == 'csv':
+        response = HttpResponse(dataset.csv, content_type='text/csv')
+        response['Content-Disposition'] = f'attachment; filename="orders_export_{timestamp}.csv"'
+        return response
+        
+    elif export_format == 'xlsx':
+        xlsx_data = dataset.export('xlsx')
+        response = HttpResponse(
+            xlsx_data, 
+            content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+        )
+        response['Content-Disposition'] = f'attachment; filename="orders_export_{timestamp}.xlsx"'
+        return response
+
+
+def get_order_stats(orders):
+    """Get order statistics in optimized way"""
+    status_counts = orders.aggregate(
+        total=Count('id'),
+        pending=Count('id', filter=Q(order_status='pending')),
+        completed=Count('id', filter=Q(order_status='Completed')),
+        delivered=Count('id', filter=Q(order_status='delivered')),
+        in_progress=Count('id', filter=Q(order_status='in_progress'))
+    )
+    
+    return {
+        'total_orders': status_counts['total'],
+        'pending_orders': status_counts['pending'],
+        'completed_orders': status_counts['completed'],
+        'delivered_orders': status_counts['delivered'],
+        'in_progress_orders': status_counts['in_progress'],
+    }
+
+
+def get_page_obj(paginator, page_number):
+    """Handle pagination safely"""
+    try:
+        return paginator.page(page_number)
+    except PageNotAnInteger:
+        return paginator.page(1)
+    except EmptyPage:
+        return paginator.page(paginator.num_pages)
 @login_required
 @shop_required
 def order_detail(request, order_code):
@@ -515,7 +539,8 @@ def order_edit(request, order_code):
 def order_delete(request, order_code):
     """Delete an order"""
     try:
-        order = Order.objects.only('uniquecode', 'shop', 'created_by').get(uniquecode=order_code)
+        # Only include fields that exist in your Order model
+        order = Order.objects.only('uniquecode', 'shop').get(uniquecode=order_code)
         
         # Check if user has permission to delete this order
         if not check_order_permission(request, order):
@@ -535,7 +560,6 @@ def order_delete(request, order_code):
         
     except Order.DoesNotExist:
         raise Http404("Order not found")
-
 @login_required
 @shop_required
 @require_POST
@@ -1031,10 +1055,10 @@ def user_add(request):
                     user_type = profile_form.cleaned_data['user_type']
                     app_type = profile_form.cleaned_data['app_type']
 
-                    # Assign role permissions
+                    # ✅ Assign role permissions
                     if user_type == "admin":
                         user.is_staff = True
-                        user.is_superuser = True
+                        user.is_superuser = True   # <-- allow superuser even for laundry
                     elif user_type == "staff":
                         user.is_staff = True
                         user.is_superuser = False
@@ -1046,18 +1070,18 @@ def user_add(request):
                     user.app_type = app_type
                     user.save()
 
-                    # ✅ Enforce laundry shop assignment
+                    # ✅ Enforce Laundry shop assignment for staff only
                     if app_type == 'laundry' and not user.is_superuser:
                         if laundry_form.is_valid():
                             laundry_profile = laundry_form.save(commit=False)
                             laundry_profile.user = user
                             laundry_profile.save()
                         else:
-                            # Debug: show why it's invalid
                             messages.error(request, f"Laundry form errors: {laundry_form.errors}")
                             raise Exception("Please select a valid shop for laundry users.")
 
                     elif app_type == 'hotel':
+                        # Add HotelProfile logic if needed
                         pass
 
                 messages.success(request, f"User {user.email} created successfully!")
@@ -1632,19 +1656,47 @@ def delete_expense_field(request, field_id):
     return render(request, "expenses/delete_expense_field.html", {"field": field})
 
 
+# views.py - Update expense_form view
 @login_required
+@shop_required
 def expense_form(request):
+    user_shops = get_user_shops(request)
+    
     if request.method == "POST":
-        form = ExpenseRecordForm(request.POST)
+        form = ExpenseRecordForm(request.POST, request=request)
+        
         if form.is_valid():
-            form.save()
+            # Create expense record but don't save yet
+            expense_record = form.save(commit=False)
+            
+            # Handle shop assignment based on user type
+            if request.user.is_superuser:
+                # Superuser - use the shop they selected in the form
+                # The shop should be saved from the form field
+                pass  # Form will handle it automatically since it's included
+            else:
+                # Staff user - auto-assign their shop
+                if user_shops and len(user_shops) == 1:
+                    expense_record.shop = user_shops[0]
+                else:
+                    messages.error(request, "Unable to determine your shop assignment.")
+                    return redirect("laundry:expense_list")
+            
+            expense_record.save()
             messages.success(request, "Expense recorded successfully!")
             return redirect("laundry:expense_list")
     else:
-        form = ExpenseRecordForm()
-    return render(request, "expenses/expense_form.html", {"form": form})
-
-
+        form = ExpenseRecordForm(request=request)
+        # Pre-fill the shop for superusers if they have a default shop
+        if request.user.is_superuser and user_shops and len(user_shops) == 1:
+            form.fields['business'].initial = user_shops[0]
+    
+    context = {
+        "form": form,
+        "user_shop": user_shops[0] if user_shops else '',
+        "is_superuser": request.user.is_superuser,
+    }
+    return render(request, "expenses/expense_form.html", context)
 @login_required
 def expense_list(request):
     records = ExpenseRecord.objects.select_related("field").order_by("-date")

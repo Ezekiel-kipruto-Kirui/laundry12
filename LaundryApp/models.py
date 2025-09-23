@@ -301,6 +301,7 @@ class ExpenseRecord(models.Model):
     field = models.ForeignKey(
         ExpenseField, on_delete=models.CASCADE, related_name="records", db_index=True
     )
+    shop = models.CharField(max_length=100, choices=Order.SHOP_CHOICE)
     amount = models.DecimalField(max_digits=10, decimal_places=2)
     date = models.DateField(auto_now_add=True, db_index=True)
     notes = models.CharField(max_length=150, null=True, blank=True)
@@ -310,8 +311,7 @@ class ExpenseRecord(models.Model):
 
 
 class Payment(models.Model):
-    order = models.OneToOneField(Order, on_delete=models.CASCADE,
-                                 related_name='payment', db_index=True)
+    order = models.OneToOneField(Order, on_delete=models.CASCADE,related_name='payment', db_index=True)
     price = models.DecimalField(max_digits=10, decimal_places=2)
 
     class Meta:

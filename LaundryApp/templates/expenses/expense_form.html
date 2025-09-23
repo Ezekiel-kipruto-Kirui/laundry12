@@ -1,61 +1,220 @@
 {% extends "../home.html" %}
+{% load static %}
 
-{% block title %}Record Expense - Expense Manager{% endblock %}
+{% block title %}{% if object %}Edit{% else %}Create{% endif %} Expense - Expense Manager{% endblock %}
 
 {% block content %}
-<div class="max-w-md mx-auto">
-    <h1 class="text-2xl font-bold text-gray-800 mb-6">Record Expense</h1>
+<div class="max-w-2xl mx-auto px-4 py-8">
+    <div class="bg-white shadow rounded-lg p-6">
+        <h2 class="text-2xl font-bold text-gray-800 mb-6">
+            {% if object %}Edit{% else %}Create{% endif %} Expense Record
+        </h2>
 
-    <div class="bg-white shadow-md rounded-lg p-6">
+        <!-- Shop Info Banner -->
+        {% if not is_superuser and user_shop %}
+        <div class="mb-6 p-4 bg-blue-50 rounded-lg border border-blue-200">
+            <div class="flex items-center">
+                <svg class="h-5 w-5 text-blue-500 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+                </svg>
+                <span class="font-medium text-blue-800">Expense will be recorded for: {{ user_shop }}</span>
+            </div>
+            <p class="text-blue-600 text-sm mt-1">As a staff member, expenses are automatically assigned to your shop.
+            </p>
+        </div>
+        {% endif %}
+
         <form method="post">
             {% csrf_token %}
 
-            <div class="mb-4">
-                <label for="{{ form.field.id_for_label }}"
-                    class="block text-sm font-medium text-gray-700 mb-1">Field</label>
-                {{ form.field }}
-                {% if form.field.errors %}
-                <p class="text-red-500 text-xs mt-1">{{ form.field.errors.0 }}</p>
+            <div class="space-y-6">
+                <!-- Shop Selection (Superuser only when creating new expense) -->
+                {% if is_superuser %}
+                <div>
+                    <label for="{{ form.business.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-2">
+                        Select Shop *
+                    </label>
+                    {{ form.business }}
+                    {% if form.business.errors %}
+                    <p class="text-red-500 text-xs mt-1">{{ form.business.errors.0 }}</p>
+                    {% endif %}
+                    <p class="text-gray-500 text-xs mt-1">Choose which shop this expense belongs to</p>
+                </div>
+                {% else %}
+                <!-- Hidden business field for staff users -->
+                {% if form.business %}
+                <input type="hidden" name="business" value="{{ user_shop }}">
                 {% endif %}
+                {% endif %}
+
+                <!-- Expense Category -->
+                <div>
+                    <label for="{{ form.field.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-2">
+                        Expense Category *
+                    </label>
+                    {{ form.field }}
+                    {% if form.field.errors %}
+                    <p class="text-red-500 text-xs mt-1">{{ form.field.errors.0 }}</p>
+                    {% endif %}
+                    {% if is_superuser %}
+                    <p class="text-gray-500 text-xs mt-1">Categories will be filtered based on the selected shop</p>
+                    {% endif %}
+                </div>
+
+                <!-- Amount -->
+                <div>
+                    <label for="{{ form.amount.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-2">
+                        Amount (KSh) *
+                    </label>
+                    {{ form.amount }}
+                    {% if form.amount.errors %}
+                    <p class="text-red-500 text-xs mt-1">{{ form.amount.errors.0 }}</p>
+                    {% endif %}
+                </div>
+
+                <!-- Date -->
+                <div>
+                    <label for="{{ form.date.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-2">
+                        Date *
+                    </label>
+                    {{ form.date }}
+                    {% if form.date.errors %}
+                    <p class="text-red-500 text-xs mt-1">{{ form.date.errors.0 }}</p>
+                    {% endif %}
+                </div>
+
+                <!-- Notes -->
+                <div>
+                    <label for="{{ form.notes.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-2">
+                        Description / Notes
+                    </label>
+                    {{ form.notes }}
+                    {% if form.notes.errors %}
+                    <p class="text-red-500 text-xs mt-1">{{ form.notes.errors.0 }}</p>
+                    {% endif %}
+                </div>
             </div>
 
-            <div class="mb-4">
-                <label for="{{ form.amount.id_for_label }}"
-                    class="block text-sm font-medium text-gray-700 mb-1">Amount</label>
-                {{ form.amount }}
-                {% if form.amount.errors %}
-                <p class="text-red-500 text-xs mt-1">{{ form.amount.errors.0 }}</p>
-                {% endif %}
-            </div>
-
-            <div class="mb-4">
-                <label for="{{ form.date.id_for_label }}"
-                    class="block text-sm font-medium text-gray-700 mb-1">Date</label>
-                {{ form.date }}
-                {% if form.date.errors %}
-                <p class="text-red-500 text-xs mt-1">{{ form.date.errors.0 }}</p>
-                {% endif %}
-            </div>
-
-            <div class="mb-4">
-                <label for="{{ form.notes.id_for_label }}"
-                    class="block text-sm font-medium text-gray-700 mb-1">Notes</label>
-                {{ form.notes }}
-                {% if form.notes.errors %}
-                <p class="text-red-500 text-xs mt-1">{{ form.notes.errors.0 }}</p>
-                {% endif %}
-            </div>
-
-            <div class="flex space-x-3">
-                <button type="submit" class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg">
-                    Save Expense
+            <div class="flex gap-4 pt-6">
+                <button type="submit"
+                    class="bg-blue-600 text-white px-6 py-2 rounded-md hover:bg-blue-700 transition duration-200 flex items-center">
+                    <svg class="h-4 w-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                    </svg>
+                    {% if object %}Update{% else %}Create{% endif %} Expense
                 </button>
                 <a href="{% url 'laundry:expense_list' %}"
-                    class="bg-gray-300 hover:bg-gray-400 text-gray-800 px-4 py-2 rounded-lg">
+                    class="bg-gray-300 text-gray-700 px-6 py-2 rounded-md hover:bg-gray-400 transition duration-200">
                     Cancel
                 </a>
             </div>
         </form>
     </div>
 </div>
+
+{% if is_superuser %}
+<script>
+    // JavaScript to dynamically update categories based on selected shop
+    document.addEventListener('DOMContentLoaded', function () {
+        const shopSelect = document.getElementById('{{ form.business.id_for_label }}');
+        const categorySelect = document.getElementById('{{ form.field.id_for_label }}');
+
+        if (shopSelect && categorySelect) {
+            // Function to load categories
+            function loadCategories(shopId) {
+                if (shopId) {
+                    // Show loading state
+                    categorySelect.innerHTML = '<option value="">Loading categories...</option>';
+                    categorySelect.disabled = true;
+
+                    // Fetch categories for the selected shop
+                    fetch(`/api/expense-categories/?business_id=${shopId}`)
+                        .then(response => {
+                            if (!response.ok) {
+                                throw new Error('Network response was not ok');
+                            }
+                            return response.json();
+                        })
+                        .then(data => {
+                            categorySelect.innerHTML = '<option value="">Select a category</option>';
+                            if (data.categories && data.categories.length > 0) {
+                                data.categories.forEach(category => {
+                                    const option = document.createElement('option');
+                                    option.value = category.id;
+                                    option.textContent = category.label;
+                                    categorySelect.appendChild(option);
+                                });
+                            } else {
+                                categorySelect.innerHTML = '<option value="">No categories available</option>';
+                            }
+                            categorySelect.disabled = false;
+                        })
+                        .catch(error => {
+                            console.error('Error fetching categories:', error);
+                            categorySelect.innerHTML = '<option value="">Error loading categories</option>';
+                            categorySelect.disabled = false;
+                        });
+                } else {
+                    categorySelect.innerHTML = '<option value="">Select a shop first</option>';
+                    categorySelect.disabled = true;
+                }
+            }
+
+            // Load categories when shop selection changes
+            shopSelect.addEventListener('change', function () {
+                loadCategories(this.value);
+            });
+
+            // Load categories on page load if a shop is already selected
+            if (shopSelect.value) {
+                loadCategories(shopSelect.value);
+            } else {
+                categorySelect.innerHTML = '<option value="">Select a shop first</option>';
+                categorySelect.disabled = true;
+            }
+        }
+    });
+</script>
+{% endif %}
+
+<style>
+    /* Ensure form fields are styled properly */
+    select,
+    input,
+    textarea {
+        width: 100%;
+        padding: 0.5rem 0.75rem;
+        border: 1px solid #d1d5db;
+        border-radius: 0.375rem;
+        background-color: white;
+        transition: border-color 0.2s, box-shadow 0.2s;
+    }
+
+    select:focus,
+    input:focus,
+    textarea:focus {
+        outline: none;
+        border-color: #3b82f6;
+        box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+    }
+
+    select:disabled {
+        background-color: #f9fafb;
+        color: #6b7280;
+        cursor: not-allowed;
+    }
+
+    /* Improve select appearance */
+    select {
+        background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e");
+        background-position: right 0.5rem center;
+        background-repeat: no-repeat;
+        background-size: 1.5em 1.5em;
+        padding-right: 2.5rem;
+        -webkit-appearance: none;
+        -moz-appearance: none;
+        appearance: none;
+    }
+</style>
 {% endblock %}
