@@ -1,6 +1,6 @@
 from django import forms
 from django.core.exceptions import ValidationError
-from .models import FoodCategory, FoodItem, Order, OrderItem,HotelExpenseField,HotelExpenseRecord
+from .models import FoodCategory, FoodItem, Order, HotelOrderItem,HotelExpenseField,HotelExpenseRecord
 
 class FoodCategoryForm(forms.ModelForm):
     class Meta:
@@ -97,9 +97,9 @@ class OrderForm(forms.ModelForm):
         }
 
 
-class OrderItemForm(forms.ModelForm):
+class HotelOrderItemForm(forms.ModelForm):
     class Meta:
-        model = OrderItem
+        model = HotelOrderItem
         fields = ['food_item', 'quantity']
         widgets = {
             'food_item': forms.Select(attrs={

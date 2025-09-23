@@ -9,10 +9,10 @@ from django.contrib import messages
 from django.http import JsonResponse
 from django.db import IntegrityError, transaction
 from django.db.models import Sum
-from .models import FoodCategory, FoodItem, Order, OrderItem
+from .models import FoodCategory, FoodItem, Order, HotelOrderItem
 from .forms import (
     FoodCategoryForm, FoodItemForm, FoodItemAvailabilityForm,
-    OrderForm, OrderItemForm, BulkOrderForm
+    OrderForm, HotelOrderItemForm, BulkOrderForm
 )
 
 logger = logging.getLogger(__name__)
@@ -239,10 +239,10 @@ def food_item_delete(request, pk):
 
 @login_required
 def create_order(request):
-    OrderItemFormSet = inlineformset_factory(
+    HotelOrderItemFormSet = inlineformset_factory(
         Order,
-        OrderItem,
-        form=OrderItemForm,
+        HotelOrderItem,
+        form=HotelOrderItemForm,
         extra=1,
         can_delete=False,
         fields=['food_item', 'quantity']
@@ -254,7 +254,7 @@ def create_order(request):
         
         # Bind forms to the same instance
         order_form = OrderForm(request.POST, instance=order)
-        item_formset = OrderItemFormSet(request.POST, instance=order, prefix="items")
+        item_formset = HotelOrderItemFormSet(request.POST, instance=order, prefix="items")
 
         if order_form.is_valid() and item_formset.is_valid():
             with transaction.atomic():
@@ -279,7 +279,7 @@ def create_order(request):
     else:
         # GET request - create empty forms
         order_form = OrderForm()
-        item_formset = OrderItemFormSet(queryset=OrderItem.objects.none(), prefix="items")
+        item_formset = HotelOrderItemFormSet(queryset=HotelOrderItem.objects.none(), prefix="items")
 
     return render(request, 'food/create_order.html', {
         'order_form': order_form,
@@ -335,8 +335,8 @@ def order_edit(request, pk):
     # Create formset for order items
     OrderItemFormSet = inlineformset_factory(
         Order, 
-        OrderItem, 
-        form=OrderItemForm, 
+        HotelOrderItem, 
+        form=HotelOrderItemForm, 
         extra=1, 
         can_delete=True,
         fields=['food_item', 'quantity']  # Explicitly specify fields
@@ -363,7 +363,7 @@ def order_edit(request, pk):
                 for form in formset:
                     if form.has_changed() and 'quantity' in form.changed_data and form.instance.pk:
                         order_item = form.instance
-                        original_qty = OrderItem.objects.get(pk=order_item.pk).quantity
+                        original_qty = HotelOrderItem.objects.get(pk=order_item.pk).quantity
                         quantity_diff = order_item.quantity - original_qty
                         
                         if quantity_diff != 0:
@@ -407,7 +407,7 @@ def order_edit(request, pk):
 @login_required
 def order_item_delete(request, order_pk, item_pk):
     order = get_object_or_404(Order, pk=order_pk)
-    order_item = get_object_or_404(OrderItem, pk=item_pk, order=order)
+    order_item = get_object_or_404(HotelOrderItem, pk=item_pk, order=order)
     
     if request.method == 'POST':
         # Return stock when deleting order item

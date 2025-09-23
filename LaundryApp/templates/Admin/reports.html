@@ -95,12 +95,12 @@
             <div>
                 <h3 class="text-sm font-semibold text-gray-500 uppercase tracking-wide">Orders</h3>
                 <div>
-                   
+
                     <div class="text-2xl font-bold text-gray-800 mt-1">{{ total_orders }}</div>
                     <span class="text-yellow-500">{{ pending_orders }} pending</span> •
                     <span class="text-blue-500">{{ completed_orders }} Completed</span>
-                    
-                    
+
+
                 </div>
                 <div class="text-2xl font-bold text-gray-800 mt-1"></div>
                 <div class="text-xs text-gray-500 mt-1">All time orders</div>
@@ -118,13 +118,14 @@
             <div>
                 <h3 class="text-sm font-semibold text-gray-500 uppercase tracking-wide">Pending payment Balance</h3>
                 <div class="text-2xl font-bold text-gray-800 mt-1">{{ total_balance_amount }}</div>
-                
+
                 <div class="text-xs text-gray-500 mt-1">Awaiting processing</div>
             </div>
         </div>
 
         <!-- Genral Expenses -->
-        <div class="bg-white rounded-xl p-4 shadow-sm transition-all duration-300 hover:shadow-md border-l-4 border-indigo-900">
+        <div
+            class="bg-white rounded-xl p-4 shadow-sm transition-all duration-300 hover:shadow-md border-l-4 border-indigo-900">
             <div class="flex items-center justify-between mb-4">
                 <div class="w-10 h-10 rounded-lg bg-indigo-50 flex items-center justify-center">
                     <i class="fas fa-money-bill-wave text-indigo-900 text-lg"></i>
@@ -133,13 +134,13 @@
             <div>
                 <h3 class="text-sm font-semibold text-gray-500 uppercase tracking-wide">Total Expenses</h3>
                 <div class="text-2xl font-bold text-gray-800 mt-1">{{ total_expenses }}</div>
-        
-        
-        
+
+
+
                 <div class="text-xs text-gray-500 mt-1">Advanced payments</div>
             </div>
         </div>
-        
+
     </div>
 
     <!-- Shop A Stats -->
@@ -158,7 +159,8 @@
                 </div>
                 <div>
                     <h3 class="text-sm font-semibold text-gray-500 uppercase tracking-wide">Total Revenue</h3>
-                    <div class="text-2xl font-bold text-gray-800 mt-1">Ksh {{shop_a_revenue|floatformat:2|default:"0.00" }}</div>
+                    <div class="text-2xl font-bold text-gray-800 mt-1">Ksh {{shop_a_revenue|floatformat:2|default:"0.00"
+                        }}</div>
                     <div class="text-xs text-gray-500 mt-1">Shop A earnings</div>
                 </div>
             </div>
@@ -199,19 +201,21 @@
                 </div>
             </div>
             <!--Shop A Expenses-->
-            <div class="bg-white rounded-xl p-4 shadow-sm transition-all duration-300 hover:shadow-md border-l-4 border-indigo-900">
+            <div
+                class="bg-white rounded-xl p-4 shadow-sm transition-all duration-300 hover:shadow-md border-l-4 border-indigo-900">
                 <div class="flex items-center justify-between mb-4">
                     <div class="w-10 h-10 rounded-lg bg-indigo-50 flex items-center justify-center">
                         <i class="fas fa-money-bill-wave text-indigo-900 text-lg"></i>
                     </div>
                 </div>
                 <div>
-                    <h3 class="text-sm font-semibold text-gray-500 uppercase tracking-wide">Shop A Expenses & Profit</h3>
+                    <h3 class="text-sm font-semibold text-gray-500 uppercase tracking-wide">Shop A Expenses & Profit
+                    </h3>
                     <div class="text-2xl font-bold text-gray-800 mt-1"></div>
-            
+
                     <span class="text-yellow-500">{{ shop_a_net_profit }} Profit</span> •
                     <span class="text-blue-500">{{ shop_a_total_expenses }} Expense</span>
-            
+
                     <div class="text-xs text-gray-500 mt-1"></div>
                 </div>
             </div>
@@ -268,25 +272,27 @@
                 <div>
                     <h3 class="text-sm font-semibold text-gray-500 uppercase tracking-wide">Payments</h3>
                     <div class="text-2xl font-bold text-gray-800 mt-1">{{ shop_b_total_balance }}</div>
-                    
+
                     <span class="text-yellow-500"> {{ shop_b_pending_payments }} pending</span> •
                     <span class="text-blue-500">{{ shop_b_partial_payments }} Partial</span>•
                     <span class="text-blue-500">{{ shop_b_complete_payments }} completed</span>
-                   
+
                     <div class="text-xs text-gray-500 mt-1">Advanced payments</div>
                 </div>
             </div>
             <!--Shop B Expenses-->
-            <div class="bg-white rounded-xl p-4 shadow-sm transition-all duration-300 hover:shadow-md border-l-4 border-indigo-900">
+            <div
+                class="bg-white rounded-xl p-4 shadow-sm transition-all duration-300 hover:shadow-md border-l-4 border-indigo-900">
                 <div class="flex items-center justify-between mb-4">
                     <div class="w-10 h-10 rounded-lg bg-indigo-50 flex items-center justify-center">
                         <i class="fas fa-money-bill-wave text-indigo-900 text-lg"></i>
                     </div>
                 </div>
                 <div>
-                    <h3 class="text-sm font-semibold text-gray-500 uppercase tracking-wide">Shop B Expenses & Profit</h3>
+                    <h3 class="text-sm font-semibold text-gray-500 uppercase tracking-wide">Shop B Expenses & Profit
+                    </h3>
                     <div class="text-2xl font-bold text-gray-800 mt-1"></div>
-            
+
                     <span class="text-yellow-500">{{ shop_b_net_profit }} Profit</span> •
                     <span class="text-blue-500">{{shop_b_total_expenses}} Expense</span>
                     <div class="text-xs text-gray-500 mt-1"></div>
@@ -318,7 +324,8 @@
                     <i class="fas fa-chart-line text-pink-500"></i>
                     Revenue Trend
                 </h2>
-                <span class="bg-pink-100 text-pink-800 px-3 py-1 rounded-full text-sm font-medium">{{ selected_year }}</span>
+                <span class="bg-pink-100 text-pink-800 px-3 py-1 rounded-full text-sm font-medium">{{ selected_year
+                    }}</span>
             </div>
             <div class="h-64">
                 {% if not selected_month %}
@@ -343,7 +350,8 @@
                     <i class="fas fa-spa text-green-500"></i>
                     Top Services
                 </h2>
-                <span class="bg-green-100 text-green-800 px-3 py-1 rounded-full text-sm font-medium">{{ selected_year }}</span>
+                <span class="bg-green-100 text-green-800 px-3 py-1 rounded-full text-sm font-medium">{{ selected_year
+                    }}</span>
             </div>
             <div class="h-72">
                 {% if services_labels and services_labels|length > 0 %}
@@ -364,7 +372,8 @@
                     <i class="fas fa-box-open text-yellow-500"></i>
                     Common Items
                 </h2>
-                <span class="bg-yellow-100 text-yellow-800 px-3 py-1 rounded-full text-sm font-medium">{{ selected_year }}</span>
+                <span class="bg-yellow-100 text-yellow-800 px-3 py-1 rounded-full text-sm font-medium">{{ selected_year
+                    }}</span>
             </div>
             <div class="h-72">
                 {% if item_labels and item_labels|length > 0 %}
@@ -385,7 +394,8 @@
                     <i class="fas fa-crown text-yellow-500"></i>
                     Top Customers
                 </h2>
-                <span class="bg-yellow-100 text-yellow-800 px-3 py-1 rounded-full text-sm font-medium">{{ selected_year }}</span>
+                <span class="bg-yellow-100 text-yellow-800 px-3 py-1 rounded-full text-sm font-medium">{{ selected_year
+                    }}</span>
             </div>
             <div class="h-72 overflow-y-auto">
                 {% for customer in common_customers %}
@@ -842,3 +852,4 @@
     });
 </script>
 {% endblock %}
+

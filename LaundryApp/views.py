@@ -949,16 +949,19 @@ def get_laundry_profit_and_hotel(request, selected_year=None):
     """
     try:
         # HOTEL PROFIT CALCULATION
-        hotel_revenue = OrderItem.objects.aggregate(
-            total=Coalesce(
-                Sum(F('quantity') * F('food_item__price'), output_field=DecimalField()),
-                0
-            )
-        )['total']
+        from HotelApp.models import HotelOrderItem, HotelExpenseRecord
         
-        hotel_expenses = HotelExpenseRecord.objects.aggregate(
-            total=Coalesce(Sum('amount'), 0)
-        )['total']
+        # Calculate hotel revenue by iterating through order items
+        hotel_revenue = Decimal('0.00')
+        for order_item in HotelOrderItem.objects.select_related('food_item').all():
+            if order_item.food_item and order_item.food_item.price:
+                hotel_revenue += Decimal(str(order_item.quantity)) * Decimal(str(order_item.food_item.price))
+        
+        # Calculate hotel expenses
+        hotel_expenses_result = HotelExpenseRecord.objects.aggregate(
+            total=Sum('amount')
+        )
+        hotel_expenses = Decimal(str(hotel_expenses_result['total'] or '0.00'))
         
         hotel_profit = hotel_revenue - hotel_expenses
         
@@ -972,25 +975,27 @@ def get_laundry_profit_and_hotel(request, selected_year=None):
             
         laundry_data = analytics.get_dashboard_data(request, selected_year)
         
-        laundry_revenue = laundry_data['order_stats']['total_revenue']
-        laundry_expenses = laundry_data['expense_stats']['total_expenses']
+        # Extract laundry revenue and expenses
+        laundry_revenue = Decimal(str(laundry_data.get('order_stats', {}).get('total_revenue', 0) or 0))
+        laundry_expenses = Decimal(str(laundry_data.get('expense_stats', {}).get('total_expenses', 0) or 0))
         laundry_profit = laundry_revenue - laundry_expenses
         
-        # TOTAL REVENUE (Hotel + Laundry)
+        # TOTALS
         total_revenue = hotel_revenue + laundry_revenue
+        total_profit = hotel_profit + laundry_profit
         
+        # Convert to float for template (or keep as Decimal if your template filters support it)
         context = {
-            'total_revenue': total_revenue,
-            'laundry_profit': laundry_profit,
-            'hotel_profit': hotel_profit,
-            'total_profit': laundry_profit + hotel_profit,  # Optional: combined profit
+            'total_revenue': float(total_revenue),
+            'laundry_profit': float(laundry_profit),
+            'hotel_profit': float(hotel_profit),
+            'total_profit': float(total_profit),
         }
         
-        return render(request, 'AGeneraldashboard.html', context)
+        return render(request, 'Admin/Generaldashboard.html', context)
         
     except Exception as e:
         logger.error(f"Error in get_laundry_profit_and_hotel: {e}")
-        # Fallback context in case of error
         context = {
             'total_revenue': 0,
             'laundry_profit': 0,
@@ -998,136 +1003,6 @@ def get_laundry_profit_and_hotel(request, selected_year=None):
             'total_profit': 0,
         }
         return render(request, 'Admin/Generaldashboard.html', context)
-
-@login_required
-def generaldashboard(request):
-    if not request.user.is_authenticated:
-        return redirect('login')
-
-    # Get user's shops
-    user_shops = get_user_shops(request)
-
-    # ===== HOTEL BUSINESS DATA =====
-    revenue_expression = ExpressionWrapper(
-        F('items__quantity') * F('items__food_item__price'),
-        output_field=DecimalField(max_digits=12, decimal_places=2)
-    )
-
-   
-    hotel_total_revenue = OrderItem.objects.aggregate(
-        total_revenue=Coalesce(
-            Sum(F('quantity') * F('food_item__price')),
-            Value(0)
-        )
-    )['total_revenue'] or 0
-
-    # Calculate hotel expenses
-    hotel_expenses = HotelExpenseRecord.objects.aggregate(
-        total_expenses=Coalesce(Sum('amount'), Value(0))
-    )['total_expenses'] or 0
-
-    # Calculate hotel profit
-    hotel_profit = hotel_total_revenue - hotel_expenses
-
-    # Hotel order statistics
-    hotel_total_orders = Order.objects.count()
-    hotel_served_orders = Order.objects.filter(order_status='Served').count()
-    hotel_in_progress_orders = Order.objects.filter(order_status='In Progress').count()
-
-    # Recent hotel orders
-    recent_hotel_orders = Order.objects.select_related('created_by').prefetch_related(
-        'items', 'items__food_item'
-    ).order_by('-created_at')[:10]
-
-    # ===== LAUNDRY BUSINESS DATA =====
-    class MockAdmin:
-        def get_user_shops(self, request):
-            return get_user_shops(request)
-
-    mock_admin = MockAdmin()
-    analytics = DashboardAnalytics(mock_admin)
-    current_year = timezone.now().year
-    laundry_data = analytics.get_dashboard_data(request, current_year)
-
-    # Laundry stats
-    laundry_total_revenue = laundry_data['order_stats']['total_revenue']
-    laundry_total_expenses = laundry_data['expense_stats']['total_expenses']
-    laundry_profit = laundry_total_revenue - laundry_total_expenses
-    laundry_total_orders = laundry_data['order_stats']['total_orders']
-    laundry_pending_orders = laundry_data['order_stats']['pending_orders']
-    laundry_completed_orders = laundry_data['order_stats']['completed_orders']
-
-    # Recent laundry orders
-    recent_laundry_orders = []
-    for status_orders in laundry_data['orders_by_payment_status'].values():
-        recent_laundry_orders.extend(status_orders[:5])
-    recent_laundry_orders = recent_laundry_orders[:10]
-
-    # ===== COMBINED BUSINESS DATA =====
-    total_combined_revenue = hotel_total_revenue + laundry_total_revenue
-    total_combined_expenses = hotel_expenses + laundry_total_expenses
-    total_combined_profit = hotel_profit + laundry_profit
-
-    # ===== SHOP PERFORMANCE =====
-    shop_performance = None
-    if request.user.is_superuser:
-        shop_performance = {}
-
-        # Laundry performance
-        if 'shop_a_stats' in laundry_data:
-            shop_performance['Shop A'] = {
-                'total_orders': laundry_data['shop_a_stats'].get('total_orders', 0),
-                'completed_orders': laundry_data['shop_a_stats'].get('completed_orders', 0),
-                'total_revenue': laundry_data['shop_a_stats'].get('revenue', 0),
-                'total_expenses': laundry_data['shop_a_stats'].get('total_expenses', 0),
-                'net_profit': laundry_data['shop_a_stats'].get('net_profit', 0),
-                'business_type': 'Laundry'
-            }
-        if 'shop_b_stats' in laundry_data:
-            shop_performance['Shop B'] = {
-                'total_orders': laundry_data['shop_b_stats'].get('total_orders', 0),
-                'completed_orders': laundry_data['shop_b_stats'].get('completed_orders', 0),
-                'total_revenue': laundry_data['shop_b_stats'].get('revenue', 0),
-                'total_expenses': laundry_data['shop_b_stats'].get('total_expenses', 0),
-                'net_profit': laundry_data['shop_b_stats'].get('net_profit', 0),
-                'business_type': 'Laundry'
-            }
-
-        # Hotel performance
-        shop_performance['Hotel'] = {
-            'total_orders': hotel_total_orders,
-            'completed_orders': hotel_served_orders,
-            'total_revenue': hotel_total_revenue,
-            'total_expenses': hotel_expenses,
-            'net_profit': hotel_profit,
-            'business_type': 'Hotel'
-        }
-
-    # ===== CONTEXT =====
-    context = {
-        'user_shops': user_shops,
-        'hotel_total_revenue': hotel_total_revenue,
-        'hotel_expenses': hotel_expenses,
-        'hotel_profit': hotel_profit,
-        'hotel_total_orders': hotel_total_orders,
-        'hotel_served_orders': hotel_served_orders,
-        'hotel_in_progress_orders': hotel_in_progress_orders,
-        'recent_hotel_orders': recent_hotel_orders,
-        'laundry_total_revenue': laundry_total_revenue,
-        'laundry_total_expenses': laundry_total_expenses,
-        'laundry_profit': laundry_profit,
-        'laundry_total_orders': laundry_total_orders,
-        'laundry_pending_orders': laundry_pending_orders,
-        'laundry_completed_orders': laundry_completed_orders,
-        'recent_laundry_orders': recent_laundry_orders,
-        'total_combined_revenue': total_combined_revenue,
-        'total_combined_expenses': total_combined_expenses,
-        'total_combined_profit': total_combined_profit,
-        'shop_performance': shop_performance,
-        'laundry_analytics_data': laundry_data,
-    }
-
-    return render(request, 'Admin/Generaldashboard.html', context)
 
 def Reportsdashboard(request):
     # Initialize DashboardAnalytics with a mock admin instance

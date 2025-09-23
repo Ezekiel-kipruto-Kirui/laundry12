@@ -68,7 +68,7 @@ class Order(models.Model):
         return sum(item.quantity * item.food_item.price for item in self.order_items.all())
 
 
-class OrderItem(models.Model):
+class HotelOrderItem(models.Model):
     order = models.ForeignKey(Order, on_delete=models.CASCADE, related_name="order_items")
     food_item = models.ForeignKey(FoodItem, on_delete=models.CASCADE)
     quantity = models.PositiveIntegerField(default=1)
