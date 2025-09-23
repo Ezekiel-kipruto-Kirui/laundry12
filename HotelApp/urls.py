@@ -1,6 +1,7 @@
 from django.contrib import admin
 from django.urls import path,include
 from . import views
+from . Vews import expense
 from django.views.decorators.cache import cache_page
 
 # Create an instance of the admin class to access its methods
@@ -34,4 +35,15 @@ urlpatterns = [
 
     # API URLs
     path('api/items/<int:pk>/', views.get_food_item_info, name='get_food_item_info'),
+
+    path('expensemanagement/', expense.BusinessListView.as_view(), name='business_list'),
+    path('business/<int:business_id>/', expense.ExpenseDashboardView.as_view(), name='expense_dashboard'),
+    path('expense-field/create/', expense.ExpenseFieldCreateView.as_view(), name='expense_field_create'),
+    path('expense-record/create/<int:business_id>/', expense.ExpenseRecordCreateView.as_view(), name='expense_record_create'),
+    path('expense-record/update/<int:pk>/', expense.ExpenseRecordUpdateView.as_view(), name='expense_record_update'),
+    path('expense-record/delete/<int:pk>/', expense.ExpenseRecordDeleteView.as_view(), name='expense_record_delete'),
+    path('expense-field/delete/<int:pk>/', expense.delete_expense_field, name='expense_field_delete'),
+
+
+
 ]

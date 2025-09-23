@@ -7,265 +7,55 @@
     src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0/dist/chartjs-plugin-datalabels.min.js"></script>
 <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-<style>
-    :root {
-        --primary: #4f46e5;
-        --primary-light: #e0e7ff;
-        --secondary: #ec4899;
-        --success: #10b981;
-        --warning: #f59e0b;
-        --danger: #ef4444;
-        --info: #3b82f6;
-        --light-bg: #f8fafc;
-        --card-bg: #ffffff;
-        --text-primary: #1e293b;
-        --text-secondary: #64748b;
-        --border: #e2e8f0;
-        --shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
-        --shadow-hover: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
-    }
-
-    body {
-        background-color: var(--light-bg);
-        color: var(--text-primary);
-        font-family: 'Inter', sans-serif;
-    }
-
-    .dashboard-card {
-        background-color: var(--card-bg);
-        border-radius: 12px;
-        box-shadow: var(--shadow);
-        border: 1px solid var(--border);
-        transition: all 0.3s ease;
-    }
-
-    .dashboard-card:hover {
-        box-shadow: var(--shadow-hover);
-        transform: translateY(-2px);
-    }
-
-    .chart-container {
-        background-color: var(--card-bg);
-        border-radius: 12px;
-        padding: 20px;
-        box-shadow: var(--shadow);
-        border: 1px solid var(--border);
-    }
-
-    .filter-section {
-        background-color: var(--card-bg);
-        border-radius: 12px;
-        box-shadow: var(--shadow);
-        border: 1px solid var(--border);
-    }
-
-    .section-title {
-        color: var(--text-primary);
-        border-left: 4px solid var(--primary);
-        padding-left: 12px;
-        margin-bottom: 20px;
-        font-weight: 600;
-    }
-
-    .stat-icon {
-        width: 40px;
-        height: 40px;
-        border-radius: 10px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-size: 18px;
-    }
-
-    .stat-value {
-        color: var(--text-primary);
-        font-weight: 700;
-        font-size: 24px;
-        margin: 8px 0 4px;
-    }
-
-    .stat-label {
-        color: var(--text-secondary);
-        font-size: 14px;
-        font-weight: 500;
-        text-transform: uppercase;
-        letter-spacing: 0.5px;
-    }
-
-    .stat-description {
-        color: var(--text-secondary);
-        font-size: 12px;
-    }
-
-    .btn-primary {
-        background-color: var(--primary);
-        color: white;
-        border: none;
-        border-radius: 8px;
-        padding: 10px 16px;
-        font-weight: 500;
-        transition: all 0.3s ease;
-    }
-
-    .btn-primary:hover {
-        background-color: #4338ca;
-        transform: translateY(-1px);
-    }
-
-    .btn-secondary {
-        background-color: white;
-        color: var(--text-primary);
-        border: 1px solid var(--border);
-        border-radius: 8px;
-        padding: 10px 16px;
-        font-weight: 500;
-        transition: all 0.3s ease;
-    }
-
-    .btn-secondary:hover {
-        background-color: #f1f5f9;
-    }
-
-    input,
-    select {
-        background-color: white;
-        border: 1px solid var(--border);
-        border-radius: 8px;
-        padding: 10px 12px;
-        color: var(--text-primary);
-        transition: all 0.3s ease;
-    }
-
-    input:focus,
-    select:focus {
-        outline: none;
-        border-color: var(--primary);
-        box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
-    }
-
-    .customer-item {
-        background-color: #f8fafc;
-        border-radius: 10px;
-        padding: 12px;
-        margin-bottom: 8px;
-        transition: all 0.3s ease;
-        border: 1px solid transparent;
-    }
-
-    .customer-item:hover {
-        background-color: #f1f5f9;
-        border-color: var(--border);
-    }
-
-    .customer-rank {
-        width: 32px;
-        height: 32px;
-        border-radius: 8px;
-        background: linear-gradient(135deg, var(--primary), var(--secondary));
-        color: white;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-weight: 600;
-        font-size: 14px;
-    }
-
-    .scroll-container {
-        scrollbar-width: thin;
-        scrollbar-color: #cbd5e1 transparent;
-    }
-
-    .scroll-container::-webkit-scrollbar {
-        width: 6px;
-    }
-
-    .scroll-container::-webkit-scrollbar-track {
-        background: transparent;
-    }
-
-    .scroll-container::-webkit-scrollbar-thumb {
-        background-color: #cbd5e1;
-        border-radius: 3px;
-    }
-
-    /* Ensure charts have white backgrounds */
-    canvas {
-        background-color: white !important;
-        border-radius: 8px;
-        padding: 10px;
-    }
-
-    /* Status badges */
-    .status-badge {
-        padding: 4px 8px;
-        border-radius: 6px;
-        font-size: 12px;
-        font-weight: 500;
-    }
-
-    .status-pending {
-        background-color: #fef3c7;
-        color: #92400e;
-    }
-
-    .status-completed {
-        background-color: #d1fae5;
-        color: #065f46;
-    }
-
-    .status-partial {
-        background-color: #dbeafe;
-        color: #1e40af;
-    }
-
-    .status-overdue {
-        background-color: #fee2e2;
-        color: #991b1b;
-    }
-</style>
 {% endblock %}
 
 {% block content %}
-<div id="content-main" class="min-h-screen p-6">
+<div id="content-main" class="min-h-screen p-6 bg-gray-50">
     <!-- Dashboard Header -->
     <div class="flex justify-between items-center mb-8 flex-wrap gap-4">
         <h1 class="text-3xl font-bold text-gray-800 flex items-center gap-3">
-            <i class="fas fa-chart-line" style="color: var(--primary);"></i>
+            <i class="fas fa-chart-line text-pink-500"></i>
             Business Dashboard
         </h1>
     </div>
 
     <!-- Date Range Filter Section -->
-    <div class="filter-section p-4 mb-6">
+    <div class="bg-white border border-gray-200 rounded-xl p-4 shadow-sm mb-6">
         <form method="get" id="filterForm" class="flex items-center gap-4 flex-wrap">
             <!-- Year Input -->
             <div class="flex items-center gap-2">
                 <label for="year" class="text-sm font-medium text-gray-700 whitespace-nowrap">Year:</label>
                 <input type="number" id="year" name="year" value="{{ selected_year }}" min="2020" max="2100"
-                    class="w-24">
+                    class="bg-white border border-gray-300 rounded-md px-3 py-2 text-gray-700 w-24 focus:outline-none focus:ring-2 focus:ring-pink-500">
             </div>
 
             <!-- Month Selector -->
             <div class="flex items-center gap-2">
                 <label for="month" class="text-sm font-medium text-gray-700 whitespace-nowrap">Month:</label>
                 <input type="month" id="month" name="month"
-                    value="{% if selected_month %}{{ selected_year }}-{{ selected_month|stringformat:'02d' }}{% endif %}">
+                    value="{% if selected_month %}{{ selected_year }}-{{ selected_month|stringformat:'02d' }}{% endif %}"
+                    class="bg-white border border-gray-300 rounded-md px-3 py-2 text-gray-700 focus:outline-none focus:ring-2 focus:ring-pink-500">
             </div>
+
             <!-- Date Range -->
             <div class="flex items-center gap-2">
                 <label for="from_date" class="text-sm font-medium text-gray-700 whitespace-nowrap">From:</label>
-                <input type="date" id="from_date" name="from_date" value="{% if from_date %}{{ from_date }}{% endif %}">
+                <input type="date" id="from_date" name="from_date" value="{% if from_date %}{{ from_date }}{% endif %}"
+                    class="bg-white border border-gray-300 rounded-md px-3 py-2 text-gray-700 focus:outline-none focus:ring-2 focus:ring-pink-500">
             </div>
             <div class="flex items-center gap-2">
                 <label for="to_date" class="text-sm font-medium text-gray-700 whitespace-nowrap">To:</label>
-                <input type="date" id="to_date" name="to_date" value="{% if to_date %}{{ to_date }}{% endif %}">
+                <input type="date" id="to_date" name="to_date" value="{% if to_date %}{{ to_date }}{% endif %}"
+                    class="bg-white border border-gray-300 rounded-md px-3 py-2 text-gray-700 focus:outline-none focus:ring-2 focus:ring-pink-500">
             </div>
 
             <div class="flex gap-2 ml-auto">
-                <button type="submit" class="btn-primary flex items-center gap-2">
+                <button type="submit"
+                    class="bg-pink-500 hover:bg-pink-600 text-white px-4 py-2 rounded-md font-medium transition-all duration-300 flex items-center gap-2">
                     <i class="fas fa-filter"></i> Apply Filters
                 </button>
-                <button type="button" id="resetFilters" class="btn-secondary flex items-center gap-2">
+                <button type="button" id="resetFilters"
+                    class="bg-white border border-gray-300 text-gray-700 hover:bg-gray-100 px-4 py-2 rounded-md font-medium transition-all duration-300 flex items-center gap-2">
                     <i class="fas fa-redo"></i> Reset
                 </button>
             </div>
@@ -273,125 +63,127 @@
     </div>
 
     <!-- Overall Stats -->
-    <h2 class="section-title text-xl flex items-center gap-2">
-        <i class="fas fa-store" style="color: var(--primary);"></i> General
+    <h2 class="text-xl font-semibold text-gray-800 mb-4 pl-3 border-l-4 border-pink-500 flex items-center gap-2">
+        <i class="fas fa-store text-pink-500"></i> General
     </h2>
     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+
         <!-- Total Revenue -->
-        <div class="dashboard-card p-4 border-t-4" style="border-top-color: var(--success);">
+        <div
+            class="bg-white rounded-xl p-4 shadow-sm transition-all duration-300 hover:shadow-md border-l-4 border-green-500">
             <div class="flex items-center justify-between mb-4">
-                <div class="stat-icon" style="background-color: var(--primary-light); color: var(--success);">
-                    <i class="fas fa-wallet"></i>
+                <div class="w-10 h-10 rounded-lg bg-green-50 flex items-center justify-center">
+                    <i class="fas fa-wallet text-green-500 text-lg"></i>
                 </div>
             </div>
             <div>
-                <div class="stat-label">Total Revenue</div>
-                <div class="stat-value">Ksh {{total_revenue|floatformat:2|default:"0.00" }}</div>
-                <div class="stat-description">Total earnings</div>
+                <h3 class="text-sm font-semibold text-gray-500 uppercase tracking-wide">Total Revenue</h3>
+                <div class="text-2xl font-bold text-gray-800 mt-1">Ksh {{total_revenue|floatformat:2|default:"0.00" }}
+                </div>
+                <div class="text-xs text-gray-500 mt-1">Total earnings</div>
             </div>
         </div>
 
         <!-- Total Orders -->
-        <div class="dashboard-card p-4 border-t-4" style="border-top-color: var(--primary);">
+        <div
+            class="bg-white rounded-xl p-4 shadow-sm transition-all duration-300 hover:shadow-md border-l-4 border-pink-500">
             <div class="flex items-center justify-between mb-4">
-                <div class="stat-icon" style="background-color: var(--primary-light); color: var(--primary);">
-                    <i class="fas fa-shopping-bag"></i>
+                <div class="w-10 h-10 rounded-lg bg-pink-50 flex items-center justify-center">
+                    <i class="fas fa-shopping-bag text-pink-500 text-lg"></i>
                 </div>
             </div>
             <div>
-                <div class="stat-label">Total Orders</div>
-                <div class="stat-value">{{ total_orders }}</div>
-                <div class="stat-description">All time orders</div>
+                <h3 class="text-sm font-semibold text-gray-500 uppercase tracking-wide">Total Orders</h3>
+                <div class="text-2xl font-bold text-gray-800 mt-1">{{ total_orders }}</div>
+                <div class="text-xs text-gray-500 mt-1">All time orders</div>
             </div>
         </div>
 
         <!-- Pending Orders -->
-        <div class="dashboard-card p-4 border-t-4" style="border-top-color: var(--warning);">
+        <div
+            class="bg-white rounded-xl p-4 shadow-sm transition-all duration-300 hover:shadow-md border-l-4 border-yellow-500">
             <div class="flex items-center justify-between mb-4">
-                <div class="stat-icon" style="background-color: #fef3c7; color: var(--warning);">
-                    <i class="fas fa-clock"></i>
+                <div class="w-10 h-10 rounded-lg bg-yellow-50 flex items-center justify-center">
+                    <i class="fas fa-clock text-yellow-500 text-lg"></i>
                 </div>
             </div>
             <div>
-                <div class="stat-label">Pending Orders</div>
-                <div class="stat-value">{{ pending_orders }}</div>
-                <div class="stat-description">Awaiting processing</div>
+                <h3 class="text-sm font-semibold text-gray-500 uppercase tracking-wide">Pending Orders</h3>
+                <div class="text-2xl font-bold text-gray-800 mt-1">{{ pending_orders }}</div>
+                <div class="text-xs text-gray-500 mt-1">Awaiting processing</div>
             </div>
         </div>
 
         <!-- Completed Orders -->
-        <div class="dashboard-card p-4 border-t-4" style="border-top-color: var(--info);">
+        <div
+            class="bg-white rounded-xl p-4 shadow-sm transition-all duration-300 hover:shadow-md border-l-4 border-blue-500">
             <div class="flex items-center justify-between mb-4">
-                <div class="stat-icon" style="background-color: #dbeafe; color: var(--info);">
-                    <i class="fas fa-check-circle"></i>
+                <div class="w-10 h-10 rounded-lg bg-blue-50 flex items-center justify-center">
+                    <i class="fas fa-check-circle text-blue-500 text-lg"></i>
                 </div>
             </div>
             <div>
-                <div class="stat-label">Completed Orders</div>
-                <div class="stat-value">{{ completed_orders }}</div>
-                <div class="stat-description">Successfully delivered</div>
+                <h3 class="text-sm font-semibold text-gray-500 uppercase tracking-wide">Completed Orders</h3>
+                <div class="text-2xl font-bold text-gray-800 mt-1">{{ completed_orders }}</div>
+                <div class="text-xs text-gray-500 mt-1">Successfully delivered</div>
             </div>
         </div>
     </div>
 
     <!-- Shop A Stats -->
     <div class="mb-8">
-        <h2 class="section-title text-xl flex items-center gap-2">
-            <i class="fas fa-store" style="color: var(--primary);"></i> Shop A
+        <h2 class="text-xl font-semibold text-gray-800 mb-4 pl-3 border-l-4 border-pink-500 flex items-center gap-2">
+            <i class="fas fa-store text-pink-500"></i> Shop A
         </h2>
         <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
             <!-- Shop A Revenue -->
-            <div class="dashboard-card p-4 border-t-4" style="border-top-color: var(--success);">
+            <div
+                class="bg-white rounded-xl p-4 shadow-sm transition-all duration-300 hover:shadow-md border-l-4 border-green-500">
                 <div class="flex items-center justify-between mb-4">
-                    <div class="stat-icon" style="background-color: var(--primary-light); color: var(--success);">
-                        <i class="fas fa-wallet"></i>
+                    <div class="w-10 h-10 rounded-lg bg-green-50 flex items-center justify-center">
+                        <i class="fas fa-wallet text-green-500 text-lg"></i>
                     </div>
                 </div>
                 <div>
-                    <div class="stat-label">Total Revenue</div>
-                    <div class="stat-value">Ksh {{ shop_a_revenue|floatformat:2|default:"0.00" }}</div>
-                    <div class="stat-description">Shop A earnings</div>
+                    <h3 class="text-sm font-semibold text-gray-500 uppercase tracking-wide">Total Revenue</h3>
+                    <div class="text-2xl font-bold text-gray-800 mt-1">Ksh {{shop_a_revenue|floatformat:2|default:"0.00" }}</div>
+                    <div class="text-xs text-gray-500 mt-1">Shop A earnings</div>
                 </div>
             </div>
 
             <!-- Shop A Orders -->
-            <div class="dashboard-card p-4 border-t-4" style="border-top-color: var(--primary);">
+            <div
+                class="bg-white rounded-xl p-4 shadow-sm transition-all duration-300 hover:shadow-md border-l-4 border-pink-500">
                 <div class="flex items-center justify-between mb-4">
-                    <div class="stat-icon" style="background-color: var(--primary-light); color: var(--primary);">
-                        <i class="fas fa-shopping-bag"></i>
+                    <div class="w-10 h-10 rounded-lg bg-pink-50 flex items-center justify-center">
+                        <i class="fas fa-shopping-bag text-pink-500 text-lg"></i>
                     </div>
                 </div>
                 <div>
-                    <div class="stat-label">Order Statistics</div>
-                    <div class="stat-value">{{ shop_a_total_orders }}</div>
-                    <div class="flex gap-2 mt-1">
-                        <span class="status-badge status-pending">{{ shop_a_pending_orders }} pending</span>
-                        <span class="status-badge status-completed">{{ shop_a_completed_orders }} completed</span>
+                    <h3 class="text-sm font-semibold text-gray-500 uppercase tracking-wide">Order Statistics</h3>
+                    <div class="text-2xl font-bold text-gray-800 mt-1">{{ shop_a_total_orders }}</div>
+                    <div class="text-xs text-gray-500 mt-1 flex gap-2">
+                        <span class="text-yellow-500">{{ shop_a_pending_orders }} pending</span> •
+                        <span class="text-blue-500">{{ shop_a_completed_orders }} completed</span>
                     </div>
                 </div>
             </div>
 
-            <!-- Shop A Payments -->
-            <div class="dashboard-card p-4 border-t-4" style="border-top-color: #3730a3;">
+            <!-- Shop A Partial Payment -->
+            <div
+                class="bg-white rounded-xl p-4 shadow-sm transition-all duration-300 hover:shadow-md border-l-4 border-indigo-900">
                 <div class="flex items-center justify-between mb-4">
-                    <div class="stat-icon" style="background-color: #e0e7ff; color: #3730a3;">
-                        <i class="fas fa-money-bill-wave"></i>
+                    <div class="w-10 h-10 rounded-lg bg-indigo-50 flex items-center justify-center">
+                        <i class="fas fa-money-bill-wave text-indigo-900 text-lg"></i>
                     </div>
                 </div>
                 <div>
-                    <div class="stat-label">Payments</div>
-                    <div class="flex flex-wrap gap-1 mt-2">
-                        <span class="status-badge status-pending">{{ shop_a_pending_payments }} pending</span>
-                        <span class="status-badge status-partial">{{ shop_a_partial_payments }} partial</span>
-                        <span class="status-badge status-completed">{{ shop_a_complete_payments }} completed</span>
-                        {% if shop_a_overdue_orders_list %}
-                        <span class="status-badge status-overdue">{{ shop_a_overdue_orders_list|length }} overdue</span>
-                        {% endif %}
-                    </div>
-                    <div class="stat-description mt-2">
-                        Ksh {{ shop_a_stats.total_collected_amount|default:0 }} collected •
-                        Ksh {{ shop_a_stats.total_pending_amount|default:0 }} pending
-                    </div>
+                    <h3 class="text-sm font-semibold text-gray-500 uppercase tracking-wide">Payments</h3>
+                    <div class="text-2xl font-bold text-gray-800 mt-1">{{ shop_a_completed_order }}</div>
+                    <span class="text-yellow-500">{{ pending_payments }} pending</span> •
+                    <span class="text-blue-500">{{ partial_payments }} Partial</span>
+                    <span class="text-blue-500">{{ partial_payments }} completed</span>
+                    <div class="text-xs text-gray-500 mt-1">Advanced payments</div>
                 </div>
             </div>
         </div>
@@ -399,62 +191,61 @@
 
     <!-- Shop B Stats -->
     <div class="mb-8">
-        <h2 class="section-title text-xl flex items-center gap-2">
-            <i class="fas fa-store" style="color: var(--warning);"></i> Shop B Performance
+        <h2 class="text-xl font-semibold text-gray-800 mb-4 pl-3 border-l-4 border-yellow-500 flex items-center gap-2">
+            <i class="fas fa-store text-yellow-500"></i> Shop B Performance
         </h2>
         <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
             <!-- Shop B Revenue -->
-            <div class="dashboard-card p-4 border-t-4" style="border-top-color: var(--success);">
+            <div
+                class="bg-white rounded-xl p-4 shadow-sm transition-all duration-300 hover:shadow-md border-l-4 border-green-500">
                 <div class="flex items-center justify-between mb-4">
-                    <div class="stat-icon" style="background-color: var(--primary-light); color: var(--success);">
-                        <i class="fas fa-wallet"></i>
+                    <div class="w-10 h-10 rounded-lg bg-green-50 flex items-center justify-center">
+                        <i class="fas fa-wallet text-green-500 text-lg"></i>
                     </div>
                 </div>
                 <div>
-                    <div class="stat-label">Total Revenue</div>
-                    <div class="stat-value">Ksh {{shop_b_revenue|floatformat:2|default:"0.00" }}</div>
-                    <div class="stat-description">Shop B earnings</div>
+                    <h3 class="text-sm font-semibold text-gray-500 uppercase tracking-wide">Total Revenue</h3>
+                    <div class="text-2xl font-bold text-gray-800 mt-1">Ksh
+                        {{shop_b_revenue|floatformat:2|default:"0.00"}}</div>
+                    <div class="text-xs text-gray-500 mt-1">Shop B earnings</div>
                 </div>
             </div>
 
             <!-- Shop B Orders -->
-            <div class="dashboard-card p-4 border-t-4" style="border-top-color: var(--primary);">
+            <div
+                class="bg-white rounded-xl p-4 shadow-sm transition-all duration-300 hover:shadow-md border-l-4 border-pink-500">
                 <div class="flex items-center justify-between mb-4">
-                    <div class="stat-icon" style="background-color: var(--primary-light); color: var(--primary);">
-                        <i class="fas fa-shopping-bag"></i>
+                    <div class="w-10 h-10 rounded-lg bg-pink-50 flex items-center justify-center">
+                        <i class="fas fa-shopping-bag text-pink-500 text-lg"></i>
                     </div>
                 </div>
                 <div>
-                    <div class="stat-label">Order Statistics</div>
-                    <div class="stat-value">{{ shop_b_total_orders }}</div>
-                    <div class="flex gap-2 mt-1">
-                        <span class="status-badge status-pending">{{ shop_b_pending_orders }} pending</span>
-                        <span class="status-badge status-completed">{{ shop_b_completed_orders }} completed</span>
+                    <h3 class="text-sm font-semibold text-gray-500 uppercase tracking-wide">Order Statistics</h3>
+                    <div class="text-2xl font-bold text-gray-800 mt-1">{{ shop_b_total_orders }}</div>
+                    <div class="text-xs text-gray-500 mt-1 flex gap-2">
+                        <span class="text-yellow-500">{{ shop_b_pending_orders }} pending</span> •
+                        <span class="text-blue-500">{{ shop_b_completed_orders }} completed</span>
                     </div>
                 </div>
             </div>
 
-            <!-- Shop B Payments -->
-            <div class="dashboard-card p-4 border-t-4" style="border-top-color: #3730a3;">
+            <!-- Shop B Partial Payment -->
+            <div
+                class="bg-white rounded-xl p-4 shadow-sm transition-all duration-300 hover:shadow-md border-l-4 border-indigo-900">
                 <div class="flex items-center justify-between mb-4">
-                    <div class="stat-icon" style="background-color: #e0e7ff; color: #3730a3;">
-                        <i class="fas fa-money-bill-wave"></i>
+                    <div class="w-10 h-10 rounded-lg bg-indigo-50 flex items-center justify-center">
+                        <i class="fas fa-money-bill-wave text-indigo-900 text-lg"></i>
                     </div>
                 </div>
                 <div>
-                    <div class="stat-label">Payments</div>
-                    <div class="flex flex-wrap gap-1 mt-2">
-                        <span class="status-badge status-pending">{{ shop_b_pending_payments }} pending</span>
-                        <span class="status-badge status-partial">{{ shop_b_partial_payments }} partial</span>
-                        <span class="status-badge status-completed">{{ shop_b_complete_payments }} completed</span>
-                        {% if shop_b_overdue_orders_list %}
-                        <span class="status-badge status-overdue">{{ shop_b_overdue_orders_list|length }} overdue</span>
-                        {% endif %}
-                    </div>
-                    <div class="stat-description mt-2">
-                        Ksh {{ shop_b_stats.total_collected_amount|default:0 }} collected •
-                        Ksh {{ shop_b_stats.total_pending_amount|default:0 }} pending
-                    </div>
+                    <h3 class="text-sm font-semibold text-gray-500 uppercase tracking-wide">Payments</h3>
+                    <div class="text-2xl font-bold text-gray-800 mt-1">{{ shop_b_completed_orders }}</div>
+                    {% for shop, stats in shop_payment_stats.items %}
+                    <span class="text-yellow-500"> {{ stats.pending }} (KSh {{ stats.pending_amount }}) pending</span> •
+                    <span class="text-blue-500">{{ stats.partial }} (KSh {{ stats.partial_amount }}) Partial</span>•
+                    <span class="text-blue-500">{{ stats.complete }} (KSh {{ stats.collected_amount }}) completed</span>
+                    {% endfor %}
+                    <div class="text-xs text-gray-500 mt-1">Advanced payments</div>
                 </div>
             </div>
         </div>
@@ -463,13 +254,13 @@
     <!-- Main Charts Section -->
     <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
         <!-- Revenue Distribution -->
-        <div class="chart-container">
+        <div class="bg-white rounded-xl p-6 shadow-sm">
             <div class="flex justify-between items-center mb-6">
                 <h4 class="text-lg font-semibold text-gray-800 flex items-center gap-2">
-                    <i class="fas fa-chart-pie" style="color: var(--warning);"></i>
+                    <i class="fas fa-chart-pie text-yellow-500"></i>
                     Revenue Distribution
                 </h4>
-                <span class="status-badge" style="background-color: #fef3c7; color: #92400e;">Total</span>
+                <span class="bg-yellow-100 text-yellow-800 px-3 py-1 rounded-full text-sm font-medium">Total</span>
             </div>
             <div class="h-64">
                 <canvas id="revenueChart"></canvas>
@@ -477,14 +268,13 @@
         </div>
 
         <!-- Revenue Trend -->
-        <div class="chart-container">
+        <div class="bg-white rounded-xl p-6 shadow-sm">
             <div class="flex justify-between items-center mb-6">
                 <h2 class="text-lg font-semibold text-gray-800 flex items-center gap-2">
-                    <i class="fas fa-chart-line" style="color: var(--primary);"></i>
+                    <i class="fas fa-chart-line text-pink-500"></i>
                     Revenue Trend
                 </h2>
-                <span class="status-badge" style="background-color: #e0e7ff; color: var(--primary);">{{ selected_year
-                    }}</span>
+                <span class="bg-pink-100 text-pink-800 px-3 py-1 rounded-full text-sm font-medium">{{ selected_year }}</span>
             </div>
             <div class="h-64">
                 {% if not selected_month %}
@@ -503,13 +293,13 @@
     <!-- Insights Section -->
     <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
         <!-- Top Services -->
-        <div class="chart-container">
+        <div class="bg-white rounded-xl p-6 shadow-sm">
             <div class="flex justify-between items-center mb-6">
                 <h2 class="text-lg font-semibold text-gray-800 flex items-center gap-2">
-                    <i class="fas fa-spa" style="color: var(--success);"></i>
+                    <i class="fas fa-spa text-green-500"></i>
                     Top Services
                 </h2>
-                <span class="status-badge" style="background-color: #d1fae5; color: #065f46;">{{ selected_year }}</span>
+                <span class="bg-green-100 text-green-800 px-3 py-1 rounded-full text-sm font-medium">{{ selected_year }}</span>
             </div>
             <div class="h-72">
                 {% if services_labels and services_labels|length > 0 %}
@@ -524,13 +314,13 @@
         </div>
 
         <!-- Popular Products -->
-        <div class="chart-container">
+        <div class="bg-white rounded-xl p-6 shadow-sm">
             <div class="flex justify-between items-center mb-6">
                 <h2 class="text-lg font-semibold text-gray-800 flex items-center gap-2">
-                    <i class="fas fa-box-open" style="color: var(--warning);"></i>
+                    <i class="fas fa-box-open text-yellow-500"></i>
                     Common Items
                 </h2>
-                <span class="status-badge" style="background-color: #fef3c7; color: #92400e;">{{ selected_year }}</span>
+                <span class="bg-yellow-100 text-yellow-800 px-3 py-1 rounded-full text-sm font-medium">{{ selected_year }}</span>
             </div>
             <div class="h-72">
                 {% if item_labels and item_labels|length > 0 %}
@@ -545,25 +335,27 @@
         </div>
 
         <!-- VIP Customers -->
-        <div class="chart-container">
+        <div class="bg-white rounded-xl p-6 shadow-sm">
             <div class="flex justify-between items-center mb-6">
                 <h2 class="text-lg font-semibold text-gray-800 flex items-center gap-2">
-                    <i class="fas fa-crown" style="color: var(--warning);"></i>
+                    <i class="fas fa-crown text-yellow-500"></i>
                     Top Customers
                 </h2>
-                <span class="status-badge" style="background-color: #fef3c7; color: #92400e;">{{ selected_year }}</span>
+                <span class="bg-yellow-100 text-yellow-800 px-3 py-1 rounded-full text-sm font-medium">{{ selected_year }}</span>
             </div>
-            <div class="h-72 scroll-container overflow-y-auto">
+            <div class="h-72 overflow-y-auto">
                 {% for customer in common_customers %}
-                <div class="customer-item flex items-center">
-                    <div class="customer-rank mr-3">
+                <div
+                    class="flex items-center p-3 bg-gray-50 rounded-lg mb-2 transition-all duration-300 hover:bg-gray-100">
+                    <div
+                        class="w-9 h-9 rounded-lg bg-gradient-to-br from-pink-500 to-yellow-500 flex items-center justify-center text-white font-semibold mr-3">
                         {{ forloop.counter }}
                     </div>
                     <div class="flex-1">
                         <div class="font-medium text-gray-800">{{ customer.customer__name }}</div>
                         <div class="text-sm text-gray-500">{{ customer.order_count }} orders</div>
                     </div>
-                    <div class="font-bold" style="color: var(--primary);">
+                    <div class="font-bold text-pink-500">
                         ksh{{ customer.total_spent|floatformat:2 }}
                     </div>
                 </div>
@@ -640,21 +432,22 @@
         }
 
         const COLOR_PALETTE = {
-            primary: '#4f46e5',
-            secondary: '#ec4899',
-            success: '#10b981',
-            warning: '#f59e0b',
-            danger: '#ef4444',
-            info: '#3b82f6',
-            lightPrimary: '#818cf8',
-            lightSecondary: '#f472b6'
+            navyBlue: '#1E3A8A',
+            orangeYellow: '#F59E0B',
+            lightOrange: '#FBBF24',
+            pink: '#EC407A',
+            lightPink: '#F48FB1',
+            success: '#10B981',
+            warning: '#F59E0B',
+            danger: '#EF4444',
+            info: '#3B82F6'
         };
 
         function getChartOptions() {
-            const textColor = '#1e293b';
-            const tooltipBg = '#ffffff';
-            const tooltipBorder = '#e2e8f0';
-            const tooltipText = '#1e293b';
+            const textColor = '#1E293B';
+            const tooltipBg = '#FFFFFF';
+            const tooltipBorder = '#E2E8F0';
+            const tooltipText = '#1E293B';
 
             return {
                 maintainAspectRatio: false,
@@ -770,11 +563,11 @@
                         datasets: [{
                             data: revenueValues,
                             backgroundColor: [
-                                COLOR_PALETTE.primary,
-                                COLOR_PALETTE.warning,
-                                COLOR_PALETTE.lightPrimary,
-                                COLOR_PALETTE.secondary,
-                                COLOR_PALETTE.lightSecondary,
+                                COLOR_PALETTE.navyBlue,
+                                COLOR_PALETTE.orangeYellow,
+                                COLOR_PALETTE.lightOrange,
+                                COLOR_PALETTE.pink,
+                                COLOR_PALETTE.lightPink,
                                 COLOR_PALETTE.success,
                                 COLOR_PALETTE.info
                             ],
@@ -824,9 +617,9 @@
             if (lineData && lineData.length > 0 && lineData[0] && lineData[0].months) {
                 const trendCtx = trendCanvas.getContext('2d');
                 const lineColors = [
-                    COLOR_PALETTE.primary,
-                    COLOR_PALETTE.warning,
-                    COLOR_PALETTE.secondary,
+                    COLOR_PALETTE.pink,
+                    COLOR_PALETTE.orangeYellow,
+                    COLOR_PALETTE.navyBlue,
                     COLOR_PALETTE.success,
                     COLOR_PALETTE.info
                 ];
@@ -836,7 +629,7 @@
                     data: series.data || [],
                     borderColor: lineColors[index % lineColors.length],
                     backgroundColor: `${lineColors[index % lineColors.length]}20`,
-                    borderWidth: 2,
+                    borderWidth: 1,
                     tension: 0.4,
                     pointRadius: 0,
                     pointHoverRadius: 6,
@@ -894,13 +687,13 @@
 
                 const ctx = canvas.getContext('2d');
                 const barColors = [
-                    COLOR_PALETTE.primary,
-                    COLOR_PALETTE.warning,
-                    COLOR_PALETTE.secondary,
-                    COLOR_PALETTE.lightSecondary,
+                    COLOR_PALETTE.navyBlue,
+                    COLOR_PALETTE.orangeYellow,
+                    COLOR_PALETTE.pink,
+                    COLOR_PALETTE.lightPink,
                     COLOR_PALETTE.success,
                     COLOR_PALETTE.info,
-                    COLOR_PALETTE.lightPrimary
+                    COLOR_PALETTE.warning
                 ];
 
                 const customTooltip = {

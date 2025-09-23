@@ -94,17 +94,28 @@ class ExpenseField(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
-        unique_together = ('business', 'label')  # Prevent duplicate labels per business
+        unique_together = ('business', 'label')
 
     def __str__(self):
         return f"{self.label} ({self.business.name})"
 
 class ExpenseRecord(models.Model):
-    field = models.ForeignKey(ExpenseField, on_delete=models.CASCADE, db_index=True)
+    business = models.ForeignKey(Business, on_delete=models.CASCADE, related_name="expense_records")
+    expense_field = models.ForeignKey(ExpenseField, on_delete=models.CASCADE, related_name="expense_records")
     amount = models.DecimalField(max_digits=10, decimal_places=2)
-    date = models.DateField(auto_now_add=True, db_index=True)
-    notes = models.CharField(max_length=150,null=True)
-    business = models.ForeignKey(Business, on_delete=models.CASCADE, related_name='expense_records')
+    description = models.TextField(blank=True)
+    date = models.DateField()
+    created_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
-        return f"{self.field.label}: {self.amount} ({self.business.name})"
+        return f"{self.expense_field.label} - ${self.amount} - {self.date}"
+    business = models.ForeignKey(Business, on_delete=models.CASCADE, related_name="expense_records")
+    expense_field = models.ForeignKey(ExpenseField, on_delete=models.CASCADE, related_name="expense_records")
+    amount = models.DecimalField(max_digits=10, decimal_places=2)
+    description = models.TextField(blank=True)
+    expense_date = models.DateField()
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return f"{self.expense_field.label} - {self.amount} ({self.expense_date})"
