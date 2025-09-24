@@ -1,5 +1,6 @@
 {% extends "./base.html" %}
 {% load static %}
+
 {% load static tailwind_tags %}
 
 {% block title %}Login - Clean Page Laundry{% endblock %}
@@ -90,11 +91,14 @@
                     </div>
 
                     <div>
-                        <button type="submit"
-                            class=" bg-blue-800 m-8 p-3 relative w-full flex  justify-center border border-transparent text-base font-semibold rounded-lg text-white bg-gradient-to-r from-blue-600 to-indigo-700 hover:from-blue-700 hover:to-indigo-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-600 transition-all duration-300 ease-in-out shadow-md hover:shadow-lg">
-                           
-                            Sign in
-                        </button>
+                    <button type="submit" class="m-8 p-3 w-full flex justify-center text-base font-semibold rounded-lg text-white
+                               bg-gradient-to-r from-blue-600 to-indigo-700 
+                               hover:from-blue-700 hover:to-indigo-800 
+                               focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-600
+                               transition-all duration-300 ease-in-out shadow-md hover:shadow-lg">
+                        Sign in
+                    </button>
+
                     </div>
                 </form>
 
