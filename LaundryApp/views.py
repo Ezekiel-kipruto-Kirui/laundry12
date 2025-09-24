@@ -975,6 +975,10 @@ def get_laundry_profit_and_hotel(request, selected_year=None):
     """
     Get the total profit for both laundry and hotel businesses
     """
+    if not request.user.is_authenticated and not request.user.is_superuser:
+        return redirect('login')
+    # user is NOT logged in
+
     try:
         # HOTEL PROFIT CALCULATION
         from HotelApp.models import HotelOrderItem, HotelExpenseRecord
