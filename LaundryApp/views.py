@@ -1054,9 +1054,6 @@ def Reportsdashboard(request):
     
     return render(request, 'dashboard.html', context)
 
-def home(request):
-    return render(request, 'home.html')
-
 def initiatepayment(request, order_id):
     if request.method == 'POST':
         order = get_object_or_404(Order, id=order_id)

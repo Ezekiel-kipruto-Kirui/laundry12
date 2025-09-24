@@ -21,9 +21,14 @@ from django.shortcuts import redirect
 
 urlpatterns = [
     path('admin/', admin.site.urls),
+
+    # Auth URLs
     path("accounts/", include("django.contrib.auth.urls")),
+
+    # Custom redirect after login
     path('redirect-after-login/', redirect_after_login, name='redirect_after_login'),
+
+    # Apps
     path('', include(('LaundryApp.urls', 'laundry'), namespace='laundry')),
-    path('Hotel/', include(('HotelApp.urls','hotel'),namespace="hotel")),
-    
+    path('hotel/', include(('HotelApp.urls', 'hotel'), namespace='hotel')),
 ]
