@@ -222,30 +222,25 @@ class OrderForm(forms.ModelForm):
 class OrderItemForm(forms.ModelForm):
     class Meta:
         model = OrderItem
-        fields = ['servicetype', 'itemtype', 'itemname', 'quantity', 'itemcondition', 'unit_price', 'additional_info']
+        fields = [
+            'servicetype', 'itemtype', 'itemname', 'quantity',
+            'itemcondition', 'unit_price', 'additional_info'
+        ]
+        base_input_classes = (
+            "w-full px-3 py-2 border border-gray-300 rounded-md "
+            "focus:outline-none focus:ring-2 focus:ring-blue-500 "
+            "focus:border-blue-500 text-sm bg-white"
+        )
         widgets = {
-            'servicetype': forms.Select(attrs={
-                'class': 'w-full px-2 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 text-sm h-9'
-            }),
-            'itemtype': forms.Select(attrs={
-                'class': 'w-full px-2 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 text-sm h-9'
-            }),
-            'itemname': forms.TextInput(attrs={
-                'class': 'w-full px-2 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 text-sm h-9'
-            }),
-            'quantity': forms.NumberInput(attrs={
-                'class': 'w-full px-2 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 text-sm h-9'
-            }),
-            'itemcondition': forms.Select(attrs={
-                'class': 'w-full px-2 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 text-sm h-9'
-            }),
-            'unit_price': forms.NumberInput(attrs={
-                'class': 'w-full px-2 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 text-sm h-9'
-            }),
-            'additional_info': forms.TextInput(attrs={
-                'class': 'w-full px-2 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 text-sm h-9'
-            }),
+            'servicetype': forms.Select(attrs={'class': base_input_classes}),
+            'itemtype': forms.Select(attrs={'class': base_input_classes}),
+            'itemname': forms.TextInput(attrs={'class': base_input_classes}),
+            'quantity': forms.NumberInput(attrs={'class': base_input_classes}),
+            'itemcondition': forms.Select(attrs={'class': base_input_classes}),
+            'unit_price': forms.NumberInput(attrs={'class': base_input_classes}),
+            'additional_info': forms.TextInput(attrs={'class': base_input_classes}),
         }
+
 # ---------------------------
 # Expenses Forms
 # ---------------------------
