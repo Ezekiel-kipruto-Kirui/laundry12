@@ -22,12 +22,12 @@ from django.shortcuts import redirect
 urlpatterns = [
     path('admin/', admin.site.urls),
 
-    path("accounts/login", include("django.contrib.auth.urls")),
+    path("accounts/", include("django.contrib.auth.urls"),name='login'),
 
     path('redirect-after-login/', redirect_after_login, name='redirect_after_login'),
 
     path('Laundry', include(('LaundryApp.urls', 'laundry'), namespace='laundry')),
     path('Hotel/', include(('HotelApp.urls', 'hotel'), namespace='hotel')),
 
-    path('', lambda request: redirect('login')),
+     path('', lambda request: redirect('login')),
 ]

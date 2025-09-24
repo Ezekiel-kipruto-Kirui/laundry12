@@ -5,57 +5,61 @@
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 <script
     src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0/dist/chartjs-plugin-datalabels.min.js"></script>
-
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 {% endblock %}
 
 {% block content %}
-<div id="content-main" class="min-h-screen p-6 bg-gray-50">
+<div id="content-main" class="min-h-screen p-4 md:p-6 bg-gradient-to-br from-gray-50 to-gray-100">
     <!-- Dashboard Header -->
-    <div class="flex justify-between items-center mb-8 flex-wrap gap-4">
-        <h1 class="text-3xl font-bold text-gray-800 flex items-center gap-3">
-            <i class="fas fa-chart-line text-pink-500"></i>
-            Business Dashboard
-        </h1>
+    <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 md:mb-8">
+        <div class="mb-4 md:mb-0">
+            <h1 class="text-3xl md:text-4xl font-bold text-gray-900 mb-2">Business Dashboard</h1>
+            <p class="text-gray-600">Monitor your business performance and key metrics</p>
+        </div>
+        <div class="flex items-center gap-3 bg-white rounded-2xl px-4 py-3 shadow-sm">
+            <i class="fas fa-calendar-alt text-pink-500"></i>
+            <span class="font-semibold text-gray-700">{{ selected_year }}</span>
+        </div>
     </div>
 
     <!-- Date Range Filter Section -->
-    <div class="bg-white border border-gray-200 rounded-xl p-4 shadow-sm mb-6">
-        <form method="get" id="filterForm" class="flex items-center gap-4 flex-wrap">
+    <div class="bg-white rounded-2xl p-4 md:p-6 shadow-lg mb-6 md:mb-8">
+        <form method="get" id="filterForm" class="flex flex-col md:flex-row gap-4 items-end">
             <!-- Year Input -->
-            <div class="flex items-center gap-2">
-                <label for="year" class="text-sm font-medium text-gray-700 whitespace-nowrap">Year:</label>
+            <div class="w-full md:w-auto">
+                <label for="year" class="block text-sm font-medium text-gray-700 mb-2">Year</label>
                 <input type="number" id="year" name="year" value="{{ selected_year }}" min="2020" max="2100"
-                    class="bg-white border border-gray-300 rounded-md px-3 py-2 text-gray-700 w-24 focus:outline-none focus:ring-2 focus:ring-pink-500">
+                    class="w-full bg-white border border-gray-200 rounded-xl px-4 py-3 text-gray-700 focus:outline-none focus:ring-2 focus:ring-pink-500 focus:border-transparent transition-all duration-200">
             </div>
 
             <!-- Month Selector -->
-            <div class="flex items-center gap-2">
-                <label for="month" class="text-sm font-medium text-gray-700 whitespace-nowrap">Month:</label>
+            <div class="w-full md:w-auto">
+                <label for="month" class="block text-sm font-medium text-gray-700 mb-2">Month</label>
                 <input type="month" id="month" name="month"
                     value="{% if selected_month %}{{ selected_year }}-{{ selected_month|stringformat:'02d' }}{% endif %}"
-                    class="bg-white border border-gray-300 rounded-md px-3 py-2 text-gray-700 focus:outline-none focus:ring-2 focus:ring-pink-500">
+                    class="w-full bg-white border border-gray-200 rounded-xl px-4 py-3 text-gray-700 focus:outline-none focus:ring-2 focus:ring-pink-500 focus:border-transparent transition-all duration-200">
             </div>
 
             <!-- Date Range -->
-            <div class="flex items-center gap-2">
-                <label for="from_date" class="text-sm font-medium text-gray-700 whitespace-nowrap">From:</label>
+            <div class="w-full md:w-auto">
+                <label for="from_date" class="block text-sm font-medium text-gray-700 mb-2">From Date</label>
                 <input type="date" id="from_date" name="from_date" value="{% if from_date %}{{ from_date }}{% endif %}"
-                    class="bg-white border border-gray-300 rounded-md px-3 py-2 text-gray-700 focus:outline-none focus:ring-2 focus:ring-pink-500">
-            </div>
-            <div class="flex items-center gap-2">
-                <label for="to_date" class="text-sm font-medium text-gray-700 whitespace-nowrap">To:</label>
-                <input type="date" id="to_date" name="to_date" value="{% if to_date %}{{ to_date }}{% endif %}"
-                    class="bg-white border border-gray-300 rounded-md px-3 py-2 text-gray-700 focus:outline-none focus:ring-2 focus:ring-pink-500">
+                    class="w-full bg-white border border-gray-200 rounded-xl px-4 py-3 text-gray-700 focus:outline-none focus:ring-2 focus:ring-pink-500 focus:border-transparent transition-all duration-200">
             </div>
 
-            <div class="flex gap-2 ml-auto">
+            <div class="w-full md:w-auto">
+                <label for="to_date" class="block text-sm font-medium text-gray-700 mb-2">To Date</label>
+                <input type="date" id="to_date" name="to_date" value="{% if to_date %}{{ to_date }}{% endif %}"
+                    class="w-full bg-white border border-gray-200 rounded-xl px-4 py-3 text-gray-700 focus:outline-none focus:ring-2 focus:ring-pink-500 focus:border-transparent transition-all duration-200">
+            </div>
+
+            <div class="flex gap-3 w-full md:w-auto">
                 <button type="submit"
-                    class="bg-pink-500 hover:bg-pink-600 text-white px-4 py-2 rounded-md font-medium transition-all duration-300 flex items-center gap-2">
-                    <i class="fas fa-filter"></i> Apply Filters
+                    class="flex-1 bg-gradient-to-r from-pink-500 to-purple-600 hover:from-pink-600 hover:to-purple-700 text-white px-6 py-3 rounded-xl font-semibold transition-all duration-300 transform hover:scale-105 shadow-lg hover:shadow-xl flex items-center justify-center gap-2">
+                    <i class="fas fa-filter"></i> Apply
                 </button>
                 <button type="button" id="resetFilters"
-                    class="bg-white border border-gray-300 text-gray-700 hover:bg-gray-100 px-4 py-2 rounded-md font-medium transition-all duration-300 flex items-center gap-2">
+                    class="flex-1 bg-white border border-gray-300 text-gray-700 hover:bg-gray-50 px-6 py-3 rounded-xl font-semibold transition-all duration-300 flex items-center justify-center gap-2">
                     <i class="fas fa-redo"></i> Reset
                 </button>
             </div>
@@ -63,254 +67,272 @@
     </div>
 
     <!-- Overall Stats -->
-    <h2 class="text-xl font-semibold text-gray-800 mb-4 pl-3 border-l-4 border-pink-500 flex items-center gap-2">
-        <i class="fas fa-store text-pink-500"></i> General
-    </h2>
-    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-
-        <!-- Total Revenue -->
-        <div
-            class="bg-white rounded-xl p-4 shadow-sm transition-all duration-300 hover:shadow-md border-l-4 border-green-500">
-            <div class="flex items-center justify-between mb-4">
-                <div class="w-10 h-10 rounded-lg bg-green-50 flex items-center justify-center">
-                    <i class="fas fa-wallet text-green-500 text-lg"></i>
-                </div>
-            </div>
-            <div>
-                <h3 class="text-sm font-semibold text-gray-500 uppercase tracking-wide">Total Revenue</h3>
-                <div class="text-2xl font-bold text-gray-800 mt-1">Ksh {{total_revenue|floatformat:2|default:"0.00" }}
-                </div>
-                <div class="text-xs text-gray-500 mt-1">Total earnings</div>
-            </div>
+    <div class="mb-6 md:mb-8">
+        <div class="flex items-center gap-3 mb-4 md:mb-6">
+            <div class="w-1 h-8 bg-gradient-to-b from-pink-500 to-purple-600 rounded-full"></div>
+            <h2 class="text-xl md:text-2xl font-bold text-gray-900">Business Overview</h2>
         </div>
 
-        <!-- Total Orders -->
-        <div
-            class="bg-white rounded-xl p-4 shadow-sm transition-all duration-300 hover:shadow-md border-l-4 border-pink-500">
-            <div class="flex items-center justify-between mb-4">
-                <div class="w-10 h-10 rounded-lg bg-pink-50 flex items-center justify-center">
-                    <i class="fas fa-shopping-bag text-pink-500 text-lg"></i>
-                </div>
-            </div>
-            <div>
-                <h3 class="text-sm font-semibold text-gray-500 uppercase tracking-wide">Orders</h3>
-                <div>
-
-                    <div class="text-2xl font-bold text-gray-800 mt-1">{{ total_orders }}</div>
-                    <span class="text-yellow-500">{{ pending_orders }} pending</span> •
-                    <span class="text-blue-500">{{ completed_orders }} Completed</span>
-
-
-                </div>
-                <div class="text-2xl font-bold text-gray-800 mt-1"></div>
-                <div class="text-xs text-gray-500 mt-1">All time orders</div>
-            </div>
-        </div>
-
-        <!-- Pending Orders -->
-        <div
-            class="bg-white rounded-xl p-4 shadow-sm transition-all duration-300 hover:shadow-md border-l-4 border-yellow-500">
-            <div class="flex items-center justify-between mb-4">
-                <div class="w-10 h-10 rounded-lg bg-yellow-50 flex items-center justify-center">
-                    <i class="fas fa-clock text-yellow-500 text-lg"></i>
-                </div>
-            </div>
-            <div>
-                <h3 class="text-sm font-semibold text-gray-500 uppercase tracking-wide">Pending payment Balance</h3>
-                <div class="text-2xl font-bold text-gray-800 mt-1">{{ total_balance_amount }}</div>
-
-                <div class="text-xs text-gray-500 mt-1">Awaiting processing</div>
-            </div>
-        </div>
-
-        <!-- Genral Expenses -->
-        <div
-            class="bg-white rounded-xl p-4 shadow-sm transition-all duration-300 hover:shadow-md border-l-4 border-indigo-900">
-            <div class="flex items-center justify-between mb-4">
-                <div class="w-10 h-10 rounded-lg bg-indigo-50 flex items-center justify-center">
-                    <i class="fas fa-money-bill-wave text-indigo-900 text-lg"></i>
-                </div>
-            </div>
-            <div>
-                <h3 class="text-sm font-semibold text-gray-500 uppercase tracking-wide">Total Expenses</h3>
-                <div class="text-2xl font-bold text-gray-800 mt-1">{{ total_expenses }}</div>
-
-
-
-                <div class="text-xs text-gray-500 mt-1">Advanced payments</div>
-            </div>
-        </div>
-
-    </div>
-
-    <!-- Shop A Stats -->
-    <div class="mb-8">
-        <h2 class="text-xl font-semibold text-gray-800 mb-4 pl-3 border-l-4 border-pink-500 flex items-center gap-2">
-            <i class="fas fa-store text-pink-500"></i> Shop A
-        </h2>
-        <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
-            <!-- Shop A Revenue -->
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
+            <!-- Total Revenue -->
             <div
-                class="bg-white rounded-xl p-4 shadow-sm transition-all duration-300 hover:shadow-md border-l-4 border-green-500">
+                class="bg-white rounded-2xl p-4 md:p-6 shadow-lg hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1">
                 <div class="flex items-center justify-between mb-4">
-                    <div class="w-10 h-10 rounded-lg bg-green-50 flex items-center justify-center">
-                        <i class="fas fa-wallet text-green-500 text-lg"></i>
+                    <div
+                        class="w-10 h-10 md:w-12 md:h-12 rounded-xl bg-gradient-to-br from-green-50 to-green-100 flex items-center justify-center">
+                        <i class="fas fa-wallet text-lg md:text-2xl text-green-600"></i>
+                    </div>
+                    <div class="text-right">
+                        <span
+                            class="bg-green-100 text-green-800 text-xs font-semibold px-2 py-1 rounded-full">+12%</span>
                     </div>
                 </div>
-                <div>
-                    <h3 class="text-sm font-semibold text-gray-500 uppercase tracking-wide">Total Revenue</h3>
-                    <div class="text-2xl font-bold text-gray-800 mt-1">Ksh {{shop_a_revenue|floatformat:2|default:"0.00"
-                        }}</div>
-                    <div class="text-xs text-gray-500 mt-1">Shop A earnings</div>
+                <h3 class="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-1">Total Revenue</h3>
+                <div class="text-xl md:text-2xl font-bold text-gray-900 mb-1">Ksh
+                    {{total_revenue|floatformat:2|default:"0.00" }}</div>
+                <div class="flex items-center text-xs text-gray-500">
+                    <i class="fas fa-trend-up text-green-500 mr-1"></i>
+                    <span>Total earnings</span>
                 </div>
             </div>
 
-            <!-- Shop A Orders -->
+            <!-- Total Orders -->
             <div
-                class="bg-white rounded-xl p-4 shadow-sm transition-all duration-300 hover:shadow-md border-l-4 border-pink-500">
+                class="bg-white rounded-2xl p-4 md:p-6 shadow-lg hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1">
                 <div class="flex items-center justify-between mb-4">
-                    <div class="w-10 h-10 rounded-lg bg-pink-50 flex items-center justify-center">
-                        <i class="fas fa-shopping-bag text-pink-500 text-lg"></i>
+                    <div
+                        class="w-10 h-10 md:w-12 md:h-12 rounded-xl bg-gradient-to-br from-pink-50 to-pink-100 flex items-center justify-center">
+                        <i class="fas fa-shopping-bag text-lg md:text-2xl text-pink-600"></i>
+                    </div>
+                    <div class="text-right">
+                        <span class="bg-pink-100 text-pink-800 text-xs font-semibold px-2 py-1 rounded-full">+8%</span>
                     </div>
                 </div>
-                <div>
-                    <h3 class="text-sm font-semibold text-gray-500 uppercase tracking-wide">Order Statistics</h3>
-                    <div class="text-2xl font-bold text-gray-800 mt-1">{{ shop_a_total_orders }}</div>
-                    <div class="text-xs text-gray-500 mt-1 flex gap-2">
-                        <span class="text-yellow-500">{{ shop_a_pending_orders }} pending</span> •
-                        <span class="text-blue-500">{{ shop_a_completed_orders }} completed</span>
-                    </div>
+                <h3 class="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-1">Orders</h3>
+                <div class="text-xl md:text-2xl font-bold text-gray-900 mb-2">{{ total_orders }}</div>
+                <div class="flex flex-wrap gap-2 text-xs">
+                    <span class="bg-yellow-100 text-yellow-800 px-2 py-1 rounded-full font-medium">{{ pending_orders }}
+                        pending</span>
+                    <span class="bg-blue-100 text-blue-800 px-2 py-1 rounded-full font-medium">{{ completed_orders }}
+                        completed</span>
                 </div>
             </div>
 
-            <!-- Shop A Partial Payment -->
+            <!-- Pending Balance -->
             <div
-                class="bg-white rounded-xl p-4 shadow-sm transition-all duration-300 hover:shadow-md border-l-4 border-indigo-900">
+                class="bg-white rounded-2xl p-4 md:p-6 shadow-lg hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1">
                 <div class="flex items-center justify-between mb-4">
-                    <div class="w-10 h-10 rounded-lg bg-indigo-50 flex items-center justify-center">
-                        <i class="fas fa-money-bill-wave text-indigo-900 text-lg"></i>
+                    <div
+                        class="w-10 h-10 md:w-12 md:h-12 rounded-xl bg-gradient-to-br from-yellow-50 to-yellow-100 flex items-center justify-center">
+                        <i class="fas fa-clock text-lg md:text-2xl text-yellow-600"></i>
+                    </div>
+                    <div class="text-right">
+                        <span
+                            class="bg-yellow-100 text-yellow-800 text-xs font-semibold px-2 py-1 rounded-full">Pending</span>
                     </div>
                 </div>
-                <div>
-                    <h3 class="text-sm font-semibold text-gray-500 uppercase tracking-wide">Payments</h3>
-                    <div class="text-2xl font-bold text-gray-800 mt-1">{{ shop_a_total_balance }}</div>
-                    <span class="text-yellow-500">{{ shop_a_pending_payments }} pending</span> •
-                    <span class="text-blue-500">{{ shop_a_partial_payments }} Partial</span>
-                    <span class="text-blue-500">{{ shop_a_complete_payments }} completed</span>
-                    <div class="text-xs text-gray-500 mt-1">Advanced payments</div>
+                <h3 class="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-1">Pending Balance</h3>
+                <div class="text-xl md:text-2xl font-bold text-gray-900 mb-1">{{ total_balance_amount }}</div>
+                <div class="flex items-center text-xs text-gray-500">
+                    <i class="fas fa-exclamation-circle text-yellow-500 mr-1"></i>
+                    <span>Awaiting processing</span>
                 </div>
             </div>
-            <!--Shop A Expenses-->
+
+            <!-- Total Expenses -->
             <div
-                class="bg-white rounded-xl p-4 shadow-sm transition-all duration-300 hover:shadow-md border-l-4 border-indigo-900">
+                class="bg-white rounded-2xl p-4 md:p-6 shadow-lg hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1">
                 <div class="flex items-center justify-between mb-4">
-                    <div class="w-10 h-10 rounded-lg bg-indigo-50 flex items-center justify-center">
-                        <i class="fas fa-money-bill-wave text-indigo-900 text-lg"></i>
+                    <div
+                        class="w-10 h-10 md:w-12 md:h-12 rounded-xl bg-gradient-to-br from-indigo-50 to-indigo-100 flex items-center justify-center">
+                        <i class="fas fa-money-bill-wave text-lg md:text-2xl text-indigo-600"></i>
+                    </div>
+                    <div class="text-right">
+                        <span
+                            class="bg-indigo-100 text-indigo-800 text-xs font-semibold px-2 py-1 rounded-full">-5%</span>
                     </div>
                 </div>
-                <div>
-                    <h3 class="text-sm font-semibold text-gray-500 uppercase tracking-wide">Shop A Expenses & Profit
-                    </h3>
-                    <div class="text-2xl font-bold text-gray-800 mt-1"></div>
-
-                    <span class="text-yellow-500">{{ shop_a_net_profit }} Profit</span> •
-                    <span class="text-blue-500">{{ shop_a_total_expenses }} Expense</span>
-
-                    <div class="text-xs text-gray-500 mt-1"></div>
+                <h3 class="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-1">Total Expenses</h3>
+                <div class="text-xl md:text-2xl font-bold text-gray-900 mb-1">{{ total_expenses }}</div>
+                <div class="flex items-center text-xs text-gray-500">
+                    <i class="fas fa-chart-line text-indigo-500 mr-1"></i>
+                    <span>Advanced payments</span>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- Shop B Stats -->
-    <div class="mb-8">
-        <h2 class="text-xl font-semibold text-gray-800 mb-4 pl-3 border-l-4 border-yellow-500 flex items-center gap-2">
-            <i class="fas fa-store text-yellow-500"></i> Shop B Performance
-        </h2>
-        <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
-            <!-- Shop B Revenue -->
-            <div
-                class="bg-white rounded-xl p-4 shadow-sm transition-all duration-300 hover:shadow-md border-l-4 border-green-500">
-                <div class="flex items-center justify-between mb-4">
-                    <div class="w-10 h-10 rounded-lg bg-green-50 flex items-center justify-center">
-                        <i class="fas fa-wallet text-green-500 text-lg"></i>
+    <!-- Shop Performance Section -->
+    <div class="grid grid-cols-1 xl:grid-cols-2 gap-6 md:gap-8 mb-6 md:mb-8">
+        <!-- Shop A Stats -->
+        <div class="bg-white rounded-2xl p-4 md:p-6 shadow-lg">
+            <div class="flex items-center justify-between mb-4 md:mb-6">
+                <div class="flex items-center gap-3">
+                    <div class="w-2 h-6 md:w-3 md:h-8 bg-gradient-to-b from-pink-500 to-purple-600 rounded-full"></div>
+                    <h2 class="text-lg md:text-xl font-bold text-gray-900">Shop A Performance</h2>
+                </div>
+                <span
+                    class="bg-pink-100 text-pink-800 px-2 py-1 md:px-3 md:py-1 rounded-full text-xs md:text-sm font-semibold">Active</span>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4">
+                <!-- Shop A Revenue -->
+                <div class="bg-gradient-to-br from-pink-50 to-purple-50 rounded-xl p-3 md:p-4 shadow-sm">
+                    <div class="flex items-center gap-3 mb-2 md:mb-3">
+                        <div class="w-8 h-8 rounded-lg bg-pink-100 flex items-center justify-center">
+                            <i class="fas fa-wallet text-pink-600"></i>
+                        </div>
+                        <span class="text-sm font-semibold text-gray-700">Revenue</span>
+                    </div>
+                    <div class="text-lg md:text-2xl font-bold text-gray-900 mb-1">Ksh
+                        {{shop_a_revenue|floatformat:2|default:"0.00"}}</div>
+                    <div class="text-xs text-gray-500">Shop A earnings</div>
+                </div>
+
+                <!-- Shop A Orders -->
+                <div class="bg-gradient-to-br from-blue-50 to-cyan-50 rounded-xl p-3 md:p-4 shadow-sm">
+                    <div class="flex items-center gap-3 mb-2 md:mb-3">
+                        <div class="w-8 h-8 rounded-lg bg-blue-100 flex items-center justify-center">
+                            <i class="fas fa-shopping-bag text-blue-600"></i>
+                        </div>
+                        <span class="text-sm font-semibold text-gray-700">Orders</span>
+                    </div>
+                    <div class="text-lg md:text-2xl font-bold text-gray-900 mb-1">{{ shop_a_total_orders }}</div>
+                    <div class="flex flex-col gap-1 text-xs">
+                        <span class="text-yellow-600">{{ shop_a_pending_orders }} pending</span>
+                        <span class="text-green-600">{{ shop_a_completed_orders }} completed</span>
                     </div>
                 </div>
-                <div>
-                    <h3 class="text-sm font-semibold text-gray-500 uppercase tracking-wide">Total Revenue</h3>
-                    <div class="text-2xl font-bold text-gray-800 mt-1">Ksh
+
+                <!-- Shop A Payments -->
+                <div class="bg-gradient-to-br from-purple-50 to-indigo-50 rounded-xl p-3 md:p-4 shadow-sm">
+                    <div class="flex items-center gap-3 mb-2 md:mb-3">
+                        <div class="w-8 h-8 rounded-lg bg-purple-100 flex items-center justify-center">
+                            <i class="fas fa-credit-card text-purple-600"></i>
+                        </div>
+                        <span class="text-sm font-semibold text-gray-700">Payments</span>
+                    </div>
+                    <div class="text-lg md:text-2xl font-bold text-gray-900 mb-1">{{ shop_a_total_balance }}</div>
+                    <div class="flex flex-col gap-1 text-xs">
+                        <span class="text-yellow-600">{{ shop_a_pending_payments }} pending</span>
+                        <span class="text-blue-600">{{ shop_a_partial_payments }} partial</span>
+                        <span class="text-green-600">{{ shop_a_complete_payments }} complete</span>
+                    </div>
+                </div>
+
+                <!-- Shop A Profit -->
+                <div class="bg-gradient-to-br from-green-50 to-emerald-50 rounded-xl p-3 md:p-4 shadow-sm">
+                    <div class="flex items-center gap-3 mb-2 md:mb-3">
+                        <div class="w-8 h-8 rounded-lg bg-green-100 flex items-center justify-center">
+                            <i class="fas fa-chart-line text-green-600"></i>
+                        </div>
+                        <span class="text-sm font-semibold text-gray-700">Profit & Expenses</span>
+                    </div>
+                    <div class="flex flex-col gap-2">
+                        <div>
+                            <div class="text-md md:text-lg font-bold text-green-600">{{ shop_a_net_profit }}</div>
+                            <div class="text-xs text-gray-500">Profit</div>
+                        </div>
+                        <div>
+                            <div class="text-md md:text-lg font-bold text-blue-600">{{ shop_a_total_expenses }}</div>
+                            <div class="text-xs text-gray-500">Expenses</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Shop B Stats -->
+        <div class="bg-white rounded-2xl p-4 md:p-6 shadow-lg">
+            <div class="flex items-center justify-between mb-4 md:mb-6">
+                <div class="flex items-center gap-3">
+                    <div class="w-2 h-6 md:w-3 md:h-8 bg-gradient-to-b from-yellow-500 to-orange-600 rounded-full">
+                    </div>
+                    <h2 class="text-lg md:text-xl font-bold text-gray-900">Shop B Performance</h2>
+                </div>
+                <span
+                    class="bg-yellow-100 text-yellow-800 px-2 py-1 md:px-3 md:py-1 rounded-full text-xs md:text-sm font-semibold">Active</span>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4">
+                <!-- Shop B Revenue -->
+                <div class="bg-gradient-to-br from-yellow-50 to-amber-50 rounded-xl p-3 md:p-4 shadow-sm">
+                    <div class="flex items-center gap-3 mb-2 md:mb-3">
+                        <div class="w-8 h-8 rounded-lg bg-yellow-100 flex items-center justify-center">
+                            <i class="fas fa-wallet text-yellow-600"></i>
+                        </div>
+                        <span class="text-sm font-semibold text-gray-700">Revenue</span>
+                    </div>
+                    <div class="text-lg md:text-2xl font-bold text-gray-900 mb-1">Ksh
                         {{shop_b_revenue|floatformat:2|default:"0.00"}}</div>
-                    <div class="text-xs text-gray-500 mt-1">Shop B earnings</div>
+                    <div class="text-xs text-gray-500">Shop B earnings</div>
                 </div>
-            </div>
 
-            <!-- Shop B Orders -->
-            <div
-                class="bg-white rounded-xl p-4 shadow-sm transition-all duration-300 hover:shadow-md border-l-4 border-pink-500">
-                <div class="flex items-center justify-between mb-4">
-                    <div class="w-10 h-10 rounded-lg bg-pink-50 flex items-center justify-center">
-                        <i class="fas fa-shopping-bag text-pink-500 text-lg"></i>
+                <!-- Shop B Orders -->
+                <div class="bg-gradient-to-br from-orange-50 to-red-50 rounded-xl p-3 md:p-4 shadow-sm">
+                    <div class="flex items-center gap-3 mb-2 md:mb-3">
+                        <div class="w-8 h-8 rounded-lg bg-orange-100 flex items-center justify-center">
+                            <i class="fas fa-shopping-bag text-orange-600"></i>
+                        </div>
+                        <span class="text-sm font-semibold text-gray-700">Orders</span>
+                    </div>
+                    <div class="text-lg md:text-2xl font-bold text-gray-900 mb-1">{{ shop_b_total_orders }}</div>
+                    <div class="flex flex-col gap-1 text-xs">
+                        <span class="text-yellow-600">{{ shop_b_pending_orders }} pending</span>
+                        <span class="text-green-600">{{ shop_b_completed_orders }} completed</span>
                     </div>
                 </div>
-                <div>
-                    <h3 class="text-sm font-semibold text-gray-500 uppercase tracking-wide">Order Statistics</h3>
-                    <div class="text-2xl font-bold text-gray-800 mt-1">{{ shop_b_total_orders }}</div>
-                    <div class="text-xs text-gray-500 mt-1 flex gap-2">
-                        <span class="text-yellow-500">{{ shop_b_pending_orders }} pending</span> •
-                        <span class="text-blue-500">{{ shop_b_completed_orders }} completed</span>
+
+                <!-- Shop B Payments -->
+                <div class="bg-gradient-to-br from-red-50 to-pink-50 rounded-xl p-3 md:p-4 shadow-sm">
+                    <div class="flex items-center gap-3 mb-2 md:mb-3">
+                        <div class="w-8 h-8 rounded-lg bg-red-100 flex items-center justify-center">
+                            <i class="fas fa-credit-card text-red-600"></i>
+                        </div>
+                        <span class="text-sm font-semibold text-gray-700">Payments</span>
+                    </div>
+                    <div class="text-lg md:text-2xl font-bold text-gray-900 mb-1">{{ shop_b_total_balance }}</div>
+                    <div class="flex flex-col gap-1 text-xs">
+                        <span class="text-yellow-600">{{ shop_b_pending_payments }} pending</span>
+                        <span class="text-blue-600">{{ shop_b_partial_payments }} partial</span>
+                        <span class="text-green-600">{{ shop_b_complete_payments }} complete</span>
                     </div>
                 </div>
-            </div>
-            <!-- Shop B Partial Payment -->
-            <div
-                class="bg-white rounded-xl p-4 shadow-sm transition-all duration-300 hover:shadow-md border-l-4 border-indigo-900">
-                <div class="flex items-center justify-between mb-4">
-                    <div class="w-10 h-10 rounded-lg bg-indigo-50 flex items-center justify-center">
-                        <i class="fas fa-money-bill-wave text-indigo-900 text-lg"></i>
+
+                <!-- Shop B Profit -->
+                <div class="bg-gradient-to-br from-emerald-50 to-teal-50 rounded-xl p-3 md:p-4 shadow-sm">
+                    <div class="flex items-center gap-3 mb-2 md:mb-3">
+                        <div class="w-8 h-8 rounded-lg bg-emerald-100 flex items-center justify-center">
+                            <i class="fas fa-chart-line text-emerald-600"></i>
+                        </div>
+                        <span class="text-sm font-semibold text-gray-700">Profit & Expenses</span>
                     </div>
-                </div>
-                <div>
-                    <h3 class="text-sm font-semibold text-gray-500 uppercase tracking-wide">Payments</h3>
-                    <div class="text-2xl font-bold text-gray-800 mt-1">{{ shop_b_total_balance }}</div>
-
-                    <span class="text-yellow-500"> {{ shop_b_pending_payments }} pending</span> •
-                    <span class="text-blue-500">{{ shop_b_partial_payments }} Partial</span>•
-                    <span class="text-blue-500">{{ shop_b_complete_payments }} completed</span>
-
-                    <div class="text-xs text-gray-500 mt-1">Advanced payments</div>
-                </div>
-            </div>
-            <!--Shop B Expenses-->
-            <div
-                class="bg-white rounded-xl p-4 shadow-sm transition-all duration-300 hover:shadow-md border-l-4 border-indigo-900">
-                <div class="flex items-center justify-between mb-4">
-                    <div class="w-10 h-10 rounded-lg bg-indigo-50 flex items-center justify-center">
-                        <i class="fas fa-money-bill-wave text-indigo-900 text-lg"></i>
+                    <div class="flex flex-col gap-2">
+                        <div>
+                            <div class="text-md md:text-lg font-bold text-green-600">{{ shop_b_net_profit }}</div>
+                            <div class="text-xs text-gray-500">Profit</div>
+                        </div>
+                        <div>
+                            <div class="text-md md:text-lg font-bold text-blue-600">{{ shop_b_total_expenses }}</div>
+                            <div class="text-xs text-gray-500">Expenses</div>
+                        </div>
                     </div>
-                </div>
-                <div>
-                    <h3 class="text-sm font-semibold text-gray-500 uppercase tracking-wide">Shop B Expenses & Profit
-                    </h3>
-                    <div class="text-2xl font-bold text-gray-800 mt-1"></div>
-
-                    <span class="text-yellow-500">{{ shop_b_net_profit }} Profit</span> •
-                    <span class="text-blue-500">{{shop_b_total_expenses}} Expense</span>
-                    <div class="text-xs text-gray-500 mt-1"></div>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- Main Charts Section -->
-    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+    <!-- Charts Section -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6 mb-6 md:mb-8">
         <!-- Revenue Distribution -->
-        <div class="bg-white rounded-xl p-6 shadow-sm">
-            <div class="flex justify-between items-center mb-6">
-                <h4 class="text-lg font-semibold text-gray-800 flex items-center gap-2">
+        <div class="bg-white rounded-2xl p-4 md:p-6 shadow-lg">
+            <div class="flex justify-between items-center mb-4 md:mb-6">
+                <h4 class="text-lg font-bold text-gray-900 flex items-center gap-2">
                     <i class="fas fa-chart-pie text-yellow-500"></i>
                     Revenue Distribution
                 </h4>
-                <span class="bg-yellow-100 text-yellow-800 px-3 py-1 rounded-full text-sm font-medium">Total</span>
+                <span
+                    class="bg-yellow-100 text-yellow-800 px-2 py-1 md:px-3 md:py-1 rounded-full text-xs md:text-sm font-semibold">Total</span>
             </div>
             <div class="h-64">
                 <canvas id="revenueChart"></canvas>
@@ -318,14 +340,15 @@
         </div>
 
         <!-- Revenue Trend -->
-        <div class="bg-white rounded-xl p-6 shadow-sm">
-            <div class="flex justify-between items-center mb-6">
-                <h2 class="text-lg font-semibold text-gray-800 flex items-center gap-2">
+        <div class="bg-white rounded-2xl p-4 md:p-6 shadow-lg">
+            <div class="flex justify-between items-center mb-4 md:mb-6">
+                <h2 class="text-lg font-bold text-gray-900 flex items-center gap-2">
                     <i class="fas fa-chart-line text-pink-500"></i>
                     Revenue Trend
                 </h2>
-                <span class="bg-pink-100 text-pink-800 px-3 py-1 rounded-full text-sm font-medium">{{ selected_year
-                    }}</span>
+                <span
+                    class="bg-pink-100 text-pink-800 px-2 py-1 md:px-3 md:py-1 rounded-full text-xs md:text-sm font-semibold">{{
+                    selected_year }}</span>
             </div>
             <div class="h-64">
                 {% if not selected_month %}
@@ -333,7 +356,7 @@
                 {% else %}
                 <div class="flex flex-col items-center justify-center h-full text-center">
                     <i class="fas fa-calendar-week text-4xl text-gray-400 mb-4"></i>
-                    <h3 class="text-lg font-medium text-gray-700 mb-2">Switch to yearly view</h3>
+                    <h3 class="text-lg font-semibold text-gray-700 mb-2">Switch to yearly view</h3>
                     <p class="text-gray-500">Monthly trends are available in the annual overview</p>
                 </div>
                 {% endif %}
@@ -341,17 +364,18 @@
         </div>
     </div>
 
-    <!-- Insights Section -->
-    <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+    <!-- Analytics Section -->
+    <div class="flex sm:flex-col md:flex-row gap-4 md:gap-6 mb-6 md:mb-8">
         <!-- Top Services -->
-        <div class="bg-white rounded-xl p-6 shadow-sm">
-            <div class="flex justify-between items-center mb-6">
-                <h2 class="text-lg font-semibold text-gray-800 flex items-center gap-2">
+        <div class="bg-white rounded-2xl p-4 md:p-6 shadow-lg flex-1">
+            <div class="flex justify-between items-center mb-4 md:mb-6">
+                <h2 class="text-lg font-bold text-gray-900 flex items-center gap-2">
                     <i class="fas fa-spa text-green-500"></i>
                     Top Services
                 </h2>
-                <span class="bg-green-100 text-green-800 px-3 py-1 rounded-full text-sm font-medium">{{ selected_year
-                    }}</span>
+                <span
+                    class="bg-green-100 text-green-800 px-2 py-1 md:px-3 md:py-1 rounded-full text-xs md:text-sm font-semibold">{{
+                    selected_year }}</span>
             </div>
             <div class="h-72">
                 {% if services_labels and services_labels|length > 0 %}
@@ -366,14 +390,15 @@
         </div>
 
         <!-- Popular Products -->
-        <div class="bg-white rounded-xl p-6 shadow-sm">
-            <div class="flex justify-between items-center mb-6">
-                <h2 class="text-lg font-semibold text-gray-800 flex items-center gap-2">
+        <div class="bg-white rounded-2xl p-4 md:p-6 shadow-lg flex-1">
+            <div class="flex justify-between items-center mb-4 md:mb-6">
+                <h2 class="text-lg font-bold text-gray-900 flex items-center gap-2">
                     <i class="fas fa-box-open text-yellow-500"></i>
                     Common Items
                 </h2>
-                <span class="bg-yellow-100 text-yellow-800 px-3 py-1 rounded-full text-sm font-medium">{{ selected_year
-                    }}</span>
+                <span
+                    class="bg-yellow-100 text-yellow-800 px-2 py-1 md:px-3 md:py-1 rounded-full text-xs md:text-sm font-semibold">{{
+                    selected_year }}</span>
             </div>
             <div class="h-72">
                 {% if item_labels and item_labels|length > 0 %}
@@ -388,28 +413,30 @@
         </div>
 
         <!-- VIP Customers -->
-        <div class="bg-white rounded-xl p-6 shadow-sm">
-            <div class="flex justify-between items-center mb-6">
-                <h2 class="text-lg font-semibold text-gray-800 flex items-center gap-2">
+        <div class="bg-white rounded-2xl p-4 md:p-6 shadow-lg flex-1">
+            <div class="flex justify-between items-center mb-4 md:mb-6">
+                <h2 class="text-lg font-bold text-gray-900 flex items-center gap-2">
                     <i class="fas fa-crown text-yellow-500"></i>
                     Top Customers
                 </h2>
-                <span class="bg-yellow-100 text-yellow-800 px-3 py-1 rounded-full text-sm font-medium">{{ selected_year
-                    }}</span>
+                <span
+                    class="bg-yellow-100 text-yellow-800 px-2 py-1 md:px-3 md:py-1 rounded-full text-xs md:text-sm font-semibold">{{
+                    selected_year }}</span>
             </div>
-            <div class="h-72 overflow-y-auto">
+            <div class="h-72 overflow-y-auto pr-2">
                 {% for customer in common_customers %}
                 <div
-                    class="flex items-center p-3 bg-gray-50 rounded-lg mb-2 transition-all duration-300 hover:bg-gray-100">
+                    class="flex items-center p-3 md:p-4 bg-gray-50 rounded-xl mb-2 md:mb-3 transition-all duration-300 hover:shadow-md">
                     <div
-                        class="w-9 h-9 rounded-lg bg-gradient-to-br from-pink-500 to-yellow-500 flex items-center justify-center text-white font-semibold mr-3">
+                        class="w-8 h-8 md:w-10 md:h-10 rounded-xl bg-gradient-to-br from-pink-500 to-purple-600 flex items-center justify-center text-white font-bold text-xs md:text-sm mr-3 md:mr-4">
                         {{ forloop.counter }}
                     </div>
-                    <div class="flex-1">
-                        <div class="font-medium text-gray-800">{{ customer.customer__name }}</div>
-                        <div class="text-sm text-gray-500">{{ customer.order_count }} orders</div>
+                    <div class="flex-1 min-w-0">
+                        <div class="font-semibold text-gray-900 truncate text-sm md:text-base">{{
+                            customer.customer__name }}</div>
+                        <div class="text-xs text-gray-500">{{ customer.order_count }} orders</div>
                     </div>
-                    <div class="font-bold text-pink-500">
+                    <div class="font-bold text-pink-600 text-sm md:text-lg">
                         ksh{{ customer.total_spent|floatformat:2 }}
                     </div>
                 </div>
@@ -852,4 +879,3 @@
     });
 </script>
 {% endblock %}
-

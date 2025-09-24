@@ -111,7 +111,10 @@ AUTH_USER_MODEL = 'LaundryApp.UserProfile'
 ROOT_URLCONF = 'LaundryConfig.urls'
 LOGIN_REDIRECT_URL = '/redirect-after-login/'  # after login, always check role
 LOGOUT_REDIRECT_URL = '/accounts/login/'
-LOGIN_URL='login'
+
+LOGIN_URL = 'login'
+
+
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
