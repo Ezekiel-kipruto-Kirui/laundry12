@@ -135,10 +135,9 @@ class Order(models.Model):
                                     default='pending_payment', blank=True, db_index=True)
 
     PAYMENT_STATUS_CHOICES = (
-        ('pending', 'Pending'),
-        ('completed', 'Completed'),
-        ('partial', 'Partial'),
-        ('failed', 'Failed'),
+        ('pending', 'pending'),
+        ('completed', 'cpompleted'),
+        ('partial', 'partial'),
     )
     payment_status = models.CharField(max_length=50, choices=PAYMENT_STATUS_CHOICES,
                                       default='pending', blank=True, db_index=True)

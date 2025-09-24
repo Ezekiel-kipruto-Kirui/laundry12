@@ -603,55 +603,82 @@ def update_order_status(request, order_code, status):
     messages.success(request, message)
     return redirect(request.META.get('HTTP_REFERER', 'laundry:customordertable'))
 
+from decimal import Decimal, InvalidOperation
+from django.http import JsonResponse
+from django.contrib.auth.decorators import login_required
+
 @login_required
 @shop_required
 def update_payment_status(request, order_code):
     """Update payment status of an order"""
     try:
-        order = Order.objects.only('uniquecode', 'shop', 'created_by', 'total_price').get(uniquecode=order_code)
-        
-        # Check if user has permission to update this order
+        # Load full order (not limiting fields to ensure updates work)
+        order = Order.objects.get(uniquecode=order_code)
+
+        # Check if user has permission
         if not check_order_permission(request, order):
             return JsonResponse({
                 'success': False,
                 'message': "You don't have permission to update this order."
-            })
-        
+            }, status=403)
+
         if request.method == 'POST':
             payment_status = request.POST.get('payment_status')
-            amount_paid = request.POST.get('amount_paid', 0)
-            
-            if payment_status in dict(Order.PAYMENT_STATUS_CHOICES).keys():
+            amount_paid_raw = request.POST.get('amount_paid', "0")
+
+            if payment_status in dict(Order.PAYMENT_STATUS_CHOICES):
                 order.payment_status = payment_status
-                
+
+                # Safely convert amount_paid
                 try:
-                    order.amount_paid = float(amount_paid)
-                    order.balance = float(order.total_price) - float(amount_paid)
-                except (ValueError, TypeError):
-                    order.balance = order.total_price - order.amount_paid
-                
+                    amount_paid = Decimal(amount_paid_raw)
+                except (InvalidOperation, TypeError, ValueError):
+                    return JsonResponse({
+                        'success': False,
+                        'message': 'Invalid amount entered.'
+                    }, status=400)
+
+                # Ensure amount_paid is not negative
+                if amount_paid < 0:
+                    return JsonResponse({
+                        'success': False,
+                        'message': 'Amount paid cannot be negative.'
+                    }, status=400)
+
+                # Ensure amount_paid does not exceed total
+                if amount_paid > order.total_price:
+                    amount_paid = order.total_price
+
+                order.amount_paid = amount_paid
                 order.save()
-                
+
                 return JsonResponse({
                     'success': True,
-                    'message': f'Payment status updated to {payment_status}!'
+                    'message': f'Payment status updated to {payment_status}!',
+                    'order': {
+                        'uniquecode': order.uniquecode,
+                        'payment_status': order.payment_status,
+                        'amount_paid': str(order.amount_paid),
+                        'balance': str(order.balance),
+                        'total_price': str(order.total_price),
+                    }
                 })
             else:
                 return JsonResponse({
                     'success': False,
                     'message': 'Invalid payment status.'
-                })
-        
+                }, status=400)
+
         return JsonResponse({
             'success': False,
             'message': 'Invalid request method.'
-        })
-        
+        }, status=405)
+
     except Order.DoesNotExist:
         return JsonResponse({
             'success': False,
             'message': 'Order not found.'
-        })
+        }, status=404)
 
 @login_required
 @shop_required
@@ -943,6 +970,8 @@ import logging
 
 logger = logging.getLogger(__name__)
 
+@admin_required
+@login_required
 def get_laundry_profit_and_hotel(request, selected_year=None):
     """
     Get the total profit for both laundry and hotel businesses

@@ -325,6 +325,7 @@
             </form>
         </div>
 
+
         <!-- Orders Table -->
         <div class="bg-white rounded-xl overflow-hidden shadow-lg">
             <div class="overflow-x-auto">
@@ -337,7 +338,7 @@
                             <th class="w-[100px]">Service</th>
                             <th class="w-[100px]">Item Type</th>
                             <th class="w-[120px]">Items</th>
-                            <th class="w-[80px]">Qty</th>
+                            
                             <th class="w-[100px]">Condition</th>
                             <th class="w-[100px]">Amount Paid</th>
                             <th class="w-[100px]">Balance</th>
@@ -354,54 +355,91 @@
                                 <div class="font-medium text-gray-900 text-xs">{{ order.uniquecode }}</div>
                             </td>
                             <td>
-                                <div class="text-xs">{{ order.customer.name|truncatechars:15 }}</div>
+                                <div class="text-xs">{{ order.customer.name }}</div>
                             </td>
                             <td>
-                                <div class="text-xs">{{ order.customer.address|truncatewords:2 }}</div>
+                                <div class="text-xs">{{ order.customer.address }}</div>
                             </td>
+                    
+                            <!-- Service Type column -->
                             <td>
-                                {% for item in order.items.all|slice:":1" %}
-                                <span class="item-pill">{{ item.servicetype }}</span>
-                                {% endfor %}
-                                {% if order.items.count > 1 %}
-                                <span class="item-pill">+{{ order.items.count|add:"-1" }}</span>
-                                {% endif %}
+                                <div class="relative group inline-block">
+                                    {% for item in order.items.all|slice:":1" %}
+                                    <span class="item-pill">{{ item.servicetype }}</span>
+                                    {% endfor %}
+                                    {% if order.items.count > 1 %}
+                                    <span class="item-pill">{{ order.items.count }}</span>
+                                    {% endif %}
+                    
+                                    <!-- Tooltip -->
+                                    <div
+                                        class="absolute left-0 top-full mt-1 hidden group-hover:block z-20 w-max rounded-lg bg-gray-800 text-white text-xs p-2 shadow-lg">
+                                        <ul class="list-disc list-inside">
+                                            {% for item in order.items.all %}
+                                            <li>{{ item.servicetype }}</li>
+                                            {% endfor %}
+                                        </ul>
+                                    </div>
+                                </div>
                             </td>
+                    
+                            <!-- Item Type column -->
                             <td>
-                                {% for item in order.items.all|slice:":1" %}
-                                <span class="item-pill">{{ item.itemtype }}</span>
-                                {% endfor %}
-                                {% if order.items.count > 1 %}
-                                <span class="item-pill">+{{ order.items.count|add:"-1" }}</span>
-                                {% endif %}
+                                <div class="relative group inline-block">
+                                    {% for item in order.items.all|slice:":1" %}
+                                    <span class="item-pill">{{ item.itemtype }}</span>
+                                    {% endfor %}
+                                    {% if order.items.count > 1 %}
+                                    <span class="item-pill">{{ order.items.count }}</span>
+                                    {% endif %}
+                    
+                                    <!-- Tooltip -->
+                                    <div
+                                        class="absolute left-0 top-full mt-1 hidden group-hover:block z-20 w-max rounded-lg bg-gray-800 text-white text-xs p-2 shadow-lg">
+                                        <ul class="list-disc list-inside">
+                                            {% for item in order.items.all %}
+                                            <li>{{ item.itemtype }}</li>
+                                            {% endfor %}
+                                        </ul>
+                                    </div>
+                                </div>
                             </td>
+                    
+                            <!-- Item Name column -->
                             <td>
-                                {% for item in order.items.all|slice:":1" %}
-                                <span class="item-pill">{{ item.itemname|truncatechars:10 }}</span>
-                                {% endfor %}
-                                {% if order.items.count > 1 %}
-                                <span class="item-pill">+{{ order.items.count|add:"-1" }}</span>
-                                {% endif %}
+                                <div class="relative group inline-block">
+                                    {% for item in order.items.all|slice:":1" %}
+                                    <span class="item-pill">{{ item.itemname }}</span>
+                                    {% endfor %}
+                                    {% if order.items.count > 1 %}
+                                    <span class="item-pill">{{ order.items.count }}</span>
+                                    {% endif %}
+                    
+                                    <!-- Tooltip -->
+                                    <div
+                                        class="absolute left-0 top-full mt-1 hidden group-hover:block z-20 w-max rounded-lg bg-gray-800 text-white text-xs p-2 shadow-lg">
+                                        <ul class="list-disc list-inside">
+                                            {% for item in order.items.all %}
+                                            <li>{{ item.itemname }}</li>
+                                            {% endfor %}
+                                        </ul>
+                                    </div>
+                                </div>
                             </td>
-                            <td>
-                                {% for item in order.items.all|slice:":1" %}
-                                <span class="item-pill">{{ item.quantity }}</span>
-                                {% endfor %}
-                                {% if order.items.count > 1 %}
-                                <span class="item-pill">...</span>
-                                {% endif %}
-                            </td>
+                    
+                            <!-- Item Condition column (unchanged, but you can tooltip it too if you want) -->
                             <td>
                                 {% for item in order.items.all|slice:":1" %}
                                 <span
                                     class="item-pill {% if item.itemcondition == 'new' %}bg-green-100 text-green-800{% elif item.itemcondition == 'Old' %}bg-yellow-100 text-yellow-800{% elif item.itemcondition == 'Torn' %}bg-red-100 text-red-800{% endif %}">
-                                    {{ item.itemcondition|slice:":3" }}
+                                    {{ item.itemcondition }}
                                 </span>
                                 {% endfor %}
                                 {% if order.items.count > 1 %}
                                 <span class="item-pill">...</span>
                                 {% endif %}
                             </td>
+                    
                             <td class="font-semibold text-blue-900">
                                 <div class="text-xs">KSh{{ order.amount_paid }}</div>
                             </td>
@@ -454,16 +492,13 @@
                             </td>
                             <td>
                                 <div class="flex items-center justify-center space-x-2">
-                                    <!-- View Order Details -->
-                                 
-
                                     <!-- Edit Order -->
                                     <a href="{% url 'laundry:order_edit' order.uniquecode %}"
                                         class="action-btn edit-btn text-amber-600 hover:bg-amber-100 p-2 rounded-lg transition-colors duration-200"
                                         title="Edit Order">
                                         <i class="fas fa-edit text-sm"></i>
                                     </a>
-
+                    
                                     <!-- Quick Actions Dropdown -->
                                     <div class="dropdown relative">
                                         <button
@@ -471,41 +506,44 @@
                                             title="More Actions">
                                             <i class="fas fa-ellipsis-v text-sm"></i>
                                         </button>
-                                        <div
-                                            class="dropdown-menu absolute right-0 mt-1 w-48 bg-white rounded-md shadow-lg py-1 z-50">
-                                            <!-- Mark as Completed -->
+                                        <div class="dropdown-menu absolute right-0 mt-1 w-48 bg-white rounded-md shadow-lg py-1 z-50">
                                             {% if order.order_status != 'Completed' %}
-                                        <form action="{% url 'laundry:update_order_status' order.uniquecode 'Completed' %}" method="post" class="w-full">
+                                            <form action="{% url 'laundry:update_order_status' order.uniquecode 'Completed' %}"
+                                                method="post" class="w-full">
                                                 {% csrf_token %}
-                                                <button type="submit" class="w-full text-left px-4 py-2 text-sm text-green-700 hover:bg-green-100 flex items-center"
+                                                <button type="submit"
+                                                    class="w-full text-left px-4 py-2 text-sm text-green-700 hover:bg-green-100 flex items-center"
                                                     onclick="return confirm('Mark this order as completed?')">
                                                     <i class="fas fa-check-circle mr-2"></i> Mark Completed
                                                 </button>
-                                                </form>
-                                                {% endif %}
-                                                <!-- Mark as Delivered -->
-                                                
-                                                {% if order.order_status != 'Delivered_picked' %}
-                                                <form action="{% url 'laundry:update_order_status' order.uniquecode 'Delivered_picked' %}" method="post" class="w-full">
-                                                    {% csrf_token %}
-                                                    <button type="submit" class="w-full text-left px-4 py-2 text-sm text-green-700 hover:bg-green-100 flex items-center"
-                                                        onclick="return confirm('Mark this order as completed?')">
-                                                        <i class="fas fa-check-circle mr-2"></i> Mark Delivered
-                                                    </button>
-                                                    </form>
-                                                    {% endif %}
-                                        <!-- Update Payment Status -->
-                                        <div class="border-t border-gray-100 my-1"></div>
-                                        {% if order.payment_status != 'paid' %}
-                                                    <form action="{% url 'laundry:Mpesa_payment_initiation' order.id%}" method="post" class="w-full">
-                                                        {% csrf_token %}
-                                                        <button type="submit" class="w-full text-left px-4 py-2 text-sm text-green-700 hover:bg-green-100 flex items-center"
-                                                            onclick="return confirm('Mark this order as completed?')">
-                                                            <i class="fas fa-check-circle mr-2"></i>Complete Payment
-                                                        </button>
-                                                    </form>
-                                                    {% endif %}
-                                            <!-- Delete Order -->
+                                            </form>
+                                            {% endif %}
+                    
+                                            {% if order.order_status != 'Delivered_picked' %}
+                                            <form action="{% url 'laundry:update_order_status' order.uniquecode 'Delivered_picked' %}"
+                                                method="post" class="w-full">
+                                                {% csrf_token %}
+                                                <button type="submit"
+                                                    class="w-full text-left px-4 py-2 text-sm text-green-700 hover:bg-green-100 flex items-center"
+                                                    onclick="return confirm('Mark this order as completed?')">
+                                                    <i class="fas fa-check-circle mr-2"></i> Mark Delivered
+                                                </button>
+                                            </form>
+                                            {% endif %}
+                    
+                                            <div class="border-t border-gray-100 my-1"></div>
+                                            {% if order.payment_status != 'paid' %}
+                                            <form action="{% url 'laundry:Mpesa_payment_initiation' order.id%}" method="post"
+                                                class="w-full">
+                                                {% csrf_token %}
+                                                <button type="submit"
+                                                    class="w-full text-left px-4 py-2 text-sm text-green-700 hover:bg-green-100 flex items-center"
+                                                    onclick="return confirm('Mark this order as completed?')">
+                                                    <i class="fas fa-check-circle mr-2"></i> Complete Payment
+                                                </button>
+                                            </form>
+                                            {% endif %}
+                    
                                             <div class="border-t border-gray-100 my-1"></div>
                                             <a href="{% url 'laundry:order_delete' order.uniquecode %}"
                                                 class="block px-4 py-2 text-sm text-red-700 hover:bg-red-100 flex items-center"
@@ -540,6 +578,7 @@
                         </tr>
                         {% endfor %}
                     </tbody>
+
                 </table>
             </div>
 

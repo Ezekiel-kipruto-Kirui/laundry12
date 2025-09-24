@@ -20,14 +20,13 @@
                 </div>
 
                 <div class="flex items-center justify-center relative z-10">
-                    <div class="bg-blue-500 h-12 w-12  rounded-full shadow-md flex items-center justify-center">
+                    <div class="bg-blue-500   rounded-full shadow-xl flex items-center justify-center"
+                    style="width:70px;">
                         <img src="{% static 'logos/Clean-page-logo.png' %}" alt="Logo" class=" w-full rounded-full object-contain">
                     </div>
                 </div>
 
-                <h2 class="mt-2 text-center text-3xl font-bold text-blue-200 tracking-tight">
-                    Welcome Back
-                </h2>
+                
                 <p class="mt-2 text-center text-blue-100 text-sm font-medium">
                     Sign in to your Clean Page Laundry account
                 </p>
@@ -55,7 +54,7 @@
                     <div class="space-y-5">
                         <div>
                             <label for="id_username" class="block text-sm font-semibold text-gray-800 mb-2">
-                                Username
+                                Email
                             </label>
                             <div class="relative">
                                 <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
@@ -63,7 +62,7 @@
                                 </div>
                                 <input id="id_username" name="username" type="text" required
                                     class="block w-full pl-10 pr-3 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-600 focus:border-blue-600 transition duration-200 ease-in-out bg-gray-50/50 hover:bg-gray-50"
-                                    placeholder="Enter your username">
+                                    placeholder="Enter your email">
                             </div>
                         </div>
 
@@ -92,7 +91,7 @@
 
                     <div>
                         <button type="submit"
-                            class=" bg-blue-800 m-8 relative w-full p-4 flex  justify-center py-3.5 px-4 border border-transparent text-base font-semibold rounded-lg text-white bg-gradient-to-r from-blue-600 to-indigo-700 hover:from-blue-700 hover:to-indigo-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-600 transition-all duration-300 ease-in-out shadow-md hover:shadow-lg">
+                            class=" bg-blue-800 m-8 relative w-full p-4 flex  justify-center border border-transparent text-base font-semibold rounded-lg text-white bg-gradient-to-r from-blue-600 to-indigo-700 hover:from-blue-700 hover:to-indigo-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-600 transition-all duration-300 ease-in-out shadow-md hover:shadow-lg">
                             <span class="absolute left-0 inset-y-0 flex items-center pl-3">
                                 
                             </span>

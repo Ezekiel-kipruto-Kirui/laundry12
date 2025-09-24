@@ -85,7 +85,7 @@
     }
 
     .stat-value {
-        font-size: 1.875rem;
+       
         font-weight: 700;
         color: #1f2937;
         line-height: 1;
@@ -123,11 +123,7 @@
         background-color: rgba(139, 92, 246, 0.1);
     }
 
-    .content-grid {
-        display: grid;
-        grid-template-columns: 1fr;
-        gap: 2rem;
-    }
+    
 
     @media (min-width: 1024px) {
         .content-grid {
@@ -232,9 +228,7 @@
             height: 50px;
         }
 
-        .stat-value {
-            font-size: 1.5rem;
-        }
+       
 
         .card-header {
             padding: 1rem 1.25rem;
@@ -258,7 +252,7 @@
             </div>
             <div class="stat-content">
                 <div class="stat-label">Total Revenue</div>
-                <div class="stat-value">Ksh {{ total_revenue|default:0|floatformat:2|intcomma }}</div>
+                <div class="stat-value text-sm">Ksh {{ total_revenue|default:0|floatformat:2|intcomma }}</div>
             </div>
         </div>
 
@@ -273,7 +267,7 @@
             </div>
             <div class="stat-content">
                 <div class="stat-label">Laundry Profit</div>
-                <div class="stat-value {% if laundry_profit >= 0 %}profit-positive{% else %}profit-negative{% endif %}">
+                <div class="stat-value text-sm {% if laundry_profit >= 0 %}profit-positive{% else %}profit-negative{% endif %}">
                     Ksh {{ laundry_profit|default:0|floatformat:2|intcomma }}
                 </div>
             </div>
@@ -290,7 +284,7 @@
             </div>
             <div class="stat-content">
                 <div class="stat-label">Hotel Profit</div>
-                <div class="stat-value {% if hotel_profit >= 0 %}profit-positive{% else %}profit-negative{% endif %}">
+                <div class="stat-value text-sm {% if hotel_profit >= 0 %}profit-positive{% else %}profit-negative{% endif %}">
                     Ksh {{ hotel_profit|default:0|floatformat:2|intcomma }}
                 </div>
             </div>
@@ -307,7 +301,7 @@
             </div>
             <div class="stat-content">
                 <div class="stat-label">Total Profit</div>
-                <div class="stat-value {% if total_profit >= 0 %}profit-positive{% else %}profit-negative{% endif %}">
+                <div class="stat-value text-sm {% if total_profit >= 0 %}profit-positive{% else %}profit-negative{% endif %}">
                     Ksh {{ total_profit|default:0|floatformat:2|intcomma }}
                 </div>
             </div>
@@ -315,55 +309,105 @@
     </div>
 
     <!-- Quick Actions -->
-    <div class="content-grid">
-        <div class="card">
-            <div class="card-header">
-                <h3 class="card-title">Quick Actions</h3>
-            </div>
-            <div class="card-body">
-                <a href="{% url 'laundry:createorder' %}" class="quick-action">
-                    <div class="quick-action-icon bg-blue-100">
-                        <svg class="h-5 w-5 text-blue-600" xmlns="http://www.w3.org/2000/svg" fill="none"
-                            viewBox="0 0 24 24" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-                        </svg>
-                    </div>
-                    <div class="quick-action-content">
-                        <p class="quick-action-title">Create New Order</p>
-                        <p class="quick-action-desc">Add a new laundry order</p>
-                    </div>
-                </a>
+<div class="flex flex-wrap gap-4">
+    <div class="card w-full lg:flex-1">
+        <div class="card-header">
+            <h3 class="card-title">Quick Actions</h3>
+        </div>
 
-                <a href="{% url 'laundry:customordertable' %}" class="quick-action">
-                    <div class="quick-action-icon bg-amber-100">
-                        <svg class="h-5 w-5 text-amber-600" xmlns="http://www.w3.org/2000/svg" fill="none"
-                            viewBox="0 0 24 24" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
-                        </svg>
-                    </div>
-                    <div class="quick-action-content">
-                        <p class="quick-action-title">View Orders</p>
-                        <p class="quick-action-desc">Manage all laundry orders</p>
-                    </div>
-                </a>
+        <!-- Responsive flex container -->
+        <div class="flex flex-col sm:flex-row flex-wrap gap-4">
+            <!-- Action 1 -->
+            <a href="{% url 'laundry:createorder' %}" class="quick-action flex-1 min-w-[250px]">
+                <div class="quick-action-icon bg-blue-100">
+                    <svg class="h-5 w-5 text-blue-600" xmlns="http://www.w3.org/2000/svg" fill="none"
+                        viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                    </svg>
+                </div>
+                <div class="quick-action-content">
+                    <p class="quick-action-title">Create New Order</p>
+                    <p class="quick-action-desc">Add laundry order</p>
+                </div>
+            </a>
 
-                <a href="{% url 'laundry:customer_management' %}" class="quick-action">
-                    <div class="quick-action-icon bg-green-100">
-                        <svg class="h-5 w-5 text-green-600" xmlns="http://www.w3.org/2000/svg" fill="none"
-                            viewBox="0 0 24 24" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
-                        </svg>
-                    </div>
-                    <div class="quick-action-content">
-                        <p class="quick-action-title">Manage Customers</p>
-                        <p class="quick-action-desc">View and edit customer information</p>
-                    </div>
-                </a>
-            </div>
+            <!-- Action 2 -->
+            <a href="{% url 'laundry:customordertable' %}" class="quick-action flex-1 min-w-[250px]">
+                <div class="quick-action-icon bg-amber-100">
+                    <svg class="h-5 w-5 text-amber-600" xmlns="http://www.w3.org/2000/svg" fill="none"
+                        viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+                    </svg>
+                </div>
+                <div class="quick-action-content">
+                    <p class="quick-action-title">View Orders</p>
+                    <p class="quick-action-desc">Manage laundry orders</p>
+                </div>
+            </a>
+
+            <!-- Action 3 -->
+            <a href="{% url 'laundry:customer_management' %}" class="quick-action flex-1 min-w-[250px]">
+                <div class="quick-action-icon bg-green-100">
+                    <svg class="h-5 w-5 text-green-600" xmlns="http://www.w3.org/2000/svg" fill="none"
+                        viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+                    </svg>
+                </div>
+                <div class="quick-action-content">
+                    <p class="quick-action-title">Manage Customers</p>
+                    <p class="quick-action-desc">View and edit customer information</p>
+                </div>
+            </a>
+           
+            
+        </div>
+        <div class="flex flex-col sm:flex-row flex-wrap gap-4">
+       
+        
+            <a href="{% url 'hotel:create_order' %}" class="quick-action flex-1 min-w-[250px]">
+                <div class="quick-action-icon bg-blue-100">
+                    <svg class="h-5 w-5 text-blue-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
+                        stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                    </svg>
+                </div>
+                <div class="quick-action-content">
+                    <p class="quick-action-title">Create Hotel Order</p>
+                    <p class="quick-action-desc">Add Hotel order</p>
+                </div>
+            </a>
+            <a href="{% url 'hotel:order_list' %}" class="quick-action flex-1 min-w-[250px]">
+                <div class="quick-action-icon bg-blue-100">
+                    <svg class="h-5 w-5 text-amber-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
+                        stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+                    </svg>
+                </div>
+                <div class="quick-action-content">
+                    <p class="quick-action-title">View Hotel Order</p>
+                    
+                </div>
+            </a>
+            <a href="{% url 'laundry:user_management' %}" class="quick-action flex-1 min-w-[250px]">
+                <div class="quick-action-icon bg-green-100">
+                    <svg class="h-5 w-5 text-green-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
+                        stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+                    </svg>
+                </div>
+                <div class="quick-action-content">
+                    <p class="quick-action-title">Mnage Users</p>
+                    <p class="quick-action-desc">View and edit users information</p>
+                </div>
+            </a>
         </div>
     </div>
+</div>
+
 </div>
 {% endblock %}

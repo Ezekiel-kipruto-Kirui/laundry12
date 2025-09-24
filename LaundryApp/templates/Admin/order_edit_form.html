@@ -275,7 +275,7 @@
 
                 <!-- Form Actions -->
                 <div class="flex flex-col sm:flex-row gap-4 justify-end pt-6 border-t border-gray-200">
-                    <a href="{% if editing %}{% url 'laundry:order_detail' order_code=order.uniquecode %}{% else %}{% url 'laundry:customordertable' %}{% endif %}"
+                    <a href="{% url 'laundry:customordertable'%}"
                         class="bg-gray-200 text-gray-700 px-6 py-2.5 rounded-lg font-medium shadow-md hover:bg-gray-300 transition-all duration-200 text-center flex items-center justify-center">
                         <i class="fas fa-times mr-2"></i>Cancel
                     </a>
