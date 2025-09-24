@@ -347,8 +347,7 @@
                     Revenue Trend
                 </h2>
                 <span
-                    class="bg-pink-100 text-pink-800 px-2 py-1 md:px-3 md:py-1 rounded-full text-xs md:text-sm font-semibold">{{
-                    selected_year }}</span>
+                    class="bg-pink-100 text-pink-800 px-2 py-1 md:px-3 md:py-1 rounded-full text-xs md:text-sm font-semibold">{{ selected_year }}</span>
             </div>
             <div class="h-64">
                 {% if not selected_month %}
@@ -365,19 +364,18 @@
     </div>
 
     <!-- Analytics Section -->
-    <div class="flex sm:flex-col md:flex-row gap-4 md:gap-6 mb-6 md:mb-8">
+    <div class="flex sm:flex-col md:flex-row lg:flex-row gap-4 md:gap-6">
         <!-- Top Services -->
-        <div class="bg-white rounded-2xl p-4 md:p-6 shadow-lg flex-1">
+        <div class="bg-white rounded-2xl p-4 md:p-6 shadow-lg flex-1 min-h-0">
             <div class="flex justify-between items-center mb-4 md:mb-6">
                 <h2 class="text-lg font-bold text-gray-900 flex items-center gap-2">
                     <i class="fas fa-spa text-green-500"></i>
                     Top Services
                 </h2>
                 <span
-                    class="bg-green-100 text-green-800 px-2 py-1 md:px-3 md:py-1 rounded-full text-xs md:text-sm font-semibold">{{
-                    selected_year }}</span>
+                    class="bg-green-100 text-green-800 px-2 py-1 md:px-3 md:py-1 rounded-full text-xs md:text-sm font-semibold">{{selected_year }}</span>
             </div>
-            <div class="h-72">
+            <div class="h-72 min-h-0">
                 {% if services_labels and services_labels|length > 0 %}
                 <canvas id="servicesChart"></canvas>
                 {% else %}
@@ -388,19 +386,18 @@
                 {% endif %}
             </div>
         </div>
-
+    
         <!-- Popular Products -->
-        <div class="bg-white rounded-2xl p-4 md:p-6 shadow-lg flex-1">
+        <div class="bg-white rounded-2xl p-4 md:p-6 shadow-lg flex-1 min-h-0">
             <div class="flex justify-between items-center mb-4 md:mb-6">
                 <h2 class="text-lg font-bold text-gray-900 flex items-center gap-2">
                     <i class="fas fa-box-open text-yellow-500"></i>
                     Common Items
                 </h2>
                 <span
-                    class="bg-yellow-100 text-yellow-800 px-2 py-1 md:px-3 md:py-1 rounded-full text-xs md:text-sm font-semibold">{{
-                    selected_year }}</span>
+                    class="bg-yellow-100 text-yellow-800 px-2 py-1 md:px-3 md:py-1 rounded-full text-xs md:text-sm font-semibold">{{ selected_year }}</span>
             </div>
-            <div class="h-72">
+            <div class="h-72 min-h-0">
                 {% if item_labels and item_labels|length > 0 %}
                 <canvas id="productsChart"></canvas>
                 {% else %}
@@ -411,19 +408,18 @@
                 {% endif %}
             </div>
         </div>
-
+    
         <!-- VIP Customers -->
-        <div class="bg-white rounded-2xl p-4 md:p-6 shadow-lg flex-1">
+        <div class="bg-white rounded-2xl p-4 md:p-6 shadow-lg flex-1 min-h-0">
             <div class="flex justify-between items-center mb-4 md:mb-6">
                 <h2 class="text-lg font-bold text-gray-900 flex items-center gap-2">
                     <i class="fas fa-crown text-yellow-500"></i>
                     Top Customers
                 </h2>
                 <span
-                    class="bg-yellow-100 text-yellow-800 px-2 py-1 md:px-3 md:py-1 rounded-full text-xs md:text-sm font-semibold">{{
-                    selected_year }}</span>
+                    class="bg-yellow-100 text-yellow-800 px-2 py-1 md:px-3 md:py-1 rounded-full text-xs md:text-sm font-semibold">{{ selected_year }}</span>
             </div>
-            <div class="h-72 overflow-y-auto pr-2">
+            <div class="h-72 min-h-0 overflow-y-auto pr-2">
                 {% for customer in common_customers %}
                 <div
                     class="flex items-center p-3 md:p-4 bg-gray-50 rounded-xl mb-2 md:mb-3 transition-all duration-300 hover:shadow-md">
@@ -432,8 +428,8 @@
                         {{ forloop.counter }}
                     </div>
                     <div class="flex-1 min-w-0">
-                        <div class="font-semibold text-gray-900 truncate text-sm md:text-base">{{
-                            customer.customer__name }}</div>
+                        <div class="font-semibold text-gray-900 truncate text-sm md:text-base">{{ customer.customer__name }}
+                        </div>
                         <div class="text-xs text-gray-500">{{ customer.order_count }} orders</div>
                     </div>
                     <div class="font-bold text-pink-600 text-sm md:text-lg">
