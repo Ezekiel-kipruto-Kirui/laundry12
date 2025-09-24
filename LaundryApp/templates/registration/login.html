@@ -48,52 +48,58 @@
                 </div>
                 {% endif %}
 
-                <form class="space-y-6 p-4 " method="post" action="{% url 'login' %}">
-                    {% csrf_token %}
-                    <input type="hidden" name="next" value="{{ next }}">
-
-                    <div class="space-y-5">
-                        <div>
-                            <label for="id_username" class="block text-sm font-semibold text-gray-800 mb-2">
-                                Email
-                            </label>
-                            <div class="relative">
-                                <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                                    <i class="fas fa-user text-gray-500"></i>
-                                </div>
-                                <input id="id_username" name="username" type="text" required
-                                    class="block w-full pl-10 pr-3 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-600 focus:border-blue-600 transition duration-200 ease-in-out bg-gray-50/50 hover:bg-gray-50"
-                                    placeholder="Enter your email">
+            <form class="space-y-6 p-4" method="post" action="{% url 'login' %}">
+                {% csrf_token %}
+                <input type="hidden" name="next" value="{{ next }}">
+            
+                <div class="space-y-5">
+                    <div>
+                        <label for="id_username" class="block text-sm font-semibold text-gray-800 mb-2">
+                            Email
+                        </label>
+                        <div class="relative">
+                            <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                <i class="fas fa-user text-gray-500"></i>
                             </div>
-                        </div>
-
-                        <div>
-                            <label for="id_password" class="block text-sm font-semibold text-gray-800 mb-2">
-                                Password
-                            </label>
-                            <div class="relative">
-                                <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                                    <i class="fas fa-lock text-gray-500"></i>
-                                </div>
-                                <input id="id_password" name="password" type="password" required
-                                    class="block w-full pl-10 pr-3 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-600 focus:border-blue-600 transition duration-200 ease-in-out bg-gray-50/50 hover:bg-gray-50"
-                                    placeholder="Enter your password">
-                            </div>
+                            <input id="id_username" name="username" type="text" required class="block w-full pl-10 pr-3 py-3 border border-gray-300 rounded-lg 
+                                       focus:ring-2 focus:ring-blue-600 focus:border-blue-600 
+                                       transition duration-200 ease-in-out bg-gray-50/50 hover:bg-gray-50"
+                                placeholder="Enter your email">
                         </div>
                     </div>
+            
+                    <div>
+                        <label for="id_password" class="block text-sm font-semibold text-gray-800 mb-2">
+                            Password
+                        </label>
+                        <div class="relative">
+                            <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                <i class="fas fa-lock text-gray-500"></i>
+                            </div>
+                            <input id="id_password" name="password" type="password" required class="block w-full pl-10 pr-3 py-3 border border-gray-300 rounded-lg 
+                                       focus:ring-2 focus:ring-blue-600 focus:border-blue-600 
+                                       transition duration-200 ease-in-out bg-gray-50/50 hover:bg-gray-50"
+                                placeholder="Enter your password">
+                        </div>
+                    </div>
+                </div>
+            
+                <!-- Button aligned perfectly -->
+                <button type="submit" class="mt-6 w-full py-3 flex justify-center items-center text-base font-semibold rounded-lg text-white
+                           bg-gradient-to-r from-blue-600 to-indigo-700 
+                           hover:from-blue-700 hover:to-indigo-800 
+                           focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-600
+                           transition-all duration-300 ease-in-out shadow-md hover:shadow-lg">
+                    <span id="btn-text">Sign in</span>
+                    <!-- Spinner (hidden initially) -->
+                    <svg id="btn-spinner" class="hidden animate-spin ml-2 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg"
+                        fill="none" viewBox="0 0 24 24">
+                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"></path>
+                    </svg>
+                </button>
+            </form>
 
-                    
-                  
-                    <button type="submit" class="m-8 p-3 w-full flex justify-center text-base font-semibold rounded-lg text-white
-                               bg-gradient-to-r from-blue-600 to-indigo-700 
-                               hover:from-blue-700 hover:to-indigo-800 
-                               focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-600
-                               transition-all duration-300 ease-in-out shadow-md hover:shadow-lg">
-                        Sign in
-                    </button>
-
-                    
-                </form>
 
                 <div class="mt-8 text-center pt-5 border-t border-gray-200">
                     <p class="text-sm text-gray-700">
