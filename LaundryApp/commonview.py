@@ -1,7 +1,7 @@
 from django.shortcuts import redirect
 from django.contrib.auth.decorators import login_required
 
-@login_required
+
 def redirect_after_login(request):
     # If you are using a custom field `app_type`
     if hasattr(request.user, 'app_type'):
@@ -11,7 +11,4 @@ def redirect_after_login(request):
             return redirect('hotel:category_list')
     if request.user.is_superuser:
         return redirect('laundry:dashboard')
-
-
-
     return redirect('login')

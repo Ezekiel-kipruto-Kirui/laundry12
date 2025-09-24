@@ -24,11 +24,18 @@ TWILIO_ACCOUNT_SID = env("TWILIO_ACCOUNT_SID")
 TWILIO_AUTH_TOKEN = env("TWILIO_AUTH_TOKEN")
 TWILIO_PHONE_NUMBER = env("TWILIO_PHONE_NUMBER")
 
+
+
+
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = env.bool('DJANGO_DEBUG', default=False)  # Set to False for production
 
 # This allows your Render URL to be a valid host
 ALLOWED_HOSTS = ['laundry12-4.onrender.com', '*']
+
+SECURE_SSL_REDIRECT = False
+SESSION_COOKIE_SECURE = False
+CSRF_COOKIE_SECURE = False
 
 
 # NPM_BIN_PATH = os.environ.get("NPM_BIN_PATH", None)
@@ -54,7 +61,7 @@ INSTALLED_APPS = [
     'HotelApp',
     
 
-
+    
     'tailwind',
     'crispy_forms',
     'import_export',
@@ -85,6 +92,8 @@ TAILWIND_CSS_OUTPUT_FILE = 'css/output.css'
 CRISPY_ALLOWED_TEMPLATE_PACKS = "tailwind"
 CRISPY_TEMPLATE_PACK = "tailwind"
 
+
+
 EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
 DEFAULT_AUTO_FIELD = env('DEFAULT_AUTO_FIELD')
 
@@ -102,7 +111,7 @@ AUTH_USER_MODEL = 'LaundryApp.UserProfile'
 ROOT_URLCONF = 'LaundryConfig.urls'
 LOGIN_REDIRECT_URL = '/redirect-after-login/'  # after login, always check role
 LOGOUT_REDIRECT_URL = '/accounts/login/'
-
+LOGIN_URL='login'
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',

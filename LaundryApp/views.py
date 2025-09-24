@@ -970,8 +970,7 @@ import logging
 
 logger = logging.getLogger(__name__)
 
-@admin_required
-@login_required
+
 def get_laundry_profit_and_hotel(request, selected_year=None):
     """
     Get the total profit for both laundry and hotel businesses
