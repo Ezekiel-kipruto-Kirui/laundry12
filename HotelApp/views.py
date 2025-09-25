@@ -236,7 +236,6 @@ def food_item_delete(request, pk):
     return render(request, 'food/food_item_confirm_delete.html', {'food_item': food_item})
 
 # Customer Views
-
 @login_required
 def create_order(request):
     HotelOrderItemFormSet = inlineformset_factory(
@@ -249,35 +248,53 @@ def create_order(request):
     )
 
     if request.method == 'POST':
-        # Create order instance but don't save yet
         order = Order(created_by=request.user)
-        
-        # Bind forms to the same instance
+
         order_form = OrderForm(request.POST, instance=order)
         item_formset = HotelOrderItemFormSet(request.POST, instance=order, prefix="items")
 
         if order_form.is_valid() and item_formset.is_valid():
             with transaction.atomic():
-                # Save the order first
                 order = order_form.save(commit=False)
                 order.created_by = request.user
                 order.save()
 
-                # Now save the formset with the order instance
                 instances = item_formset.save(commit=False)
+
+                # ✅ Stock check
+                stock_errors = []
+                for instance in instances:
+                    if hasattr(instance.food_item, "stock_quantity"):
+                        available_qty = instance.food_item.stock_quantity
+                        if instance.quantity > available_qty:
+                            stock_errors.append(
+                                f"Only {available_qty} portions of {instance.food_item.name} are available."
+                            )
+
+                if stock_errors:
+                    # Attach errors so they show in template
+                    item_formset.non_form_errors = lambda: stock_errors
+                    transaction.set_rollback(True)
+                    return render(request, 'food/create_order.html', {
+                        'order_form': order_form,
+                        'item_formset': item_formset,
+                    })
+
+                # ✅ Save valid items and update stock
                 for instance in instances:
                     instance.order = order
                     instance.save()
+                    if hasattr(instance.food_item, "stock_quantity"):
+                        instance.food_item.stock_quantity -= instance.quantity
+                        instance.food_item.save()
 
                 messages.success(request, 'Order placed successfully!')
                 return redirect('hotel:order_detail', pk=order.pk)
         else:
-            # Print form errors for debugging
-            print("Order form errors:", order_form.errors)
-            print("Item formset errors:", item_formset.errors)
-            messages.error(request, 'There was an error with your order. Please check the form.')
+            # ❌ Removed the generic "Please fix the errors below."
+            # Errors will naturally render from formset/order_form in template
+            pass
     else:
-        # GET request - create empty forms
         order_form = OrderForm()
         item_formset = HotelOrderItemFormSet(queryset=HotelOrderItem.objects.none(), prefix="items")
 
@@ -285,6 +302,7 @@ def create_order(request):
         'order_form': order_form,
         'item_formset': item_formset,
     })
+
 @login_required
 def order_list(request):
     # Get filter parameter (default to 'In Progress' if not specified)

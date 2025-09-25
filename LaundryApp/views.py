@@ -422,7 +422,7 @@ def order_detail(request, order_code):
 @login_required
 @shop_required
 def order_edit(request, order_code):
-    """Edit an existing order"""
+    """Edit an existing order with proper payment status and balance recalculation"""
     try:
         order = get_base_order_queryset().get(uniquecode=order_code)
         
@@ -455,23 +455,34 @@ def order_edit(request, order_code):
             
             if customer_form.is_valid() and order_form.is_valid() and item_formset.is_valid():
                 try:
-                    # Save customer
-                    customer_form.save()
-                    
-                    # Save order
-                    updated_order = order_form.save(commit=False)
-                    updated_order.save()
-                    
-                    # Handle order items - delete existing and create new ones
-                    order.items.all().delete()
-                    for form in item_formset:
-                        if form.cleaned_data and not form.cleaned_data.get('DELETE', False):
-                            order_item = form.save(commit=False)
-                            order_item.order = updated_order
-                            order_item.save()
-                    
-                    # Recalculate total price
-                    updated_order.save()
+                    with transaction.atomic():
+                        # Save customer
+                        customer_form.save()
+                        
+                        # Save order first without recalculating totals
+                        updated_order = order_form.save(commit=False)
+                        
+                        # Handle order items - delete existing and create new ones
+                        order.items.all().delete()
+                        total_price = Decimal('0.00')
+                        
+                        for form in item_formset:
+                            if form.cleaned_data and not form.cleaned_data.get('DELETE', False):
+                                order_item = form.save(commit=False)
+                                order_item.order = updated_order
+                                order_item.save()
+                                # Calculate total item price and add to order total
+                                order_item.total_item_price = (order_item.unit_price or Decimal('0.00'))
+                                order_item.save()
+                                total_price += order_item.total_item_price
+                        
+                        # Update order totals and payment status
+                        updated_order.total_price = total_price
+                        updated_order.balance = total_price - updated_order.amount_paid
+                        
+                        # Payment status will be automatically set in the save() method
+                        # based on amount_paid and balance
+                        updated_order.save()
                     
                     messages.success(request, f'Order {order.uniquecode} updated successfully!')
                     return redirect('laundry:customordertable')
@@ -535,7 +546,6 @@ def order_edit(request, order_code):
         
     except Order.DoesNotExist:
         raise Http404("Order not found")
-
 @login_required
 @shop_required
 def order_delete(request, order_code):
@@ -900,90 +910,75 @@ def laundrydashboard(request):
 # OR: from datetime import datetime
 def get_laundry_profit_and_hotel(request, selected_year=None):
     """
-    Get the total profit for both laundry and hotel businesses for current month
+    Highly optimized version with minimal database queries
     """
-    if not request.user.is_authenticated and not request.user.is_superuser:
+    if not request.user.is_authenticated or not request.user.is_superuser:
         return redirect('login')
 
     try:
-        # Get current month and year
         current_date = now()
         current_year = current_date.year
         current_month = current_date.month
         
-        # HOTEL PROFIT CALCULATION FOR CURRENT MONTH
+        # Calculate date range once
+        start_date = datetime(current_year, current_month, 1).date()
+        end_date = datetime(current_year + 1, 1, 1).date() if current_month == 12 else \
+                  datetime(current_year, current_month + 1, 1).date()
+        
+        # HOTEL CALCULATIONS - 2 queries total
         from HotelApp.models import HotelOrderItem, HotelExpenseRecord
         
-        # Calculate hotel revenue for current month by iterating through order items
-        hotel_revenue = Decimal('0.00')
-        hotel_order_items = HotelOrderItem.objects.select_related('food_item').filter(
-            order__created_at__year=current_year,
-            order__created_at__month=current_month
+        # Use database-level calculation for hotel revenue
+        hotel_data = HotelOrderItem.objects.select_related('food_item', 'order').filter(
+            order__created_at__date__range=[start_date, end_date]
+        ).aggregate(
+            revenue=Sum(F('quantity') * F('food_item__price'), 
+                       output_field=DecimalField(max_digits=12, decimal_places=2))
         )
         
-        for order_item in hotel_order_items:
-            if order_item.food_item and order_item.food_item.price:
-                hotel_revenue += Decimal(str(order_item.quantity)) * Decimal(str(order_item.food_item.price))
+        hotel_expenses_data = HotelExpenseRecord.objects.filter(
+            date__range=[start_date, end_date]
+        ).aggregate(expenses=Sum('amount'))
         
-        # Calculate hotel expenses for current month
-        hotel_expenses_result = HotelExpenseRecord.objects.filter(
-            date__year=current_year,
-            date__month=current_month
-        ).aggregate(total=Sum('amount'))
-        
-        hotel_expenses = Decimal(str(hotel_expenses_result['total'] or '0.00'))
+        hotel_revenue = hotel_data['revenue'] or Decimal('0')
+        hotel_expenses = hotel_expenses_data['expenses'] or Decimal('0')
         hotel_profit = hotel_revenue - hotel_expenses
         
-        # LAUNDRY PROFIT CALCULATION FOR CURRENT MONTH
-        analytics = DashboardAnalytics(None)
+        # LAUNDRY CALCULATIONS - 2 queries total
+        laundry_revenue_data = Order.objects.filter(
+            created_at__date__range=[start_date, end_date]
+        ).aggregate(revenue=Sum('total_price'))
         
-        # Get laundry data for current month only
-        laundry_data = analytics.get_dashboard_data(
-            request, 
-            selected_year=current_year, 
-            selected_month=current_month
-        )
+        laundry_expenses_data = ExpenseRecord.objects.filter(
+            date__range=[start_date, end_date]
+        ).aggregate(expenses=Sum('amount'))
         
-        # Extract TOTAL laundry revenue and expenses (not separated by shop)
-        laundry_revenue = Decimal(str(laundry_data.get('order_stats', {}).get('total_revenue', 0) or 0))
-        laundry_expenses = Decimal(str(laundry_data.get('expense_stats', {}).get('total_expenses', 0) or 0))
+        laundry_revenue = laundry_revenue_data['revenue'] or Decimal('0')
+        laundry_expenses = laundry_expenses_data['expenses'] or Decimal('0')
         laundry_profit = laundry_revenue - laundry_expenses
         
-        # TOTALS
-        total_revenue = hotel_revenue + laundry_revenue
-        total_profit = hotel_profit + laundry_profit
-        
-        # Convert to float for template
+        # Prepare context
         context = {
-            'total_revenue': float(total_revenue),
+            'total_revenue': float(hotel_revenue + laundry_revenue),
             'laundry_revenue': float(laundry_revenue),
             'laundry_expenses': float(laundry_expenses),
             'laundry_profit': float(laundry_profit),
             'hotel_revenue': float(hotel_revenue),
             'hotel_expenses': float(hotel_expenses),
             'hotel_profit': float(hotel_profit),
-            'total_profit': float(total_profit),
-            'current_month': current_date.strftime('%B %Y'),  # Add current month for display
+            'total_profit': float(hotel_profit + laundry_profit),
+            'current_month': current_date.strftime('%B %Y'),
         }
         
         return render(request, 'Admin/Generaldashboard.html', context)
         
     except Exception as e:
         logger.error(f"Error in get_laundry_profit_and_hotel: {e}")
-        context = {
-            'total_revenue': 0,
-            'laundry_revenue': 0,
-            'laundry_expenses': 0,
-            'laundry_profit': 0,
-            'hotel_revenue': 0,
-            'hotel_expenses': 0,
-            'hotel_profit': 0,
-            'total_profit': 0,
-            'current_month': now().strftime('%B %Y'),
-        }
-        return render(request, 'Admin/Generaldashboard.html', context)
-
-
+        return render(request, 'Admin/Generaldashboard.html', {
+            'total_revenue': 0.0, 'laundry_revenue': 0.0, 'laundry_expenses': 0.0,
+            'laundry_profit': 0.0, 'hotel_revenue': 0.0, 'hotel_expenses': 0.0,
+            'hotel_profit': 0.0, 'total_profit': 0.0, 'current_month': now().strftime('%B %Y')
+        })
 def Reportsdashboard(request):
     # Initialize DashboardAnalytics with a mock admin instance
     class MockAdmin:

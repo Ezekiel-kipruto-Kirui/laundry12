@@ -7,6 +7,38 @@
         <i class="fas fa-receipt text-blue-600 mr-3"></i> Place Your Order
     </h1>
 
+    <!-- ✅ Show Django messages (success or error alerts) -->
+{% if item_formset.non_form_errors %}
+<div class="p-4 mb-4 text-red-700 bg-red-100 rounded-lg">
+    {% for error in item_formset.non_form_errors %}
+    <p>{{ error }}</p>
+    {% endfor %}
+</div>
+{% endif %}
+
+{% if order_form.errors %}
+<div class="p-4 mb-4 text-red-700 bg-red-100 rounded-lg">
+    {% for field, errors in order_form.errors.items %}
+    {% for error in errors %}
+    <p>{{ error }}</p>
+    {% endfor %}
+    {% endfor %}
+</div>
+{% endif %}
+
+{% if item_formset.errors %}
+<div class="p-4 mb-4 text-red-700 bg-red-100 rounded-lg">
+    {% for form in item_formset.forms %}
+    {% for field, errors in form.errors.items %}
+    {% for error in errors %}
+    <p>{{ error }}</p>
+    {% endfor %}
+    {% endfor %}
+    {% endfor %}
+</div>
+{% endif %}
+
+
     <div class="bg-white p-4 rounded-2xl shadow-lg p-8">
         <form method="post" id="orderForm" class="space-y-8">
             {% csrf_token %}

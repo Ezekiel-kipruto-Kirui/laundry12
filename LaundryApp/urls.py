@@ -1,6 +1,7 @@
 from django.contrib import admin
 from django.urls import path,include
 from . import views
+from .businesses import *
 from LaundryApp.View import Expenses,customers,usermanage
 from django.views.decorators.cache import cache_page
 
@@ -23,6 +24,7 @@ urlpatterns = [
     
     path('Laundry-dashboard', views.laundrydashboard, name='Laundrydashboard'),
     path('', views.get_laundry_profit_and_hotel, name='dashboard'),
+    path('/debug/', debug_orders_revenue, name='debug_orders_revenue'),
     
     path('createorder/', views.createorder, name='createorder'),
     path('Tables/', views.customordertable, name='customordertable'),
