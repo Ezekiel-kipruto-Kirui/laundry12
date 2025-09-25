@@ -4,6 +4,7 @@ from . import views
 from .businesses import *
 from LaundryApp.View import Expenses,customers,usermanage
 from django.views.decorators.cache import cache_page
+from django.contrib.auth import views as auth_views
 
 
 # Create an instance of the admin class to access its methods
@@ -17,17 +18,42 @@ urlpatterns = [
     path('accounts/', include('django_registration.backends.activation.urls')),
     path('accounts/', include('django.contrib.auth.urls')),
     path('logout',views.logout_view, name='logout'),
-    path('mpesa/initiate-payment/<int:order_id>/', views.initiatepayment, name='Mpesa_payment_initiation'),
-    path('daraja/stk_push',views.stk_push_callback, name='stk_push_callback'),
-    path('mpesa/callback/', views.stk_push_callback, name='mpesa_callback'),
+    path('/mpesa/initiate-payment/<int:order_id>/', views.initiatepayment, name='Mpesa_payment_initiation'),
+    path('daraja/stk_push/', views.stk_push_callback, name='stk_push_callback'),
+    # ... other URLs
+    #path('mpesa/initiate-payment/<int:order_id>/', views.initiatepayment, name='Mpesa_payment_initiation'),
+    #path('daraja/stk_push',views.stk_push_callback, name='stk_push_callback'),
+    #path('mpesa/callback/', views.stk_push_callback, name='mpesa_callback'),
     path('Report/', cache_page(60 * 5)(views.dashboard_view), name='laundryapp_dashboard'),
     
+
+    
+    # Password reset
+    path('password_reset/', 
+         auth_views.PasswordResetView.as_view(template_name="registration/password_reset.html"), 
+         name='password_reset'),
+
+    path('password_reset/done/', 
+         auth_views.PasswordResetDoneView.as_view(template_name="registration/password_reset_done.html"), 
+         name='password_reset_done'),
+
+    path('reset/<uidb64>/<token>/', 
+         auth_views.PasswordResetConfirmView.as_view(template_name="registration/password_reset_confirm.html"), 
+         name='password_reset_confirm'),
+
+    path('reset/done/', 
+         auth_views.PasswordResetCompleteView.as_view(template_name="registration/password_reset_complete.html"), 
+         name='password_reset_complete'),
+
+
+
+
     path('Laundry-dashboard', views.laundrydashboard, name='Laundrydashboard'),
     path('', views.get_laundry_profit_and_hotel, name='dashboard'),
     path('/debug/', debug_orders_revenue, name='debug_orders_revenue'),
     
-    path('createorder/', views.createorder, name='createorder'),
-    path('Tables/', views.customordertable, name='customordertable'),
+    path('/createorder/', views.createorder, name='createorder'),
+    path('/Tables/', views.customordertable, name='customordertable'),
     path('order/<str:order_code>/status/<str:status>/', views.update_order_status, name='update_order_status'),
     path('order/<str:order_code>/', views.order_detail, name='order_detail'),
     path('order/<str:order_code>/edit/', views.order_edit, name='order_edit'),

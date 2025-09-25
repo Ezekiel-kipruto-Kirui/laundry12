@@ -108,15 +108,15 @@ MPESA_INITIATOR_USERNAME = env('MPESA_INITIATOR_USERNAME')
 MPESA_INITIATOR_SECURITY_CREDENTIAL = env('MPESA_INITIATOR_SECURITY_CREDENTIAL')
 
 # For development: emails will be printed to the console
-EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
+
 
 # For production: use real SMTP (example with Gmail)
 EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
 EMAIL_HOST = 'smtp.gmail.com'
 EMAIL_PORT = 587
-EMAIL_USE_TLS = False
-EMAIL_HOST_USER = env('EMAIL_HOST_USER')
-EMAIL_HOST_PASSWORD = env('EMAIL_HOST_PASSWORD')  # not your Gmail password, use App Password
+EMAIL_USE_TLS = True
+EMAIL_HOST_USER = 'cleanpageltd@gmail.com'#env('EMAIL_HOST_USER')
+EMAIL_HOST_PASSWORD = 'clean2025'#env('EMAIL_HOST_PASSWORD')  # not your Gmail password, use App Password
 
 
 

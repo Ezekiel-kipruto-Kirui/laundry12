@@ -197,6 +197,107 @@
             background-color: #fee2e2;
             color: #dc2626;
         }
+
+        /* Modal Styles */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal-content {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+            width: 90%;
+            max-width: 500px;
+            animation: modalSlideIn 0.3s ease-out;
+        }
+
+        @keyframes modalSlideIn {
+            from {
+                opacity: 0;
+                transform: translateY(-50px) scale(0.9);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0) scale(1);
+            }
+        }
+
+        .modal-header {
+            padding: 1.5rem;
+            border-bottom: 1px solid #e5e7eb;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .modal-body {
+            padding: 1.5rem;
+        }
+
+        .modal-footer {
+            padding: 1rem 1.5rem;
+            border-top: 1px solid #e5e7eb;
+            display: flex;
+
+            justify-content: space-between;
+            gap: 0.75rem;
+        }
+
+     
+
+        .close-modal:hover {
+            background-color: #f3f4f6;
+            color: #374151;
+        }
+
+        .payment-detail {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0.75rem 0;
+            border-bottom: 1px solid #f3f4f6;
+        }
+
+        .payment-detail:last-child {
+            border-bottom: none;
+        }
+
+        .payment-detail-label {
+            font-weight: 500;
+            color: #374151;
+        }
+
+        .payment-detail-value {
+            font-weight: 600;
+            color: #111827;
+        }
+
+        .amount-input {
+            width: 100%;
+            padding: 0.75rem;
+            border: 2px solid #e5e7eb;
+            border-radius: 8px;
+            font-size: 1.1rem;
+            font-weight: 600;
+            text-align: center;
+            transition: border-color 0.2s;
+        }
+
+        .amount-input:focus {
+            outline: none;
+            border-color: #3b82f6;
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+        }
     </style>
 </head>
 
@@ -325,7 +426,6 @@
             </form>
         </div>
 
-
         <!-- Orders Table -->
         <div class="bg-white rounded-xl overflow-hidden shadow-lg">
             <div class="overflow-x-auto">
@@ -366,7 +466,6 @@
                                     {% for item in order.items.all|slice:":1" %}
                                     <span class="text-xs text-gray-800">{{ item.servicetype }}</span>
                                     {% endfor %}
-                                   
         
                                     <!-- Tooltip -->
                                     {% if order.items.count > 1 %}
@@ -388,7 +487,6 @@
                                     {% for item in order.items.all|slice:":1" %}
                                     <span class="text-xs text-gray-800">{{ item.itemtype }}</span>
                                     {% endfor %}
-                                   
         
                                     <!-- Tooltip -->
                                     {% if order.items.count > 1 %}
@@ -410,7 +508,6 @@
                                     {% for item in order.items.all|slice:":1" %}
                                     <span class="text-xs text-gray-800">{{ item.itemname }}</span>
                                     {% endfor %}
-                                   
         
                                     <!-- Tooltip -->
                                     {% if order.items.count > 1 %}
@@ -530,16 +627,17 @@
                                             {% endif %}
         
                                             <div class="border-t border-gray-100 my-1"></div>
-                                            {% if order.payment_status != 'paid' %}
-                                            <form action="{% url 'laundry:Mpesa_payment_initiation' order.id%}" method="post"
-                                                class="w-full">
-                                                {% csrf_token %}
-                                                <button type="submit"
-                                                    class="w-full text-left px-4 py-2 text-sm text-green-700 hover:bg-green-50 flex items-center"
-                                                    onclick="return confirm('Mark this order as completed?')">
-                                                    <i class="fas fa-check-circle mr-2"></i> Complete Payment
-                                                </button>
-                                            </form>
+                                            {% if order.payment_status != 'completed' %}
+                                            <button type="button" 
+                                                class="w-full text-left px-4 py-2 text-sm text-blue-700 hover:bg-blue-50 flex items-center complete-payment-btn"
+                                                data-order-id="{{ order.id }}"
+                                                data-customer-name="{{ order.customer.name }}"
+                                                data-customer-phone="{{ order.customer.phone }}"
+                                                data-balance="{{ order.balance }}"
+                                                data-total-price="{{ order.total_price }}"
+                                                data-amount-paid="{{ order.amount_paid }}">
+                                                <i class="fas fa-credit-card mr-2"></i> Complete Payment
+                                            </button>
                                             {% endif %}
         
                                             <div class="border-t border-gray-100 my-1"></div>
@@ -621,9 +719,244 @@
         </div>
     </div>
 
-  <script>
+    <!-- Payment Modal -->
+    <div id="paymentModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 class="text-lg font-semibold text-gray-900">Complete Payment</h3>
+                <button type="button" class="close-modal">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="space-y-4">
+                    <!-- Customer Details -->
+                    <div class="payment-detail">
+                        <span class="payment-detail-label">Customer Name:</span>
+                        <span id="modalCustomerName" class="payment-detail-value"></span>
+                    </div>
+                    <div class="payment-detail">
+                        <span class="payment-detail-label">Phone Number:</span>
+                        <span id="modalCustomerPhone" class="payment-detail-value"></span>
+                    </div>
+                    
+                    <!-- Payment Details -->
+                    <div class="payment-detail">
+                        <span class="payment-detail-label">Total Amount:</span>
+                        <span id="modalTotalPrice" class="payment-detail-value"></span>
+                    </div>
+                    <div class="payment-detail">
+                        <span class="payment-detail-label">Amount Paid:</span>
+                        <span id="modalAmountPaid" class="payment-detail-value"></span>
+                    </div>
+                    <div class="payment-detail">
+                        <span class="payment-detail-label">Balance Due:</span>
+                        <span id="modalBalance" class="payment-detail-value text-green-600 font-bold"></span>
+                    </div>
+                    
+                    <!-- Payment Amount Input -->
+                    <div>
+                        <label for="paymentAmount" class="block text-sm font-medium text-gray-700 mb-2">
+                            Enter Payment Amount (KSh)
+                        </label>
+                        <input type="number" 
+                               id="paymentAmount" 
+                               class="amount-input" 
+                               min="1" 
+                               step="1"
+                               placeholder="Enter amount to pay">
+                        <p id="amountError" class="text-red-500 text-sm mt-1 hidden">Please enter a valid amount</p>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="close-modal p-3 text-gray-700 border-2 border-gray-200 rounded hover:bg-gray-100 transition-colors duration-200">
+                    Cancel Payment
+                </button>
+                <button type="button" id="confirmPayment" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors duration-200">
+                    <i class="fas fa-credit-card mr-2"></i> Process Payment
+                </button>
+            </div>
+        </div>
+    </div>
+
+   <script>
     document.addEventListener('DOMContentLoaded', function () {
-        // Toggle dropdowns on click
+        // Modal elements
+        const modal = document.getElementById('paymentModal');
+        const closeButtons = document.querySelectorAll('.close-modal');
+        const completePaymentButtons = document.querySelectorAll('.complete-payment-btn');
+        const confirmPaymentButton = document.getElementById('confirmPayment');
+        const paymentAmountInput = document.getElementById('paymentAmount');
+        const amountError = document.getElementById('amountError');
+
+        let currentOrderId = null;
+        let currentBalance = 0;
+
+        // Open modal when complete payment button is clicked
+        completePaymentButtons.forEach(button => {
+            button.addEventListener('click', function () {
+                currentOrderId = this.getAttribute('data-order-id');
+                const customerName = this.getAttribute('data-customer-name');
+                const customerPhone = this.getAttribute('data-customer-phone');
+                const balance = parseFloat(this.getAttribute('data-balance'));
+                const totalPrice = parseFloat(this.getAttribute('data-total-price'));
+                const amountPaid = parseFloat(this.getAttribute('data-amount-paid'));
+
+                currentBalance = balance;
+
+                // Populate modal with data
+                document.getElementById('modalCustomerName').textContent = customerName;
+                document.getElementById('modalCustomerPhone').textContent = customerPhone;
+                document.getElementById('modalTotalPrice').textContent = 'KSh ' + totalPrice.toLocaleString();
+                document.getElementById('modalAmountPaid').textContent = 'KSh ' + amountPaid.toLocaleString();
+                document.getElementById('modalBalance').textContent = 'KSh ' + balance.toLocaleString();
+
+                // Set payment amount input max value to balance
+                paymentAmountInput.max = balance;
+                paymentAmountInput.value = balance; // Pre-fill with full balance
+
+                // Show modal
+                modal.style.display = 'flex';
+                paymentAmountInput.focus();
+            });
+        });
+
+        // Close modal
+        closeButtons.forEach(button => {
+            button.addEventListener('click', function () {
+                modal.style.display = 'none';
+                resetModal();
+            });
+        });
+
+        // Close modal when clicking outside
+        window.addEventListener('click', function (event) {
+            if (event.target === modal) {
+                modal.style.display = 'none';
+                resetModal();
+            }
+        });
+
+        // Validate payment amount
+        paymentAmountInput.addEventListener('input', function () {
+            const amount = parseFloat(this.value);
+            if (amount > currentBalance) {
+                amountError.textContent = 'Amount cannot exceed balance due';
+                amountError.classList.remove('hidden');
+                confirmPaymentButton.disabled = true;
+            } else if (amount <= 0 || isNaN(amount)) {
+                amountError.textContent = 'Please enter a valid amount';
+                amountError.classList.remove('hidden');
+                confirmPaymentButton.disabled = true;
+            } else {
+                amountError.classList.add('hidden');
+                confirmPaymentButton.disabled = false;
+            }
+        });
+
+        // Process payment
+        confirmPaymentButton.addEventListener('click', function () {
+            const amount = parseFloat(paymentAmountInput.value);
+
+            if (amount > currentBalance || amount <= 0 || isNaN(amount)) {
+                amountError.classList.remove('hidden');
+                return;
+            }
+
+            // Show loading state
+            this.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i> Processing...';
+            this.disabled = true;
+
+            // Submit the form via AJAX
+            const formData = new FormData();
+            formData.append('csrfmiddlewaretoken', getCookie('csrftoken'));
+            formData.append('amount', amount);
+
+            // Use the correct URL pattern
+            fetch(`/Laundry/mpesa/initiate-payment/${currentOrderId}/`, {
+                method: 'POST',
+                body: formData,
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest',
+                }
+            })
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('Network response was not ok');
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    if (data.success) {
+                        // Show success message
+                        showMessage('Payment initiated successfully! Please check your phone to complete the payment.', 'success');
+                        // Close modal
+                        modal.style.display = 'none';
+                        resetModal();
+                        // Reload page to reflect changes after 3 seconds
+                        setTimeout(() => {
+                            window.location.reload();
+                        }, 3000);
+                    } else {
+                        showMessage(data.message || 'Payment initiation failed. Please try again.', 'error');
+                        // Reset button
+                        confirmPaymentButton.innerHTML = '<i class="fas fa-credit-card mr-2"></i> Process Payment';
+                        confirmPaymentButton.disabled = false;
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    showMessage('An error occurred. Please try again.', 'error');
+                    // Reset button
+                    confirmPaymentButton.innerHTML = '<i class="fas fa-credit-card mr-2"></i> Process Payment';
+                    confirmPaymentButton.disabled = false;
+                });
+        });
+
+        function resetModal() {
+            paymentAmountInput.value = '';
+            amountError.classList.add('hidden');
+            confirmPaymentButton.innerHTML = '<i class="fas fa-credit-card mr-2"></i> Process Payment';
+            confirmPaymentButton.disabled = false;
+            currentOrderId = null;
+            currentBalance = 0;
+        }
+
+        function showMessage(message, type) {
+            // Create toast notification
+            const toast = document.createElement('div');
+            toast.className = `fixed top-4 right-4 p-4 rounded-lg shadow-lg z-50 ${type === 'success' ? 'bg-green-500 text-white' : 'bg-red-500 text-white'
+                }`;
+            toast.innerHTML = `
+                <div class="flex items-center">
+                    <i class="fas fa-${type === 'success' ? 'check' : 'exclamation-triangle'} mr-2"></i>
+                    <span>${message}</span>
+                </div>
+            `;
+            document.body.appendChild(toast);
+
+            // Remove toast after 5 seconds
+            setTimeout(() => {
+                toast.remove();
+            }, 5000);
+        }
+
+        // CSRF token helper function
+        function getCookie(name) {
+            let cookieValue = null;
+            if (document.cookie && document.cookie !== '') {
+                const cookies = document.cookie.split(';');
+                for (let i = 0; i < cookies.length; i++) {
+                    const cookie = cookies[i].trim();
+                    if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                        break;
+                    }
+                }
+            }
+            return cookieValue;
+        }
+
+        // Existing dropdown functionality
         document.querySelectorAll('.dropdown > button').forEach(button => {
             button.addEventListener('click', function (e) {
                 e.stopPropagation();
@@ -642,7 +975,6 @@
             });
         });
 
-        // Close dropdowns when clicking outside
         document.addEventListener('click', function (e) {
             if (!e.target.closest('.dropdown')) {
                 document.querySelectorAll('.dropdown-menu').forEach(menu => {
@@ -651,120 +983,12 @@
             }
         });
 
-        // Prevent dropdown from closing when clicking inside
         document.querySelectorAll('.dropdown-menu').forEach(menu => {
             menu.addEventListener('click', function (e) {
                 e.stopPropagation();
             });
         });
-
-        // Intercept form submissions for order status updates
-        document.querySelectorAll('form[action*="/order/"]').forEach(form => {
-            form.addEventListener('submit', function (e) {
-                e.preventDefault();
-
-                const form = this;
-                const url = form.action;
-                const formData = new FormData(form);
-                const orderRow = form.closest('tr');
-                const statusCell = orderRow.querySelector('.order-status');
-                const actionButtons = orderRow.querySelector('.action-buttons');
-
-                // Show loading state
-                const originalButton = form.querySelector('button');
-                const originalText = originalButton.innerHTML;
-                originalButton.innerHTML = '<span class="spinner-border spinner-border-sm" role="status"></span> Updating...';
-                originalButton.disabled = true;
-
-                fetch(url, {
-                    method: 'POST',
-                    body: formData,
-                    headers: {
-                        'X-Requested-With': 'XMLHttpRequest',
-                        'X-CSRFToken': formData.get('csrfmiddlewaretoken')
-                    }
-                })
-                    .then(response => response.json())
-                    .then(data => {
-                        if (data.success) {
-                            // ✅ Update the status cell instantly
-                            statusCell.innerHTML = `<span class="badge bg-${getStatusBadgeClass(data.new_status)}">${data.status_display}</span>`;
-
-                            // Show success message
-                            showDjangoMessage('success', data.message);
-
-                            // If order is completed or delivered, remove action buttons
-                            if (data.new_status === 'Completed' || data.new_status === 'delivered') {
-                                actionButtons.innerHTML = '<span class="text-muted">No actions available</span>';
-                            }
-                        } else {
-                            showDjangoMessage('error', data.message);
-                        }
-                    })
-                    .catch(error => {
-                        console.error('Error:', error);
-                        showDjangoMessage('error', 'An error occurred while updating the order status.');
-                    })
-                    .finally(() => {
-                        // Restore button state
-                        originalButton.innerHTML = originalText;
-                        originalButton.disabled = false;
-
-                        // Close the dropdown menu
-                        const dropdownMenu = form.closest('.dropdown-menu');
-                        if (dropdownMenu) {
-                            dropdownMenu.style.display = 'none';
-                        }
-                    });
-            });
-        });
     });
-
-    // Helper function to get badge class based on status
-    function getStatusBadgeClass(status) {
-        const statusClasses = {
-            'pending': 'warning',
-            'in_progress': 'info',
-            'Completed': 'success',
-            'delivered': 'secondary',
-            'cancelled': 'danger'
-        };
-        return statusClasses[status] || 'secondary';
-    }
-
-    // Helper function to simulate Django messages
-    function showDjangoMessage(type, message) {
-        let messageContainer = document.getElementById('django-messages');
-        if (!messageContainer) {
-            messageContainer = document.createElement('div');
-            messageContainer.id = 'django-messages';
-            messageContainer.className = 'position-fixed top-0 end-0 p-3';
-            messageContainer.style.zIndex = '9999';
-            document.body.appendChild(messageContainer);
-        }
-
-        const alertClass = type === 'success' ? 'alert-success' : 'alert-danger';
-        const iconClass = type === 'success' ? 'fa-check-circle' : 'fa-exclamation-circle';
-
-        const alertHtml = `
-        <div class="alert ${alertClass} alert-dismissible fade show" role="alert">
-            <i class="fas ${iconClass} me-2"></i>
-            ${message}
-            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-        </div>
-    `;
-
-        messageContainer.innerHTML = alertHtml;
-
-        // Auto-dismiss after 3 seconds
-        setTimeout(() => {
-            const alert = messageContainer.querySelector('.alert');
-            if (alert) {
-                const bsAlert = new bootstrap.Alert(alert);
-                bsAlert.close();
-            }
-        }, 3000);
-    }
 </script>
 
 </body>

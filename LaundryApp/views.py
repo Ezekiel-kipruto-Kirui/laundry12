@@ -1,4 +1,5 @@
 from decimal import Decimal, InvalidOperation
+from django.conf import settings
 from django.shortcuts import render, redirect, get_object_or_404
 from django.http import HttpResponse, JsonResponse
 from django_daraja.mpesa.core import MpesaClient
@@ -1006,41 +1007,102 @@ def initiatepayment(request, order_id):
         
         # Check if order is already fully paid
         if order.balance <= 0:
-            messages.warning(request, f"Order {order.uniquecode} is already fully paid.")
-            return redirect('laundry:customordertable')
+            return JsonResponse({
+                'success': False, 
+                'message': f"Order {order.uniquecode} is already fully paid."
+            })
+            
+        # Get the amount from the POST data
+        try:
+            amount = int(request.POST.get('amount', order.balance))
+        except (ValueError, TypeError):
+            amount = int(order.balance)
+            
+        # Validate amount
+        if amount <= 0:
+            return JsonResponse({
+                'success': False,
+                'message': 'Invalid payment amount'
+            })
+            
+        if amount > order.balance:
+            return JsonResponse({
+                'success': False,
+                'message': f'Amount cannot exceed balance of KSh {order.balance}'
+            })
             
         cl = MpesaClient()
         phone_number = str(order.customer.phone)
-        amount = int(order.balance)  # This should be the exact balance amount
         
+        # Format phone number correctly (remove leading 0 if present and add country code)
+        if phone_number.startswith('0'):
+            phone_number = '254' + phone_number[1:]
+        elif phone_number.startswith('+254'):
+            phone_number = phone_number[1:]
+        elif phone_number.startswith('254'):
+            phone_number = phone_number
+        else:
+            phone_number = '254' + phone_number
+            
         account_reference = f"ORDER{order.id}"
         transaction_desc = f"Payment for order {order.uniquecode}"
-        callback_url = 'https://mydomain.com/path'
-        # Use a valid callback URL - make sure this matches your actual domain
-        #callback_url = request.build_absolute_uri(reverse('stk_push_callback'))
+        
+        # For development/testing, you can use a mock callback URL
+        # For production, you need a real publicly accessible HTTPS URL
+        if settings.DEBUG:
+            # Use a service like ngrok or webhook.site for development
+            callback_url = "https://webhook.site/your-unique-url"  # Replace with your webhook URL
+            # OR use ngrok: callback_url = "https://your-ngrok-url.ngrok.io/daraja/stk_push/"
+        else:
+            # Production callback URL
+            callback_url = "https://yourdomain.com/daraja/stk_push/"
+        
+        logger.info(f"Attempting payment initiation: Phone: {phone_number}, Amount: {amount}, Callback: {callback_url}")
         
         try:
             response = cl.stk_push(phone_number, amount, account_reference, transaction_desc, callback_url)
             response_data = response.json()
             
-            if 'CheckoutRequestID' in response_data:
-                checkout_request_id = response_data['CheckoutRequestID']
-                order.checkout_request_id = checkout_request_id
-                order.payment_status = 'processing'  # Set status to processing while waiting for callback
-                order.save()
-                
-                messages.success(request, f"Payment initiated for order {order.uniquecode}. Check your phone to complete payment.")
+            logger.info(f"M-Pesa API Response: {response_data}")
+            
+            if 'ResponseCode' in response_data and response_data['ResponseCode'] == '0':
+                checkout_request_id = response_data.get('CheckoutRequestID')
+                if checkout_request_id:
+                    order.checkout_request_id = checkout_request_id
+                    order.payment_status = 'processing'
+                    order.save()
+                    
+                    logger.info(f"Payment initiated successfully for order {order.uniquecode}. CheckoutRequestID: {checkout_request_id}")
+                    
+                    return JsonResponse({
+                        'success': True,
+                        'message': f"Payment initiated for order {order.uniquecode}. Check your phone to complete payment.",
+                        'checkout_request_id': checkout_request_id
+                    })
+                else:
+                    error_message = "No CheckoutRequestID received from M-Pesa"
+                    logger.error(f"Payment initiation failed: {error_message}")
+                    return JsonResponse({
+                        'success': False,
+                        'message': f"Payment initiation failed: {error_message}"
+                    })
             else:
                 error_message = response_data.get('errorMessage', 'Unknown error occurred')
-                messages.error(request, f"Payment initiation failed: {error_message}")
+                customer_message = response_data.get('CustomerMessage', '')
+                logger.error(f"M-Pesa API error: {error_message}, CustomerMessage: {customer_message}")
+                return JsonResponse({
+                    'success': False,
+                    'message': f"Payment initiation failed: {customer_message or error_message}"
+                })
                 
         except Exception as e:
-            logger.error(f"Error initiating payment: {e}")
-            messages.error(request, f"Error initiating payment: {str(e)}")
-            
-        return redirect('laundry:customordertable')
+            logger.error(f"Error initiating payment for order {order.uniquecode}: {str(e)}")
+            return JsonResponse({
+                'success': False,
+                'message': f"Error initiating payment: {str(e)}"
+            })
     
-    return JsonResponse({'status': 'error', 'message': 'Invalid request method'})
+    return JsonResponse({'success': False, 'message': 'Invalid request method'})
 
 @csrf_exempt
 def stk_push_callback(request):
