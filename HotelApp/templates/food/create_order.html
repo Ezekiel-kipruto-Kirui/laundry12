@@ -9,7 +9,7 @@
 
     <!-- ✅ Show Django messages (success or error alerts) -->
 {% if item_formset.non_form_errors %}
-<div class="p-4 mb-4 text-red-700 bg-red-100 rounded-lg">
+<div id="form-messages" class="p-4 mb-4 text-yellow-800 bg-yellow-100 border border-yellow-300 rounded-lg">
     {% for error in item_formset.non_form_errors %}
     <p>{{ error }}</p>
     {% endfor %}
@@ -17,7 +17,7 @@
 {% endif %}
 
 {% if order_form.errors %}
-<div class="p-4 mb-4 text-red-700 bg-red-100 rounded-lg">
+<div id="form-messages" class="p-4 mb-4 text-yellow-800 bg-yellow-100 border border-yellow-300 rounded-lg">
     {% for field, errors in order_form.errors.items %}
     {% for error in errors %}
     <p>{{ error }}</p>
@@ -27,7 +27,7 @@
 {% endif %}
 
 {% if item_formset.errors %}
-<div class="p-4 mb-4 text-red-700 bg-red-100 rounded-lg">
+<div id="form-messages" class="p-4 mb-4 text-yellow-800 bg-yellow-100 border border-yellow-300 rounded-lg">
     {% for form in item_formset.forms %}
     {% for field, errors in form.errors.items %}
     {% for error in errors %}
@@ -37,6 +37,7 @@
     {% endfor %}
 </div>
 {% endif %}
+
 
 
     <div class="bg-white p-4 rounded-2xl shadow-lg p-8">
@@ -137,8 +138,20 @@
         box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
     }
 </style>
+<script>
+    // Hide warning after 10 seconds
+   
+</script>
 
 <script>
+     setTimeout(function () {
+            const messages = document.querySelectorAll('#form-messages');
+            messages.forEach(msg => {
+                msg.style.transition = "opacity 1s ease";
+                msg.style.opacity = "0";
+                setTimeout(() => msg.remove(), 1000); // Remove after fade-out
+            });
+        }, 10000);
     function updateFormCount() {
         const totalForms = document.getElementById('id_items-TOTAL_FORMS');
         const itemRows = document.querySelectorAll('.item-row');

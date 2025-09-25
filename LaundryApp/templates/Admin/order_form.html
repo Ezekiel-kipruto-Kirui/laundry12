@@ -160,30 +160,31 @@
                     <input type="hidden" id="customer_id" name="customer_id" value="">
 
                     <!-- Display form errors at the top -->
-                    {% if customer_form.errors or order_form.errors or item_formset.errors %}
-                    <div class="bg-red-50 border border-red-200 rounded-lg p-4 mb-6 shadow-sm">
-                        <h3 class="text-red-800 font-semibold mb-2">Please correct the following errors:</h3>
-                        <ul class="text-red-600 text-sm list-disc pl-5">
-                            {% for field in customer_form %}
-                            {% for error in field.errors %}
-                            <li>{{ field.label }}: {{ error }}</li>
-                            {% endfor %}
-                            {% endfor %}
-                            {% for field in order_form %}
-                            {% for error in field.errors %}
-                            <li>{{ field.label }}: {{ error }}</li>
-                            {% endfor %}
-                            {% endfor %}
-                            {% for form in item_formset %}
-                            {% for field in form %}
-                            {% for error in field.errors %}
-                            <li>Item {{ forloop.parentloop.counter }} - {{ field.label }}: {{ error }}</li>
-                            {% endfor %}
-                            {% endfor %}
-                            {% endfor %}
-                        </ul>
-                    </div>
-                    {% endif %}
+                {% if customer_form.errors or order_form.errors or item_formset.errors %}
+                <div id="error-messages" class="bg-yellow-100 shadow-md rounded-lg p-4 mb-6">
+                    <h3 class="text-yellow-800 font-semibold mb-2">Please review the following issues:</h3>
+                    <ul class="text-yellow-700 text-sm list-disc pl-5">
+                        {% for field in customer_form %}
+                        {% for error in field.errors %}
+                        <li>{{ field.label }}: {{ error }}</li>
+                        {% endfor %}
+                        {% endfor %}
+                        {% for field in order_form %}
+                        {% for error in field.errors %}
+                        <li>{{ field.label }}: {{ error }}</li>
+                        {% endfor %}
+                        {% endfor %}
+                        {% for form in item_formset %}
+                        {% for field in form %}
+                        {% for error in field.errors %}
+                        <li>Item {{ forloop.parentloop.counter }} - {{ field.label }}: {{ error }}</li>
+                        {% endfor %}
+                        {% endfor %}
+                        {% endfor %}
+                    </ul>
+                </div>
+                {% endif %}
+
 
                     <!-- Step 1: Customer Information -->
                     <div class="form-step" data-step="1">
@@ -527,8 +528,20 @@
             });
         });
     </script>
+  
+     
+
 
 <script>
+       setTimeout(function () {
+            const msg = document.getElementById("error-messages");
+            if (msg) {
+                msg.style.transition = "opacity 1s ease";
+                msg.style.opacity = "0";
+                setTimeout(() => msg.remove(), 1000); // remove after fade
+            }
+        }, 5000); // 5 seconds
+    
     document.addEventListener('DOMContentLoaded', function () {
         /** ------------------------------
          * Utility Functions
