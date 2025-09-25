@@ -1,4 +1,4 @@
-from decimal import Decimal
+from decimal import Decimal, InvalidOperation
 from django.shortcuts import render, redirect, get_object_or_404
 from django.http import HttpResponse, JsonResponse
 from django_daraja.mpesa.core import MpesaClient
@@ -603,10 +603,6 @@ def update_order_status(request, order_code, status):
     messages.success(request, message)
     return redirect(request.META.get('HTTP_REFERER', 'laundry:customordertable'))
 
-from decimal import Decimal, InvalidOperation
-from django.http import JsonResponse
-from django.contrib.auth.decorators import login_required
-
 @login_required
 @shop_required
 def update_payment_status(request, order_code):
@@ -842,39 +838,6 @@ def createorder(request):
     }
     return render(request, 'Admin/order_form.html', context)
 
-@login_required
-@shop_required
-def search_customers(request):
-    """API endpoint to search for customers by phone or name"""
-    if request.method == 'GET':
-        query = request.GET.get('q', '').strip()
-        
-        if len(query) < 2:
-            return JsonResponse({'customers': []})
-        
-        # Base queryset
-        customers = Customer.objects.filter(
-            Q(phone__icontains=query) | Q(name__icontains=query)
-        )
-        
-        # Apply permission filtering
-        customers = apply_customer_permissions(customers, request)
-        
-        # Apply the limit AFTER all filtering
-        customers = customers[:10]  # Limit to 10 results
-        
-        results = []
-        for customer in customers:
-            results.append({
-                'id': customer.id,
-                'name': customer.name,
-                'phone': str(customer.phone),  # Convert PhoneNumber to string
-                'address': customer.address,
-            })
-        
-        return JsonResponse({'customers': results})
-    
-    return JsonResponse({'error': 'Invalid request'}, status=400)
 
 @login_required
 def laundrydashboard(request):
@@ -934,80 +897,54 @@ def laundrydashboard(request):
     }
     return render(request, 'Admin/dashboard.html', context)
 
-
-
-
-
-def get_hotel_financial_summary():
-    # ✅ Calculate total revenue
-    #HOTEL PROFIT
-    revenue = OrderItem.objects.aggregate(
-        total=Coalesce(
-            Sum(F('quantity') * F('food_item__price'), output_field=DecimalField()),
-            0
-        )
-    )['total']
-
-    # ✅ Calculate total expenses
-    expenses = HotelExpenseRecord.objects.aggregate(
-        total=Coalesce(Sum('amount'), 0)
-    )['total']
-
-    # ✅ Profit = Revenue - Expenses
-    profit = revenue - expenses
-
-    return {
-        'revenue': revenue,
-        'expenses': expenses,
-        'profit': profit
-    }
-
 # OR: from datetime import datetime
-from django.db.models import Sum, F, DecimalField
-from django.db.models.functions import Coalesce
-from django.utils.timezone import now
-import logging
-
-logger = logging.getLogger(__name__)
-
-
 def get_laundry_profit_and_hotel(request, selected_year=None):
     """
-    Get the total profit for both laundry and hotel businesses
+    Get the total profit for both laundry and hotel businesses for current month
     """
     if not request.user.is_authenticated and not request.user.is_superuser:
         return redirect('login')
-    # user is NOT logged in
 
     try:
-        # HOTEL PROFIT CALCULATION
+        # Get current month and year
+        current_date = now()
+        current_year = current_date.year
+        current_month = current_date.month
+        
+        # HOTEL PROFIT CALCULATION FOR CURRENT MONTH
         from HotelApp.models import HotelOrderItem, HotelExpenseRecord
         
-        # Calculate hotel revenue by iterating through order items
+        # Calculate hotel revenue for current month by iterating through order items
         hotel_revenue = Decimal('0.00')
-        for order_item in HotelOrderItem.objects.select_related('food_item').all():
+        hotel_order_items = HotelOrderItem.objects.select_related('food_item').filter(
+            order__created_at__year=current_year,
+            order__created_at__month=current_month
+        )
+        
+        for order_item in hotel_order_items:
             if order_item.food_item and order_item.food_item.price:
                 hotel_revenue += Decimal(str(order_item.quantity)) * Decimal(str(order_item.food_item.price))
         
-        # Calculate hotel expenses
-        hotel_expenses_result = HotelExpenseRecord.objects.aggregate(
-            total=Sum('amount')
-        )
-        hotel_expenses = Decimal(str(hotel_expenses_result['total'] or '0.00'))
+        # Calculate hotel expenses for current month
+        hotel_expenses_result = HotelExpenseRecord.objects.filter(
+            date__year=current_year,
+            date__month=current_month
+        ).aggregate(total=Sum('amount'))
         
+        hotel_expenses = Decimal(str(hotel_expenses_result['total'] or '0.00'))
         hotel_profit = hotel_revenue - hotel_expenses
         
-        # LAUNDRY PROFIT CALCULATION
-        from .analytics import DashboardAnalytics
-        
+        # LAUNDRY PROFIT CALCULATION FOR CURRENT MONTH
         analytics = DashboardAnalytics(None)
         
-        if selected_year is None:
-            selected_year = now().year
-            
-        laundry_data = analytics.get_dashboard_data(request, selected_year)
+        # Get laundry data for current month only
+        laundry_data = analytics.get_dashboard_data(
+            request, 
+            selected_year=current_year, 
+            selected_month=current_month
+        )
         
-        # Extract laundry revenue and expenses
+        # Extract TOTAL laundry revenue and expenses (not separated by shop)
         laundry_revenue = Decimal(str(laundry_data.get('order_stats', {}).get('total_revenue', 0) or 0))
         laundry_expenses = Decimal(str(laundry_data.get('expense_stats', {}).get('total_expenses', 0) or 0))
         laundry_profit = laundry_revenue - laundry_expenses
@@ -1016,12 +953,17 @@ def get_laundry_profit_and_hotel(request, selected_year=None):
         total_revenue = hotel_revenue + laundry_revenue
         total_profit = hotel_profit + laundry_profit
         
-        # Convert to float for template (or keep as Decimal if your template filters support it)
+        # Convert to float for template
         context = {
             'total_revenue': float(total_revenue),
+            'laundry_revenue': float(laundry_revenue),
+            'laundry_expenses': float(laundry_expenses),
             'laundry_profit': float(laundry_profit),
+            'hotel_revenue': float(hotel_revenue),
+            'hotel_expenses': float(hotel_expenses),
             'hotel_profit': float(hotel_profit),
             'total_profit': float(total_profit),
+            'current_month': current_date.strftime('%B %Y'),  # Add current month for display
         }
         
         return render(request, 'Admin/Generaldashboard.html', context)
@@ -1030,11 +972,17 @@ def get_laundry_profit_and_hotel(request, selected_year=None):
         logger.error(f"Error in get_laundry_profit_and_hotel: {e}")
         context = {
             'total_revenue': 0,
+            'laundry_revenue': 0,
+            'laundry_expenses': 0,
             'laundry_profit': 0,
+            'hotel_revenue': 0,
+            'hotel_expenses': 0,
             'hotel_profit': 0,
             'total_profit': 0,
+            'current_month': now().strftime('%B %Y'),
         }
         return render(request, 'Admin/Generaldashboard.html', context)
+
 
 def Reportsdashboard(request):
     # Initialize DashboardAnalytics with a mock admin instance
@@ -1166,730 +1114,3 @@ def logout_view(request):
     messages.info(request, "You have been successfully logged out.")
     return redirect('login')
 
-@login_required
-def user_add(request):
-    if request.method == 'POST':
-        form = UserCreateForm(request.POST)
-        profile_form = ProfileEditForm(request.POST)
-        laundry_form = LaundryProfileForm(request.POST)
-
-        if form.is_valid() and profile_form.is_valid():
-            try:
-                with transaction.atomic():
-                    # Create base user object but don't save yet
-                    user = form.save(commit=False)
-
-                    # Get profile data
-                    user_type = profile_form.cleaned_data['user_type']
-                    app_type = profile_form.cleaned_data['app_type']
-
-                    # ✅ Assign role permissions
-                    if user_type == "admin":
-                        user.is_staff = True
-                        user.is_superuser = True   # <-- allow superuser even for laundry
-                    elif user_type == "staff":
-                        user.is_staff = True
-                        user.is_superuser = False
-                    else:
-                        user.is_staff = False
-                        user.is_superuser = False
-
-                    user.user_type = user_type
-                    user.app_type = app_type
-                    user.save()
-
-                    # ✅ Enforce Laundry shop assignment for staff only
-                    if app_type == 'laundry' and not user.is_superuser:
-                        if laundry_form.is_valid():
-                            laundry_profile = laundry_form.save(commit=False)
-                            laundry_profile.user = user
-                            laundry_profile.save()
-                        else:
-                            messages.error(request, f"Laundry form errors: {laundry_form.errors}")
-                            raise Exception("Please select a valid shop for laundry users.")
-
-                    elif app_type == 'hotel':
-                        # Add HotelProfile logic if needed
-                        pass
-
-                messages.success(request, f"User {user.email} created successfully!")
-                return redirect('laundry:user_management')
-
-            except IntegrityError:
-                form.add_error("email", "This email is already registered.")
-            except Exception as e:
-                messages.error(request, f"Error creating user: {str(e)}")
-
-    else:
-        form = UserCreateForm()
-        profile_form = ProfileEditForm()
-        laundry_form = LaundryProfileForm()
-
-    return render(request, "Admin/user_form.html", {
-        "form": form,
-        "profile_form": profile_form,
-        "laundry_form": laundry_form,
-        "title": "Add New User"
-    })
-
-
-@login_required
-@admin_required
-def user_edit(request, pk):
-    """Edit user information including profile and laundry profile"""
-    user = get_object_or_404(User, pk=pk)
-
-    # Get laundry profile if exists
-    laundry_profile = getattr(user, 'laundry_profile', None)
-
-    if request.method == 'POST':
-        user_form = UserEditForm(request.POST, instance=user, prefix='user')
-        laundry_form = LaundryProfileForm(
-            request.POST, 
-            instance=laundry_profile, 
-            prefix='laundry'
-        )
-        password_form = PasswordChangeForm(user, request.POST, prefix='password')
-
-        # Save user + (optional) laundry profile
-        if 'update_user' in request.POST:
-            forms_valid = user_form.is_valid()
-
-            if forms_valid and user_form.cleaned_data.get('app_type') == 'laundry':
-                forms_valid = laundry_form.is_valid()
-
-            if forms_valid:
-                try:
-                    with transaction.atomic():
-                        user = user_form.save(commit=False)
-
-                        # Handle staff/admin permissions
-                        if user.user_type == 'admin':
-                            user.is_staff = True
-                            user.is_superuser = True
-                        elif user.user_type == 'staff':
-                            user.is_staff = True
-                            user.is_superuser = False
-                        else:
-                            user.is_staff = False
-                            user.is_superuser = False
-
-                        user.save()
-
-                        # Handle laundry profile
-                        if user.app_type == 'laundry':
-                            laundry_profile = laundry_form.save(commit=False)
-                            laundry_profile.user = user
-                            laundry_profile.save()
-                        elif hasattr(user, 'laundry_profile'):
-                            user.laundry_profile.delete()
-
-                    messages.success(request, f'User {user.username} updated successfully!')
-                    return redirect('laundry:user_management')
-
-                except Exception as e:
-                    messages.error(request, f'Error updating user: {str(e)}')
-
-        elif 'change_password' in request.POST and password_form.is_valid():
-            password_form.save()
-            if request.user == user:
-                update_session_auth_hash(request, user)
-            messages.success(request, 'Password updated successfully!')
-            return redirect('laundry:user_edit', pk=user.pk)
-
-    else:
-        user_form = UserEditForm(instance=user, prefix='user')
-        password_form = PasswordChangeForm(user, prefix='password')
-
-        if hasattr(user, 'laundry_profile'):
-            laundry_form = LaundryProfileForm(instance=user.laundry_profile, prefix='laundry')
-        else:
-            laundry_form = LaundryProfileForm(prefix='laundry')
-
-    context = {
-        'user_form': user_form,
-        'laundry_form': laundry_form,
-        'password_form': password_form,
-        'user': user,
-        'title': f'Edit User - {user.username}'
-    }
-
-    return render(request, 'Admin/user_edit_form.html', context)
-
-@login_required
-@admin_required
-def user_profile(request, pk):
-    """View user profile and details with laundry profile information"""
-    user = get_object_or_404(User, pk=pk)
-    laundry_profile = getattr(user, 'laundryprofile', None)
-    
-    # Get customers created by this user
-    customers_created = Customer.objects.filter(created_by=user).count()
-    
-    # Get orders for customers created by this user
-    customers = Customer.objects.filter(created_by=user)
-    user_orders = Order.objects.filter(customer__in=customers)
-    
-    total_orders = user_orders.count()
-    total_revenue = user_orders.aggregate(total=Sum('total_price'))['total'] or 0
-    
-    context = {
-        'user': user,
-        'laundry_profile': laundry_profile,
-        'total_orders': total_orders,
-        'total_revenue': total_revenue,
-        'customers_created': customers_created,
-    }
-    
-    return render(request, 'Admin/user_profile.html', context)
-
-@login_required
-@admin_required
-def user_management(request):
-    """Optimized User management page for admins with laundry shop information"""
-
-    # Start with all users
-    users = User.objects.all()
-
-    # --- Filters ---
-    search_query = request.GET.get("search", "").strip()
-    shop_filter = request.GET.get("shop", "").strip()
-    status_filter = request.GET.get("status", "").strip()
-    user_type_filter = request.GET.get("user_type", "").strip()
-    app_type_filter = request.GET.get("app_type", "").strip()
-
-    if search_query:
-        users = users.filter(
-            Q(email__icontains=search_query)
-            | Q(first_name__icontains=search_query)
-            | Q(last_name__icontains=search_query)
-        )
-
-    if shop_filter:
-        users = users.filter(laundry_profile__shop=shop_filter)
-
-    if status_filter:
-        status_map = {
-            "active": {"is_active": True},
-            "inactive": {"is_active": False},
-            "staff": {"is_staff": True},
-            "superuser": {"is_superuser": True},
-        }
-        if status_filter in status_map:
-            users = users.filter(**status_map[status_filter])
-
-    if user_type_filter:
-        users = users.filter(user_type=user_type_filter)
-
-    if app_type_filter:
-        users = users.filter(app_type=app_type_filter)
-
-    # --- Build options for filters ---
-    all_shops = (
-        LaundryProfile.objects.values_list("shop", flat=True).distinct().order_by("shop")
-    )
-    shop_options = [{"value": "", "label": "All Shops", "selected": shop_filter == ""}]
-    shop_options += [
-        {"value": shop, "label": shop, "selected": shop_filter == shop}
-        for shop in all_shops
-    ]
-
-    status_options = [
-        {"value": "", "label": "All Status", "selected": status_filter == ""},
-        {"value": "active", "label": "Active", "selected": status_filter == "active"},
-        {"value": "inactive", "label": "Inactive", "selected": status_filter == "inactive"},
-        {"value": "staff", "label": "Staff Users", "selected": status_filter == "staff"},
-        {"value": "superuser", "label": "Superusers", "selected": status_filter == "superuser"},
-    ]
-
-    user_type_options = [
-        {"value": "", "label": "All Types", "selected": user_type_filter == ""},
-        {"value": "admin", "label": "Admins", "selected": user_type_filter == "admin"},
-        {"value": "staff", "label": "Staff", "selected": user_type_filter == "staff"},
-        {"value": "customer", "label": "Customers", "selected": user_type_filter == "customer"},
-    ]
-
-    app_type_options = [
-        {"value": "", "label": "All App Types", "selected": app_type_filter == ""},
-        {"value": "laundry", "label": "Laundry", "selected": app_type_filter == "laundry"},
-        {"value": "hotel", "label": "Hotel", "selected": app_type_filter == "hotel"},
-    ]
-
-    # --- Prepare user details ---
-    users_with_status = []
-    for user in users:
-        # Account status
-        if not user.is_active:
-            status = ("inactive", "danger", "Inactive")
-        elif user.is_superuser:
-            status = ("superuser", "primary", "Superuser")
-        elif user.is_staff:
-            status = ("staff", "info", "Staff")
-        else:
-            status = ("active", "success", "Active")
-
-        # Login info
-        if user.last_login:
-            last_login = user.last_login.strftime("%Y-%m-%d %H:%M")
-            days_since_login = (timezone.now() - user.last_login).days
-        else:
-            last_login = "Never"
-            days_since_login = None
-
-        # Add full details
-        users_with_status.append(
-            {
-                "id": user.id,
-                "email": user.email,
-                "first_name": user.first_name,
-                "last_name": user.last_name,
-                "is_active": user.is_active,
-                "is_staff": user.is_staff,
-                "is_superuser": user.is_superuser,
-                "status": status[0],
-                "status_class": status[1],
-                "status_text": status[2],
-                "last_login": last_login,
-                "days_since_login": days_since_login,
-                "user_type": getattr(user, "user_type", ""),
-                "app_type": getattr(user, "app_type", ""),
-                "shop": getattr(getattr(user, "laundry_profile", None), "shop", ""),
-                "is_online": bool(
-                    user.last_login
-                    and (timezone.now() - user.last_login).seconds < 300
-                ),
-                "date_joined": user.date_joined.strftime("%Y-%m-%d"),
-            }
-        )
-
-    # --- Pagination ---
-    paginator = Paginator(users_with_status, 20)
-    page_number = request.GET.get("page")
-    try:
-        page_obj = paginator.page(page_number)
-    except PageNotAnInteger:
-        page_obj = paginator.page(1)
-    except EmptyPage:
-        page_obj = paginator.page(paginator.num_pages)
-
-    # --- Statistics ---
-    total_users = users.count()
-    active_users = users.filter(is_active=True).count()
-    inactive_users = users.filter(is_active=False).count()
-    staff_users = users.filter(is_staff=True, is_superuser=False).count()
-    superusers = users.filter(is_superuser=True).count()
-    never_logged_in = users.filter(last_login__isnull=True).count()
-    recently_active = users.filter(last_login__gte=timezone.now() - timezone.timedelta(days=7)).count()
-
-    # --- Context ---
-    context = {
-        "users": page_obj,
-        "search_query": search_query,
-        "shop_options": shop_options,
-        "status_options": status_options,
-        "user_type_options": user_type_options,
-        "app_type_options": app_type_options,
-        "total_users": total_users,
-        "active_users": active_users,
-        "inactive_users": inactive_users,
-        "staff_users": staff_users,
-        "superusers": superusers,
-        "never_logged_in": never_logged_in,
-        "recently_active": recently_active,
-        "current_filters": {
-            "shop": shop_filter,
-            "status": status_filter,
-            "user_type": user_type_filter,
-            "app_type": app_type_filter,
-        },
-    }
-
-    return render(request, "Admin/user_management.html", context)
-
-@login_required
-@admin_required
-def user_delete(request, pk):
-    """Delete a user"""
-    user = get_object_or_404(User, pk=pk)
-    
-    # Prevent users from deleting themselves
-    if user == request.user:
-        messages.error(request, "You cannot delete your own account!")
-        return redirect('laundry:user_management')
-    
-    if request.method == 'POST':
-        email = user.email
-        user.delete()
-        messages.success(request, f'User {email} deleted successfully!')
-        return redirect('laundry:user_management')
-    
-    context = {
-        'user': user,
-    }
-    
-    return render(request, 'Admin/user_confirm_delete.html', context)
-
-@login_required
-@shop_required
-def customer_management(request):
-    """Customer management page with search and filtering"""
-    customers = Customer.objects.annotate(
-        order_count=Count('orders'),
-        total_spent=Sum('orders__total_price')
-    ).order_by('-id')
-    
-    # Search functionality
-    search_query = request.GET.get('search', '')
-    if search_query:
-        customers = customers.filter(
-            Q(name__icontains=search_query) |
-            Q(phone__icontains=search_query)
-        )
-    
-    # Apply permission filtering
-    customers = apply_customer_permissions(customers, request)
-    
-    # Also include customers created by users from the same shop
-    user_shops = get_user_shops(request)
-    if user_shops is not None and user_shops and not request.user.is_superuser:
-        # Get users from the same shops
-        same_shop_user_ids = User.objects.filter(
-            laundry_profile__shop__in=user_shops
-        ).values_list('id', flat=True)
-        
-        # Include customers created by users from the same shop
-        same_shop_customers = Customer.objects.filter(
-            created_by_id__in=same_shop_user_ids
-        )
-        
-        # Combine with existing customers
-        customers = customers | same_shop_customers
-        customers = customers.distinct()
-    
-    # Pagination
-    paginator = Paginator(customers, 20)
-    page_number = request.GET.get('page')
-    try:
-        page_obj = paginator.page(page_number)
-    except PageNotAnInteger:
-        page_obj = paginator.page(1)
-    except EmptyPage:
-        page_obj = paginator.page(paginator.num_pages)
-    
-    context = {
-        'customers': page_obj,
-        'search_query': search_query,
-        'total_customers': customers.count(),
-    }
-    
-    return render(request, 'Admin/customer_management.html', context)
-
-@login_required
-@shop_required
-def customer_add(request):
-    """Add new customer"""
-    if request.method == 'POST':
-        form = CustomerForm(request.POST)
-        if form.is_valid():
-            customer = form.save(commit=False)
-            customer.created_by = request.user
-            customer.save()
-            messages.success(request, f'Customer {customer.name} added successfully!')
-            return redirect('laundry:customer_management')
-    else:
-        form = CustomerForm()
-    
-    context = {
-        'form': form,
-        'title': 'Add New Customer'
-    }
-    
-    return render(request, 'Admin/customer_form.html', context)
-
-@login_required
-@shop_required
-def customer_edit(request, pk):
-    """Edit customer information"""
-    customer = get_object_or_404(Customer, pk=pk)
-    
-    # Check if user has permission to edit this customer
-    if not check_customer_permission(request, customer):
-        messages.error(request, "You don't have permission to edit this customer.")
-        return redirect('laundry:customer_management')
-    
-    if request.method == 'POST':
-        form = CustomerForm(request.POST, instance=customer)
-        if form.is_valid():
-            form.save()
-            messages.success(request, f'Customer {customer.name} updated successfully!')
-            return redirect('laundry:customer_management')
-    else:
-        form = CustomerForm(instance=customer)
-    
-    context = {
-        'form': form,
-        'customer': customer,
-        'title': f'Edit Customer - {customer.name}'
-    }
-    
-    return render(request, 'Admin/customer_form.html', context)
-
-@login_required
-@shop_required
-def customer_delete(request, pk):
-    """Delete a customer (only if they have no orders)"""
-    customer = get_object_or_404(Customer, pk=pk)
-    
-    # Check if user has permission
-    if not check_customer_permission(request, customer):
-        messages.error(request, "You don't have permission to delete this customer.")
-        return redirect('laundry:customer_management')
-    
-    if request.method == 'POST':
-        # Check if customer has orders
-        if customer.orders.exists():
-            messages.error(request, f'Cannot delete {customer.name} because they have existing orders.')
-            return redirect('laundry:customer_management')
-        
-        customer_name = customer.name
-        customer.delete()
-        messages.success(request, f'Customer {customer_name} deleted successfully!')
-        return redirect('laundry:customer_management')
-    
-    context = {
-        'customer': customer,
-    }
-    
-    return render(request, 'Admin/customer_confirm_delete.html', context)
-
-@login_required
-@shop_required
-def customer_orders(request, pk):
-    """View all orders for a specific customer"""
-    customer = get_object_or_404(Customer, pk=pk)
-    
-    # Check permission
-    if not check_customer_permission(request, customer):
-        messages.error(request, "You don't have permission to view this customer's orders.")
-        return redirect('laundry:customer_management')
-    
-    # Get orders for this customer
-    orders = customer.orders.all()
-    
-    # Apply order permissions
-    orders = apply_order_permissions(orders, request)
-    
-    # Get statistics
-    total_orders = orders.count()
-    total_spent = orders.aggregate(total=Sum('total_price'))['total'] or 0
-    avg_order_value = total_spent / total_orders if total_orders > 0 else 0
-    
-    # Pagination
-    paginator = Paginator(orders, 15)
-    page_number = request.GET.get('page')
-    try:
-        page_obj = paginator.page(page_number)
-    except PageNotAnInteger:
-        page_obj = paginator.page(1)
-    except EmptyPage:
-        page_obj = paginator.page(paginator.num_pages)
-    
-    context = {
-        'customer': customer,
-        'orders': page_obj,
-        'total_orders': total_orders,
-        'total_spent': total_spent,
-        'avg_order_value': avg_order_value,
-    }
-    
-    return render(request, 'Admin/customer_orders.html', context) 
-
-
-@login_required
-def create_expense_field(request):
-    default_expenses = [
-        "Electricity Token",
-        "Soap",
-        "Softener",
-        "Bleach",
-        "Stain removers",
-        "Laundry Bags",
-        "Hangers",
-        "Laundry Starch",
-        "Rent",
-        "Salaries",
-        "Delivery fees",
-        "Tags",
-        "Machine service fee",
-    ]
-
-    if request.method == "POST":
-        # Case 1: Create default categories (for single business)
-        if 'create_defaults' in request.POST:
-            created_count = 0
-            for label in default_expenses:
-                obj, created = ExpenseField.objects.get_or_create(label=label)
-                if created:
-                    created_count += 1
-
-            if created_count > 0:
-                messages.success(request, f"Successfully created {created_count} default expense categories!")
-            else:
-                messages.info(request, "All default expense categories already exist.")
-
-            return redirect("laundry:expense_field_list")
-
-        # Case 2: Manual form submission
-        form = ExpenseFieldForm(request.POST)
-        if form.is_valid():
-            form.save()
-            messages.success(request, "Expense field created successfully!")
-            return redirect("laundry:expense_field_list")
-    else:
-        form = ExpenseFieldForm()
-
-    return render(request, "expenses/create_expense_field.html", {
-        "form": form,
-        "default_expenses": default_expenses
-    })
-
-
-@login_required
-def expense_field_list(request):
-    fields = ExpenseField.objects.all()
-    return render(request, "expenses/expense_field_list.html", {"fields": fields})
-
-
-@login_required
-def edit_expense_field(request, field_id):
-    field = get_object_or_404(ExpenseField, id=field_id)
-    if request.method == "POST":
-        form = ExpenseFieldForm(request.POST, instance=field)
-        if form.is_valid():
-            form.save()
-            messages.success(request, "Expense field updated successfully!")
-            return redirect("laundry:expense_field_list")
-    else:
-        form = ExpenseFieldForm(instance=field)
-    return render(request, "expenses/edit_expense_field.html", {"form": form, "field": field})
-
-
-@login_required
-def delete_expense_field(request, field_id):
-    field = get_object_or_404(ExpenseField, id=field_id)
-    if request.method == "POST":
-        field.delete()
-        messages.success(request, "Expense field deleted successfully!")
-        return redirect("laundry:expense_field_list")
-    return render(request, "expenses/delete_expense_field.html", {"field": field})
-
-
-# views.py - Update expense_form view
-@login_required
-@shop_required
-def expense_form(request):
-    user_shops = get_user_shops(request)
-
-    if request.method == "POST":
-        form = ExpenseRecordForm(request.POST)
-
-        if form.is_valid():
-            expense_record = form.save(commit=False)
-
-            # Auto-assign shop based on user type
-            if request.user.is_superuser:
-                # For superuser, check if shop is provided in form data
-                shop = request.POST.get('shop')
-                if shop:
-                    expense_record.shop = shop
-                else:
-                    # If no shop provided, use the first available shop or show error
-                    if user_shops and len(user_shops) == 1:
-                        expense_record.shop = user_shops[0]
-                    else:
-                        messages.error(request, "Please select a shop for this expense.")
-                        context = {
-                            "form": form,
-                            "user_shop": user_shops[0] if user_shops else '',
-                            "is_superuser": request.user.is_superuser,
-                        }
-                        return render(request, "expenses/expense_form.html", context)
-            else:
-                # Staff user - auto-assign their shop
-                if user_shops and len(user_shops) == 1:
-                    expense_record.shop = user_shops[0]
-                else:
-                    messages.error(request, "Unable to determine your shop assignment.")
-                    return redirect("laundry:expense_list")
-
-            expense_record.save()
-            messages.success(request, "Expense recorded successfully!")
-            return redirect("laundry:expense_list")
-    else:
-        form = ExpenseRecordForm()
-
-    context = {
-        "form": form,
-        "user_shop": user_shops[0] if user_shops else '',
-        "is_superuser": request.user.is_superuser,
-    }
-    return render(request, "expenses/expense_form.html", context)
-
-@login_required
-def expense_list(request):
-    records = ExpenseRecord.objects.select_related("field").order_by("-date")
-
-    # Calculate stats for the cards
-    total_amount = records.aggregate(Sum('amount'))['amount__sum'] or 0
-    record_count = records.count()
-    average_expense = records.aggregate(Avg('amount'))['amount__avg'] or 0
-
-    context = {
-        "records": records,
-        "total_amount": total_amount,
-        "record_count": record_count,
-        "average_expense": round(average_expense, 2),
-    }
-    return render(request, "expenses/expense_list.html", context)
-
-
-@login_required
-def edit_expense_record(request, record_id):
-    record = get_object_or_404(ExpenseRecord, id=record_id)
-    if request.method == "POST":
-        form = ExpenseRecordForm(request.POST, instance=record)
-        if form.is_valid():
-            form.save()
-            messages.success(request, "Expense record updated successfully!")
-            return redirect("laundry:expense_list")
-    else:
-        form = ExpenseRecordForm(instance=record)
-    return render(request, "expenses/edit_expense_record.html", {"form": form, "record": record})
-
-
-@login_required
-def delete_expense_record(request, record_id):
-    record = get_object_or_404(ExpenseRecord, id=record_id)
-    if request.method == "POST":
-        record.delete()
-        messages.success(request, "Expense record deleted successfully!")
-        return redirect("laundry:expense_list")
-    return render(request, "expenses/delete_expense_record.html", {"record": record})
-
-@login_required
-def debug_users(request):
-    """Return all user data as JSON for debugging."""
-    users = User.objects.all().values(
-        "id",
-        "email",
-        "first_name",
-        "last_name",
-        "user_type",   # custom field in UserProfile
-        "app_type",    # custom field in UserProfile
-        "is_staff",
-        "is_superuser",
-        "is_active",
-        "last_login",
-        "date_joined",
-    )
-    return JsonResponse(list(users), safe=False)
