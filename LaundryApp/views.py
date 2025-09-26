@@ -7,7 +7,7 @@ import json
 import logging
 import datetime
 from functools import wraps
-from datetime import datetime, date, timedelta
+from datetime import datetime
 
 # Django imports
 from django import forms
@@ -379,7 +379,7 @@ def get_order_stats(orders):
         total=Count('id'),
         pending=Count('id', filter=Q(order_status='pending')),
         completed=Count('id', filter=Q(order_status='Completed')),
-        delivered=Count('id', filter=Q(order_status='delivered')),
+        delivered=Count('id', filter=Q(order_status='delivered/picked')),
         in_progress=Count('id', filter=Q(order_status='in_progress'))
     )
     
@@ -387,7 +387,7 @@ def get_order_stats(orders):
         'total_orders': status_counts['total'],
         'pending_orders': status_counts['pending'],
         'completed_orders': status_counts['completed'],
-        'delivered_orders': status_counts['delivered'],
+        'delivered_orders': status_counts['delivered/picked'],
         'in_progress_orders': status_counts['in_progress'],
     }
 
