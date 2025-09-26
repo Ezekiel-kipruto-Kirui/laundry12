@@ -46,9 +46,7 @@ INSTALLED_APPS = [
     # by collectstatic and for its static file storage engine to work.
     'whitenoise.runserver_nostatic', # For development
     
-    'unfold',
-    'unfold.contrib.import_export',
-    'unfold.contrib.filters',
+   
     'django_registration',
     'django.contrib.admin',
     'django.contrib.auth',
@@ -115,8 +113,8 @@ EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
 EMAIL_HOST = 'smtp.gmail.com'
 EMAIL_PORT = 587
 EMAIL_USE_TLS = True
-EMAIL_HOST_USER = 'cleanpageltd@gmail.com'#env('EMAIL_HOST_USER')
-EMAIL_HOST_PASSWORD = 'clean2025'#env('EMAIL_HOST_PASSWORD')  # not your Gmail password, use App Password
+EMAIL_HOST_USER = env('EMAIL_HOST_USER')
+EMAIL_HOST_PASSWORD = env('EMAIL_HOST_PASSWORD')  # not your Gmail password, use App Password
 
 AUTH_USER_MODEL = 'LaundryApp.UserProfile'
 ROOT_URLCONF = 'LaundryConfig.urls'

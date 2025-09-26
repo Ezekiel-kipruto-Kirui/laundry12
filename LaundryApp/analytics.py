@@ -15,6 +15,7 @@ from django.http import JsonResponse
 
 # Local imports
 from .models import Order, OrderItem, ExpenseRecord
+from HotelApp.models import Order as HotelOrder, HotelExpenseRecord, HotelOrderItem
 
 # Setup logger
 logger = logging.getLogger(__name__)
@@ -22,6 +23,7 @@ logger = logging.getLogger(__name__)
 # --- Constants ---
 MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
 ACTIVE_ORDER_STATUSES = ['pending', 'processing', 'Completed', 'Delivered/picked']  # Statuses that count as active orders
+HOTEL_ACTIVE_STATUSES = ['In Progress', 'Served']  # Hotel order statuses
 
 # Payment status constants
 PAYMENT_STATUS_PENDING = 'pending'
@@ -64,6 +66,21 @@ class DashboardAnalytics:
                 'shop_b_expenses': 0,
                 'average_expense': 0
             },
+            'hotel_stats': {
+                'total_orders': 0,
+                'served_orders': 0,
+                'in_progress_orders': 0,
+                'total_revenue': 0,
+                'avg_order_value': 0,
+                'total_expenses': 0,
+                'net_profit': 0
+            },
+            'business_growth': {
+                'total_revenue': 0,
+                'total_orders': 0,
+                'total_expenses': 0,
+                'net_profit': 0
+            },
             'revenue_by_shop': [],
             'balance_by_shop': [],
             'expenses_by_shop': [],
@@ -75,6 +92,7 @@ class DashboardAnalytics:
             'line_chart_data': [],
             'monthly_order_volume': [],
             'monthly_expenses_data': [],
+            'monthly_business_growth': [],
             'shop_a_stats': {
                 'revenue': 0, 'total_orders': 0, 'pending_orders': 0, 'completed_orders': 0,
                 'pending_payments': 0, 'partial_payments': 0, 'complete_payments': 0,
@@ -111,6 +129,64 @@ class DashboardAnalytics:
             return PAYMENT_STATUS_COMPLETE
         else:
             return PAYMENT_STATUS_PENDING
+    
+    def _calculate_hotel_stats(self, request, selected_year=None, selected_month=None, from_date=None, to_date=None):
+        """
+        Calculate hotel statistics including orders, revenue, and expenses.
+        """
+        # Base hotel orders queryset
+        hotel_orders = HotelOrder.objects.filter(order_status__in=HOTEL_ACTIVE_STATUSES)
+        
+        # Apply date filters if provided
+        if selected_year:
+            hotel_orders = hotel_orders.filter(created_at__year=selected_year)
+        if selected_month:
+            hotel_orders = hotel_orders.filter(created_at__month=selected_month)
+        if from_date and to_date:
+            hotel_orders = hotel_orders.filter(created_at__date__range=[from_date, to_date])
+        
+        # Calculate hotel order statistics
+        hotel_stats = hotel_orders.aggregate(
+            total_orders=Count('id'),
+            served_orders=Count('id', filter=Q(order_status='Served')),
+            in_progress_orders=Count('id', filter=Q(order_status='In Progress')),
+            total_revenue=Coalesce(Sum(
+                Case(
+                    When(order_items__isnull=False, 
+                         then=models.F('order_items__quantity') * models.F('order_items__food_item__price')),
+                    default=0,
+                    output_field=DecimalField()
+                )
+            ), 0, output_field=DecimalField()),
+            avg_order_value=Coalesce(Avg(
+                Case(
+                    When(order_items__isnull=False, 
+                         then=models.F('order_items__quantity') * models.F('order_items__food_item__price')),
+                    default=0,
+                    output_field=DecimalField()
+                )
+            ), 0, output_field=DecimalField())
+        )
+        
+        # Calculate hotel expenses
+        hotel_expenses = HotelExpenseRecord.objects.all()
+        
+        # Apply date filters to expenses
+        if selected_year:
+            hotel_expenses = hotel_expenses.filter(date__year=selected_year)
+        if selected_month:
+            hotel_expenses = hotel_expenses.filter(date__month=selected_month)
+        if from_date and to_date:
+            hotel_expenses = hotel_expenses.filter(date__range=[from_date, to_date])
+        
+        total_hotel_expenses = hotel_expenses.aggregate(
+            total_expenses=Coalesce(Sum('amount'), 0, output_field=DecimalField())
+        )['total_expenses']
+        
+        hotel_stats['total_expenses'] = total_hotel_expenses
+        hotel_stats['net_profit'] = hotel_stats['total_revenue'] - total_hotel_expenses
+        
+        return hotel_stats
     
     def _calculate_expense_stats(self, request, selected_year=None, selected_month=None, from_date=None, to_date=None):
         """
@@ -228,6 +304,88 @@ class DashboardAnalytics:
                 })
         
         return monthly_expenses_data
+
+    def _get_monthly_business_growth(self, request, selected_year=None):
+        """
+        Get monthly business growth data combining laundry and hotel business.
+        """
+        monthly_business_growth = []
+        
+        if not selected_year:
+            selected_year = now().year
+        
+        # Get monthly laundry revenue
+        laundry_monthly_data = Order.objects.filter(
+            delivery_date__year=selected_year,
+            order_status__in=ACTIVE_ORDER_STATUSES
+        ).annotate(
+            month=ExtractMonth('delivery_date')
+        ).values('month').annotate(
+            laundry_revenue=Coalesce(Sum('total_price'), 0, output_field=DecimalField()),
+            laundry_orders=Count('id')
+        ).order_by('month')
+        
+        # Get monthly hotel revenue
+        hotel_monthly_data = HotelOrder.objects.filter(
+            created_at__year=selected_year,
+            order_status__in=HOTEL_ACTIVE_STATUSES
+        ).annotate(
+            month=ExtractMonth('created_at')
+        ).values('month').annotate(
+            hotel_revenue=Coalesce(Sum(
+                Case(
+                    When(order_items__isnull=False, 
+                         then=models.F('order_items__quantity') * models.F('order_items__food_item__price')),
+                    default=0,
+                    output_field=DecimalField()
+                )
+            ), 0, output_field=DecimalField()),
+            hotel_orders=Count('id')
+        ).order_by('month')
+        
+        # Combine data
+        laundry_by_month = {item['month']: {
+            'revenue': float(item['laundry_revenue']),
+            'orders': item['laundry_orders']
+        } for item in laundry_monthly_data}
+        
+        hotel_by_month = {item['month']: {
+            'revenue': float(item['hotel_revenue']),
+            'orders': item['hotel_orders']
+        } for item in hotel_monthly_data}
+        
+        # Prepare datasets for chart
+        laundry_revenue_data = [laundry_by_month.get(month, {'revenue': 0})['revenue'] for month in range(1, 13)]
+        hotel_revenue_data = [hotel_by_month.get(month, {'revenue': 0})['revenue'] for month in range(1, 13)]
+        total_revenue_data = [laundry_revenue_data[i] + hotel_revenue_data[i] for i in range(12)]
+        
+        if any(laundry_revenue_data) or any(hotel_revenue_data):
+            monthly_business_growth = [
+                {
+                    'label': 'Laundry Revenue',
+                    'data': laundry_revenue_data,
+                    'borderColor': '#36A2EB',
+                    'backgroundColor': '#36A2EB50',
+                    'fill': False
+                },
+                {
+                    'label': 'Hotel Revenue',
+                    'data': hotel_revenue_data,
+                    'borderColor': '#FF6384',
+                    'backgroundColor': '#FF638450',
+                    'fill': False
+                },
+                {
+                    'label': 'Total Revenue',
+                    'data': total_revenue_data,
+                    'borderColor': '#4BC0C0',
+                    'backgroundColor': '#4BC0C050',
+                    'fill': False,
+                    'borderDash': [5, 5]
+                }
+            ]
+        
+        return monthly_business_growth
 
     def _get_base_queryset(self, request, selected_year, selected_month=None, from_date=None, to_date=None, payment_status=None, shop=None):
         """
@@ -444,7 +602,10 @@ class DashboardAnalytics:
             expense_stats = self._calculate_expense_stats(request, selected_year, selected_month, from_date, to_date)
             expenses_by_shop = self._get_expenses_by_shop(request, selected_year, selected_month, from_date, to_date)
             
-            if not base_queryset.exists() and expense_stats['total_expenses'] == 0:
+            # Calculate hotel statistics
+            hotel_stats = self._calculate_hotel_stats(request, selected_year, selected_month, from_date, to_date)
+            
+            if not base_queryset.exists() and expense_stats['total_expenses'] == 0 and hotel_stats['total_orders'] == 0:
                 return self._get_empty_dashboard_data()
 
             # Get order statistics including balance
@@ -459,6 +620,19 @@ class DashboardAnalytics:
             # Shop-specific statistics including balance and expenses
             shop_a_data = self._get_shop_specific_orders(base_queryset, 'Shop A', expense_stats)
             shop_b_data = self._get_shop_specific_orders(base_queryset, 'Shop B', expense_stats)
+
+            # Calculate overall business growth statistics
+            total_laundry_revenue = order_stats['total_revenue']
+            total_hotel_revenue = hotel_stats['total_revenue']
+            total_laundry_expenses = expense_stats['total_expenses']
+            total_hotel_expenses = hotel_stats['total_expenses']
+            
+            business_growth = {
+                'total_revenue': total_laundry_revenue + total_hotel_revenue,
+                'total_orders': order_stats['total_orders'] + hotel_stats['total_orders'],
+                'total_expenses': total_laundry_expenses + total_hotel_expenses,
+                'net_profit': (total_laundry_revenue + total_hotel_revenue) - (total_laundry_expenses + total_hotel_expenses)
+            }
 
             # Additional analytics data
             revenue_by_shop = list(base_queryset.values('shop').annotate(
@@ -506,6 +680,7 @@ class DashboardAnalytics:
             line_chart_data = []
             monthly_order_volume = []
             monthly_expenses_data = []
+            monthly_business_growth_data = []
 
             if not selected_month and not (from_date and to_date):
                 user_shops = self.get_user_shops(request)
@@ -545,11 +720,16 @@ class DashboardAnalytics:
                 
                 # Expenses chart data
                 monthly_expenses_data = self._get_monthly_expenses_data(request, selected_year)
+                
+                # Business growth chart data
+                monthly_business_growth_data = self._get_monthly_business_growth(request, selected_year)
 
             return {
                 'order_stats': order_stats,
                 'payment_stats': payment_stats,
                 'expense_stats': expense_stats,
+                'hotel_stats': hotel_stats,
+                'business_growth': business_growth,
                 'orders_by_payment_status': orders_by_payment_status,
                 'revenue_by_shop': revenue_by_shop,
                 'balance_by_shop': balance_by_shop,
@@ -562,6 +742,7 @@ class DashboardAnalytics:
                 'line_chart_data': line_chart_data,
                 'monthly_order_volume': monthly_order_volume,
                 'monthly_expenses_data': monthly_expenses_data,
+                'monthly_business_growth': monthly_business_growth_data,
                 'shop_a_stats': shop_a_data['stats'],
                 'shop_b_stats': shop_b_data['stats'],
                 'shop_a_orders': shop_a_data['orders_by_payment_status'],
@@ -700,6 +881,17 @@ class DashboardAnalytics:
             sanitized_series['label'] = self.sanitize_for_json(series['label'])
             sanitized_monthly_expenses_data.append(sanitized_series)
 
+        sanitized_monthly_business_growth = []
+        for series in data.get('monthly_business_growth', []):
+            sanitized_series = series.copy()
+            sanitized_series['label'] = self.sanitize_for_json(series['label'])
+            sanitized_monthly_business_growth.append(sanitized_series)
+
+        # Prepare profit comparison data for doughnut chart
+        laundry_profit = data['order_stats']['total_revenue'] - data['expense_stats']['total_expenses']
+        hotel_profit = data['hotel_stats']['net_profit']
+        total_profit = laundry_profit + hotel_profit
+
         context = {
             'title': 'Business Dashboard',
             'current_year': selected_year,
@@ -738,6 +930,26 @@ class DashboardAnalytics:
             'shop_b_expenses': data['expense_stats']['shop_b_expenses'],
             'average_expense': data['expense_stats']['average_expense'],
             'expense_count': data['expense_stats'].get('expense_count', 0),
+
+            # Hotel statistics
+            'hotel_total_orders': data['hotel_stats']['total_orders'],
+            'hotel_served_orders': data['hotel_stats']['served_orders'],
+            'hotel_in_progress_orders': data['hotel_stats']['in_progress_orders'],
+            'hotel_total_revenue': data['hotel_stats']['total_revenue'],
+            'hotel_avg_order_value': data['hotel_stats']['avg_order_value'],
+            'hotel_total_expenses': data['hotel_stats']['total_expenses'],
+            'hotel_net_profit': data['hotel_stats']['net_profit'],
+
+            # Business growth statistics
+            'business_total_revenue': data['business_growth']['total_revenue'],
+            'business_total_orders': data['business_growth']['total_orders'],
+            'business_total_expenses': data['business_growth']['total_expenses'],
+            'business_net_profit': data['business_growth']['net_profit'],
+
+            # Profit comparison data
+            'laundry_profit': laundry_profit,
+            'hotel_profit': hotel_profit,
+            'total_profit': total_profit,
 
             # Shop A statistics including balance and expenses
             'shop_a_revenue': data['shop_a_stats']['revenue'],
@@ -783,8 +995,6 @@ class DashboardAnalytics:
             'shop_b_overdue_orders_list': data.get('shop_b_orders', {}).get('overdue', []),
 
             # Chart data
-           
-            # Chart data
             'pie_chart_labels': json.dumps([item['shop'] for item in sanitized_revenue_by_shop]),
             'pie_chart_values': json.dumps([float(item['total_revenue']) for item in sanitized_revenue_by_shop]),
 
@@ -806,6 +1016,14 @@ class DashboardAnalytics:
             'service_type_counts': json.dumps([item['count'] for item in sanitized_service_types]),
 
             'monthly_order_volume': json.dumps(data['monthly_order_volume']),
+            'monthly_expenses_data': json.dumps(sanitized_monthly_expenses_data),
+            'monthly_business_growth': json.dumps(sanitized_monthly_business_growth),
+            
+            # Profit comparison chart data
+            'profit_comparison_labels': json.dumps(['Laundry Business', 'Hotel Business']),
+            'profit_comparison_data': json.dumps([float(laundry_profit), float(hotel_profit)]),
+            'profit_comparison_colors': json.dumps(['#36A2EB', '#FF6384']),
+
             'common_customers': data['common_customers'],
             
             # Additional balance information
