@@ -734,7 +734,7 @@
                             weight: '500'
                         },
                         callbacks: {
-                            title: function (context) {
+                            title: (context) => {
                                 return context[0].label || '';
                             },
                             label: function (context) {
@@ -824,7 +824,7 @@
                             cutout: '70%',
                             spacing: 0,
                             hoverOffset: 4,
-                            borderRadius: 8
+                            borderRadius: 0
                         }]
                     },
                     options: {
