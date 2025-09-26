@@ -1171,3 +1171,217 @@ def logout_view(request):
     messages.info(request, "You have been successfully logged out.")
     return redirect('login')
 
+
+
+
+
+
+
+
+
+from django.http import JsonResponse
+from django.db.models import Sum
+from django.views import View
+from .models import Order, ExpenseRecord, OrderItem
+import json
+
+class DebugFinancialDataView(View):
+    def get(self, request):
+        """
+        Debug view to sum up all expenses and order totals in the database
+        """
+        try:
+            # Sum up all orders' total_price
+            orders_summary = Order.objects.aggregate(
+                total_orders_revenue=Sum('total_price'),
+                total_orders_count=Sum('id', distinct=True),  # Count distinct orders
+                total_amount_paid=Sum('amount_paid'),
+                total_balance=Sum('balance')
+            )
+            
+            # Sum up all expenses
+            expenses_summary = ExpenseRecord.objects.aggregate(
+                total_expenses=Sum('amount'),
+                expenses_count=Sum('id', distinct=True)  # Count distinct expenses
+            )
+            
+            # Get expenses by shop
+            expenses_by_shop = list(ExpenseRecord.objects.values('shop').annotate(
+                shop_expenses=Sum('amount'),
+                expense_count=Sum('id', distinct=True)
+            ).order_by('-shop_expenses'))
+            
+            # Get revenue by shop
+            revenue_by_shop = list(Order.objects.values('shop').annotate(
+                shop_revenue=Sum('total_price'),
+                orders_count=Sum('id', distinct=True),
+                amount_paid=Sum('amount_paid'),
+                balance=Sum('balance')
+            ).order_by('-shop_revenue'))
+            
+            # Get order items summary
+            order_items_summary = OrderItem.objects.aggregate(
+                total_items_value=Sum('total_item_price'),
+                total_items_count=Sum('quantity'),
+                distinct_items=Sum('id', distinct=True)
+            )
+            
+            # Calculate net profit/loss
+            total_revenue = orders_summary['total_orders_revenue'] or 0
+            total_expenses = expenses_summary['total_expenses'] or 0
+            net_profit = total_revenue - total_expenses
+            
+            # Get some sample data for verification
+            sample_orders = list(Order.objects.values('uniquecode', 'total_price', 'amount_paid', 'balance')[:5])
+            sample_expenses = list(ExpenseRecord.objects.values('field__label', 'shop', 'amount', 'date')[:5])
+            
+            response_data = {
+                'status': 'success',
+                'summary': {
+                    'financial_overview': {
+                        'total_revenue': float(total_revenue),
+                        'total_expenses': float(total_expenses),
+                        'net_profit_loss': float(net_profit),
+                        'total_amount_collected': float(orders_summary['total_amount_paid'] or 0),
+                        'total_balance_outstanding': float(orders_summary['total_balance'] or 0)
+                    },
+                    'orders_breakdown': {
+                        'total_orders': orders_summary['total_orders_count'] or 0,
+                        'total_orders_revenue': float(orders_summary['total_orders_revenue'] or 0),
+                        'total_amount_paid': float(orders_summary['total_amount_paid'] or 0),
+                        'total_balance': float(orders_summary['total_balance'] or 0)
+                    },
+                    'expenses_breakdown': {
+                        'total_expenses': float(expenses_summary['total_expenses'] or 0),
+                        'total_expense_records': expenses_summary['expenses_count'] or 0
+                    },
+                    'order_items_breakdown': {
+                        'total_items_value': float(order_items_summary['total_items_value'] or 0),
+                        'total_items_quantity': order_items_summary['total_items_count'] or 0,
+                        'distinct_item_entries': order_items_summary['distinct_items'] or 0
+                    }
+                },
+                'detailed_breakdown': {
+                    'revenue_by_shop': revenue_by_shop,
+                    'expenses_by_shop': expenses_by_shop
+                },
+                'sample_data': {
+                    'recent_orders': sample_orders,
+                    'recent_expenses': sample_expenses
+                },
+                'calculations_verification': {
+                    'revenue_minus_expenses': float(total_revenue - total_expenses),
+                    'should_equal_net_profit': net_profit == (total_revenue - total_expenses),
+                    'amount_paid_plus_balance_equals_total': (
+                        float((orders_summary['total_amount_paid'] or 0) + (orders_summary['total_balance'] or 0)) == 
+                        float(total_revenue)
+                    )
+                },
+                'database_counts': {
+                    'total_order_records': Order.objects.count(),
+                    'total_expense_records': ExpenseRecord.objects.count(),
+                    'total_order_item_records': OrderItem.objects.count(),
+                    'total_customers': Customer.objects.count()
+                }
+            }
+            
+            return JsonResponse(response_data, json_dumps_params={'indent': 2})
+            
+        except Exception as e:
+            error_response = {
+                'status': 'error',
+                'message': str(e),
+                'error_type': type(e).__name__
+            }
+            return JsonResponse(error_response, status=500, json_dumps_params={'indent': 2})
+
+
+# Alternative simpler version for quick debugging
+def quick_financial_debug(request):
+    """
+    Quick debug endpoint that returns basic financial totals
+    """
+    try:
+        # Basic aggregates
+        total_revenue = Order.objects.aggregate(total=Sum('total_price'))['total'] or 0
+        total_expenses = ExpenseRecord.objects.aggregate(total=Sum('amount'))['total'] or 0
+        total_paid = Order.objects.aggregate(total=Sum('amount_paid'))['total'] or 0
+        total_balance = Order.objects.aggregate(total=Sum('balance'))['total'] or 0
+        
+        # Counts
+        order_count = Order.objects.count()
+        expense_count = ExpenseRecord.objects.count()
+        
+        response_data = {
+            'total_revenue': float(total_revenue),
+            'total_expenses': float(total_expenses),
+            'net_profit': float(total_revenue - total_expenses),
+            'total_amount_paid': float(total_paid),
+            'total_balance': float(total_balance),
+            'order_count': order_count,
+            'expense_count': expense_count,
+            'verification': {
+                'revenue_equals_paid_plus_balance': float(total_revenue) == float(total_paid + total_balance),
+                'difference': float(total_revenue) - float(total_paid + total_balance)
+            }
+        }
+        
+        return JsonResponse(response_data, json_dumps_params={'indent': 2})
+        
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=500)
+
+
+# View to check individual order calculations
+def debug_order_calculations(request):
+    """
+    Debug view to check if order calculations are correct
+    """
+    try:
+        orders_with_issues = []
+        correct_orders = 0
+        
+        # Check each order's calculations
+        for order in Order.objects.all().prefetch_related('items'):
+            # Calculate what the total should be based on items
+            calculated_total = sum(float(item.total_item_price) for item in order.items.all())
+            stored_total = float(order.total_price)
+            
+            # Calculate what balance should be
+            calculated_balance = stored_total - float(order.amount_paid)
+            stored_balance = float(order.balance)
+            
+            # Check for discrepancies
+            total_matches = abs(calculated_total - stored_total) < 0.01  # Allow for floating point errors
+            balance_matches = abs(calculated_balance - stored_balance) < 0.01
+            
+            if not total_matches or not balance_matches:
+                orders_with_issues.append({
+                    'order_code': order.uniquecode,
+                    'calculated_total': calculated_total,
+                    'stored_total': stored_total,
+                    'total_difference': calculated_total - stored_total,
+                    'amount_paid': float(order.amount_paid),
+                    'calculated_balance': calculated_balance,
+                    'stored_balance': stored_balance,
+                    'balance_difference': calculated_balance - stored_balance,
+                    'item_count': order.items.count()
+                })
+            else:
+                correct_orders += 1
+        
+        response_data = {
+            'total_orders_checked': Order.objects.count(),
+            'correct_orders': correct_orders,
+            'orders_with_calculation_issues': len(orders_with_issues),
+            'issues_found': orders_with_issues,
+            'issue_summary': {
+                'total_mismatch_count': len([o for o in orders_with_issues if abs(o['total_difference']) >= 0.01]),
+                'balance_mismatch_count': len([o for o in orders_with_issues if abs(o['balance_difference']) >= 0.01])
+            }
+        }
+        
+        return JsonResponse(response_data, json_dumps_params={'indent': 2})
+        
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=500)

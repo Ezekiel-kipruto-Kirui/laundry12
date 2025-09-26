@@ -3,6 +3,7 @@ import json
 import logging
 from collections import Counter
 from functools import lru_cache
+from datetime import datetime
 
 # Django core imports
 from django.db import models
@@ -22,7 +23,7 @@ logger = logging.getLogger(__name__)
 
 # --- Constants ---
 MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
-ACTIVE_ORDER_STATUSES = ['pending', 'processing', 'Completed', 'Delivered/picked']  # Statuses that count as active orders
+ACTIVE_ORDER_STATUSES = ['pending', 'processing', 'Completed', 'Delivered_picked']  # Statuses that count as active orders
 HOTEL_ACTIVE_STATUSES = ['In Progress', 'Served']  # Hotel order statuses
 
 # Payment status constants
@@ -387,7 +388,7 @@ class DashboardAnalytics:
         
         return monthly_business_growth
 
-    def _get_base_queryset(self, request, selected_year, selected_month=None, from_date=None, to_date=None, payment_status=None, shop=None):
+    def _get_base_queryset(self, request, selected_year=None, selected_month=None, from_date=None, to_date=None, payment_status=None, shop=None):
         """
         Get the base queryset with proper filtering for active orders, user permissions, and payment status.
         """
@@ -397,13 +398,21 @@ class DashboardAnalytics:
         if shop:
             base_queryset = base_queryset.filter(shop=shop)
 
-        # Apply year/month if provided
+        # Apply date filters - FIXED: Only apply year/month filters if explicitly provided
+        # When no month is selected, we want ALL data for the selected year (or current year if none selected)
+        current_year = now().year
+        
+        # If no year is selected, use current year but don't filter by it for main stats
         if selected_year:
             base_queryset = base_queryset.filter(delivery_date__year=selected_year)
+        elif not from_date and not to_date:
+            # If no date range is provided and no year is selected, default to current year
+            base_queryset = base_queryset.filter(delivery_date__year=current_year)
+            
         if selected_month:
             base_queryset = base_queryset.filter(delivery_date__month=selected_month)
 
-        # Apply date range filter if provided
+        # Apply date range filter if provided (overrides year/month filters)
         if from_date and to_date:
             base_queryset = base_queryset.filter(delivery_date__range=[from_date, to_date])
 
@@ -504,7 +513,7 @@ class DashboardAnalytics:
             total_orders=Count('id'),
             pending_orders=Count('id', filter=Q(order_status='pending')),
             completed_orders=Count('id', filter=Q(order_status='Completed')),
-            delivered_orders=Count('id', filter=Q(order_status='Delivered/picked')),
+            delivered_orders=Count('id', filter=Q(order_status='Delivered_picked')),
             total_revenue=Coalesce(Sum('total_price'), 0, output_field=DecimalField()),
             total_amount_paid=Coalesce(Sum('amount_paid'), 0, output_field=DecimalField()),
             total_balance=Coalesce(Sum('balance'), 0, output_field=DecimalField()),
@@ -591,18 +600,26 @@ class DashboardAnalytics:
         item_counter = Counter(all_items)
         return [{'itemname': item, 'count': count} for item, count in item_counter.most_common(5)]
     
-    def get_dashboard_data(self, request, selected_year, selected_month=None, from_date=None, to_date=None, payment_status=None, shop=None):
+    def get_dashboard_data(self, request, selected_year=None, selected_month=None, from_date=None, to_date=None, payment_status=None, shop=None):
         """
         Fetch comprehensive dashboard data with optimized queries and shop-based filtering.
         """
         try:
+            # FIXED: Handle the case when no year/month is selected properly
+            current_year = now().year
+            current_month = now().month
+            
+            # If no specific filters are applied, default to showing current year data
+            if not selected_year and not selected_month and not from_date and not to_date:
+                selected_year = current_year
+            
             base_queryset = self._get_base_queryset(request, selected_year, selected_month, from_date, to_date, payment_status, shop)
             
-            # Calculate expense statistics
+            # Calculate expense statistics with the same date filters
             expense_stats = self._calculate_expense_stats(request, selected_year, selected_month, from_date, to_date)
             expenses_by_shop = self._get_expenses_by_shop(request, selected_year, selected_month, from_date, to_date)
             
-            # Calculate hotel statistics
+            # Calculate hotel statistics with the same date filters
             hotel_stats = self._calculate_hotel_stats(request, selected_year, selected_month, from_date, to_date)
             
             if not base_queryset.exists() and expense_stats['total_expenses'] == 0 and hotel_stats['total_orders'] == 0:
@@ -682,6 +699,7 @@ class DashboardAnalytics:
             monthly_expenses_data = []
             monthly_business_growth_data = []
 
+            # FIXED: Only generate chart data when we're viewing yearly data (no specific month selected)
             if not selected_month and not (from_date and to_date):
                 user_shops = self.get_user_shops(request)
                 if user_shops is None:
@@ -690,8 +708,9 @@ class DashboardAnalytics:
                     shops = user_shops
 
                 for shop_name in shops:
-                    # Revenue chart data
-                    monthly_data = base_queryset.filter(shop=shop_name).annotate(
+                    # Revenue chart data - use the same year as the main query
+                    chart_year = selected_year if selected_year else current_year
+                    monthly_data = base_queryset.filter(shop=shop_name, delivery_date__year=chart_year).annotate(
                         month=ExtractMonth('delivery_date')
                     ).values('month').annotate(
                         revenue=Coalesce(Sum('total_price'), 0, output_field=DecimalField()),
@@ -713,16 +732,18 @@ class DashboardAnalytics:
                             'months': MONTHS
                         })
 
+                # Monthly order volume for the selected year
+                chart_year = selected_year if selected_year else current_year
                 monthly_order_volume = [
-                    base_queryset.filter(delivery_date__month=month).count()
+                    base_queryset.filter(delivery_date__year=chart_year, delivery_date__month=month).count()
                     for month in range(1, 13)
                 ]
                 
                 # Expenses chart data
-                monthly_expenses_data = self._get_monthly_expenses_data(request, selected_year)
+                monthly_expenses_data = self._get_monthly_expenses_data(request, selected_year if selected_year else current_year)
                 
                 # Business growth chart data
-                monthly_business_growth_data = self._get_monthly_business_growth(request, selected_year)
+                monthly_business_growth_data = self._get_monthly_business_growth(request, selected_year if selected_year else current_year)
 
             return {
                 'order_stats': order_stats,
@@ -802,7 +823,12 @@ class DashboardAnalytics:
         else:
             return self.sanitize_for_json(str(value))
     
-    def prepare_dashboard_context(self, request, data, selected_year, selected_month=None, from_date=None, to_date=None, payment_status=None, shop=None):
+    def prepare_dashboard_context(self, request, data, selected_year=None, selected_month=None, from_date=None, to_date=None, payment_status=None, shop=None):
+        # FIXED: Handle the case when no year is selected
+        current_year = now().year
+        if not selected_year and not from_date and not to_date:
+            selected_year = current_year
+            
         years = Order.objects.filter(
             order_status__in=ACTIVE_ORDER_STATUSES
         ).annotate(

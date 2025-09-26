@@ -92,6 +92,22 @@ urlpatterns = [
     path("expense-fields/", Expenses.expense_field_list, name="expense_field_list"),
     path("expense-fields/edit/<int:field_id>/", Expenses.edit_expense_field, name="edit_expense_field"),
     path("expense-fields/delete/<int:field_id>/", Expenses.delete_expense_field, name="delete_expense_field"),
+
+
+
+
+
+
+
+
+
+   
+
+
+    path('/debug/financial-summary/', views.DebugFinancialDataView.as_view(), name='debug_financial_summary'),
+    path('/debug/quick-financial/', views.quick_financial_debug, name='quick_financial_debug'),
+    path('/debug/order-calculations/', views.debug_order_calculations, name='debug_order_calculations'),
+
 ]
 
 
