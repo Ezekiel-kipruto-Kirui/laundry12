@@ -18,7 +18,7 @@ from django.urls import reverse
 from django.utils import timezone
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_POST
-from django.db.models import Q, Prefetch, Sum, Count, Avg,F,ExpressionWrapper, DecimalField, Value
+from django.db.models import Q, Prefetch, Sum, Count, Avg, F, ExpressionWrapper, DecimalField, Value
 from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
 from django.contrib.auth import login as auth_login, logout as auth_logout
 from django.contrib.auth.forms import AuthenticationForm
@@ -40,8 +40,7 @@ from .models import (
     ExpenseField, 
     ExpenseRecord, 
     LaundryProfile,
-  
-    )
+)
 from .forms import ( 
     CustomerForm, 
     OrderForm,
@@ -351,7 +350,6 @@ def customordertable(request):
     }
     return render(request, 'Admin/orders_table.html', context)
 
-
 # Helper functions for better organization
 def handle_export(orders, export_format):
     """Handle export functionality"""
@@ -374,21 +372,21 @@ def handle_export(orders, export_format):
 
 
 def get_order_stats(orders):
-    """Get order statistics in optimized way"""
+    """Get order statistics in optimized way - FIXED KEY ERROR"""
     status_counts = orders.aggregate(
         total=Count('id'),
         pending=Count('id', filter=Q(order_status='pending')),
         completed=Count('id', filter=Q(order_status='Completed')),
-        delivered=Count('id', filter=Q(order_status='delivered/picked')),
+        delivered=Count('id', filter=Q(order_status='Delivered_picked')),  # Fixed: using correct filter
         in_progress=Count('id', filter=Q(order_status='in_progress'))
     )
     
     return {
-        'total_orders': status_counts['total'],
-        'pending_orders': status_counts['pending'],
-        'completed_orders': status_counts['completed'],
-        'delivered_orders': status_counts['delivered/picked'],
-        'in_progress_orders': status_counts['in_progress'],
+        'total_orders': status_counts['total'] or 0,
+        'pending_orders': status_counts['pending'] or 0,
+        'completed_orders': status_counts['completed'] or 0,
+        'delivered_orders': status_counts['delivered'] or 0,  # Fixed: using correct key
+        'in_progress_orders': status_counts['in_progress'] or 0,
     }
 
 
@@ -400,6 +398,7 @@ def get_page_obj(paginator, page_number):
         return paginator.page(1)
     except EmptyPage:
         return paginator.page(paginator.num_pages)
+
 @login_required
 @shop_required
 def order_detail(request, order_code):
@@ -547,6 +546,7 @@ def order_edit(request, order_code):
         
     except Order.DoesNotExist:
         raise Http404("Order not found")
+
 @login_required
 @shop_required
 def order_delete(request, order_code):
@@ -573,6 +573,7 @@ def order_delete(request, order_code):
         
     except Order.DoesNotExist:
         raise Http404("Order not found")
+
 @login_required
 @shop_required
 @require_POST
@@ -980,6 +981,7 @@ def get_laundry_profit_and_hotel(request, selected_year=None):
             'laundry_profit': 0.0, 'hotel_revenue': 0.0, 'hotel_expenses': 0.0,
             'hotel_profit': 0.0, 'total_profit': 0.0, 'current_month': now().strftime('%B %Y')
         })
+
 def Reportsdashboard(request):
     # Initialize DashboardAnalytics with a mock admin instance
     class MockAdmin:
@@ -1171,14 +1173,7 @@ def logout_view(request):
     messages.info(request, "You have been successfully logged out.")
     return redirect('login')
 
-
-
-
-
-
-
-
-
+# Financial debugging views
 from django.http import JsonResponse
 from django.db.models import Sum
 from django.views import View
