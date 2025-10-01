@@ -12,6 +12,9 @@ from .sms_utility import send_sms
 from phonenumber_field.modelfields import PhoneNumberField
 import phonenumbers
 from django.conf import settings
+from multiselectfield import MultiSelectField
+
+
 
 logger = logging.getLogger(__name__)
 
@@ -220,7 +223,7 @@ class OrderItem(models.Model):
         ('Ironing', 'Ironing'),
         ('Dry cleaning', 'Dry cleaning'),
     )
-    servicetype = models.CharField(max_length=50, choices=SERVICE_TYPES,
+    servicetype = MultiSelectField(max_length=50, choices=SERVICE_TYPES,
                                    default='Washing', db_index=True)
 
     ITEMS_CATEGORY = (

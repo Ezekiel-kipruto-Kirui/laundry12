@@ -1,4 +1,4 @@
-{% extends "../home.html" %}
+{% extends "home.html" %}
 
 {% block title %}{{ title }}{% endblock %}
 
@@ -160,30 +160,30 @@
                     <input type="hidden" id="customer_id" name="customer_id" value="">
 
                     <!-- Display form errors at the top -->
-                {% if customer_form.errors or order_form.errors or item_formset.errors %}
-                <div id="error-messages" class="bg-yellow-100 shadow-md rounded-lg p-4 mb-6">
-                    <h3 class="text-yellow-800 font-semibold mb-2">Please review the following issues:</h3>
-                    <ul class="text-yellow-700 text-sm list-disc pl-5">
-                        {% for field in customer_form %}
-                        {% for error in field.errors %}
-                        <li>{{ field.label }}: {{ error }}</li>
-                        {% endfor %}
-                        {% endfor %}
-                        {% for field in order_form %}
-                        {% for error in field.errors %}
-                        <li>{{ field.label }}: {{ error }}</li>
-                        {% endfor %}
-                        {% endfor %}
-                        {% for form in item_formset %}
-                        {% for field in form %}
-                        {% for error in field.errors %}
-                        <li>Item {{ forloop.parentloop.counter }} - {{ field.label }}: {{ error }}</li>
-                        {% endfor %}
-                        {% endfor %}
-                        {% endfor %}
-                    </ul>
-                </div>
-                {% endif %}
+                    {% if customer_form.errors or order_form.errors or item_formset.errors %}
+                    <div id="error-messages" class="bg-yellow-100 shadow-md rounded-lg p-4 mb-6">
+                        <h3 class="text-yellow-800 font-semibold mb-2">Please review the following issues:</h3>
+                        <ul class="text-yellow-700 text-sm list-disc pl-5">
+                            {% for field in customer_form %}
+                            {% for error in field.errors %}
+                            <li>{{ field.label }}: {{ error }}</li>
+                            {% endfor %}
+                            {% endfor %}
+                            {% for field in order_form %}
+                            {% for error in field.errors %}
+                            <li>{{ field.label }}: {{ error }}</li>
+                            {% endfor %}
+                            {% endfor %}
+                            {% for form in item_formset %}
+                            {% for field in form %}
+                            {% for error in field.errors %}
+                            <li>Item {{ forloop.parentloop.counter }} - {{ field.label }}: {{ error }}</li>
+                            {% endfor %}
+                            {% endfor %}
+                            {% endfor %}
+                        </ul>
+                    </div>
+                    {% endif %}
 
 
                     <!-- Step 1: Customer Information -->
@@ -230,15 +230,16 @@
                                     <div class="text-red-500 text-sm mt-2">{{ customer_form.phone.errors }}</div>
                                     {% endif %}
                                 </div>
-                                <div class="relative">
-                                    {{ customer_form.address }}
-                                    <label for="address" class="form-label absolute left-4 top-3 pointer-events-none">
-                                        Estate/Address
-                                    </label>
-                                    {% if customer_form.address.errors %}
-                                    <div class="text-red-500 text-sm mt-2">{{ customer_form.errors }}</div>
-                                    {% endif %}
-                                </div>
+
+                            </div>
+                            <div class="relative mt-4">
+                                {{ customer_form.address }}
+                                <label for="address" class="form-label absolute left-4 top-3 pointer-events-none">
+                                    Estate/Address
+                                </label>
+                                {% if customer_form.address.errors %}
+                                <div class="text-red-500 text-sm mt-2">{{ customer_form.errors }}</div>
+                                {% endif %}
                             </div>
                         </div>
                     </div>
@@ -251,44 +252,45 @@
                             </h2>
 
                             <div class="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
-                                
+
                                 <!-- Delivery Date Field -->
                                 <div class="relative">
                                     {{ order_form.delivery_date }}
-                                    <label for="id_delivery_date" class="form-label absolute left-4 top-3 pointer-events-none">
-                                        Picking date/Delivery Date *
+                                    <label for="id_delivery_date"
+                                        class="form-label absolute left-4 top-3 pointer-events-none">
+                                        Picking date/Delivery Date
                                     </label>
                                     {% if order_form.delivery_date.errors %}
                                     <div class="text-red-500 text-sm mt-2">{{ order_form.delivery_date.errors }}</div>
                                     {% endif %}
                                 </div>
-                               
+
                                 <!-- Shop Field -->
                                 {% if user.is_superuser %}
                                 <div class="relative">
                                     {{ order_form.shop }}
                                     <label for="id_shop" class="form-label absolute left-4 top-3 pointer-events-none">
-                                        Shop *
+                                        Shop
                                     </label>
                                     {% if order_form.shop.errors %}
                                     <div class="text-red-500 text-sm mt-2">{{ order_form.shop.errors }}</div>
                                     {% endif %}
                                 </div>
                                 {% endif %}
-                                 
-                          
+
+
                             </div>
-                        
+
                             <div class="grid grid-cols-1 gap-4 md:gap-6 mt-4 md:mt-6">
                                 <!-- Address Field -->
-                             
+
 
                                 <!-- Address Details Field -->
                                 <div class="relative">
                                     {{ order_form.addressdetails }}
                                     <label for="addressdetails"
                                         class="form-label absolute left-4 top-3 pointer-events-none">
-                                        To Be delivered to
+                                        Delivered to/Picked from
                                     </label>
                                     {% if order_form.addressdetails.errors %}
                                     <div class="text-red-500 text-sm mt-2">{{ order_form.addressdetails.errors }}</div>
@@ -327,17 +329,98 @@
                                         {% endif %}
                                     </div>
 
-                                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
-                                        <!-- Service Type -->
-                                        <div class="relative">
-                                            {{ form.servicetype }}
-                                            <label class="form-label absolute left-4 top-3 pointer-events-none">
-                                                Service Type *
+                                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-4">
+
+                                        <!-- Add Alpine.js -->
+                                        <script src="https://unpkg.com/alpinejs" defer></script>
+                                         <script>
+                                            // Initialize selected services from existing form data
+                                            document.addEventListener('DOMContentLoaded', function () {
+                                                // For each item form, initialize the selected services
+                                                document.querySelectorAll('.item-form').forEach(itemForm => {
+                                                    const checkboxes = itemForm.querySelectorAll('input[name$="servicetype"]');
+                                                    const selectedServices = [];
+
+                                                    checkboxes.forEach(checkbox => {
+                                                        if (checkbox.checked) {
+                                                            selectedServices.push(checkbox.value);
+                                                        }
+                                                    });
+
+                                                    // Find the Alpine.js component and set the selected services
+                                                    const alpineComponent = itemForm.querySelector('[x-data]');
+                                                    if (alpineComponent && alpineComponent.__x) {
+                                                        alpineComponent.__x.$data.selectedServices = selectedServices;
+                                                    }
+                                                });
+                                            });
+                                        </script>
+                                    <!-- Service Type Dropdown - Fixed Version -->
+                                    <div x-data="{ 
+                                        open: false, 
+                                        selectedServices: [], 
+                                        updateFormInputs() {
+                                            // Update the actual form checkboxes
+                                            const formIndex = '{{ forloop.counter0 }}';
+                                            const checkboxes = this.$el.querySelectorAll('input[type=\ checkbox\]'); checkboxes.forEach(checkbox=> {
+                                        checkbox.checked = this.selectedServices.includes(checkbox.value);
+                                        });
+                                        }
+                                        }" class="relative inline-block w-full">
+                                        <!-- Dropdown button -->
+                                        <button @click="open = !open" type="button"
+                                            class="w-full px-4 py-3 bg-white border border-gray-300 rounded-lg shadow-sm hover:shadow transition-all duration-200 text-left focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 relative z-10">
+                                            <div class="flex items-center justify-between">
+                                                <div class="flex items-center">
+                                                    <svg class="w-5 h-5 text-gray-400 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                                                    </svg>
+                                                    <span class="text-gray-700"
+                                                        x-text="selectedServices.length > 0 ? selectedServices.join(', ') : 'Select services...'"></span>
+                                                </div>
+                                                <span
+                                                    class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800"
+                                                    x-show="selectedServices.length > 0" x-text="selectedServices.length"></span>
+                                            </div>
+                                        </button>
+                                    
+                                        <!-- Dropdown menu -->
+                                        <div x-show="open" x-transition:enter="transition ease-out duration-200"
+                                            x-transition:enter-start="opacity-0 transform -translate-y-2"
+                                            x-transition:enter-end="opacity-100 transform translate-y-0"
+                                            x-transition:leave="transition ease-in duration-150"
+                                            x-transition:leave-start="opacity-100 transform translate-y-0"
+                                            x-transition:leave-end="opacity-0 transform -translate-y-2" @click.away="open = false"
+                                            class="absolute mt-1 w-full bg-white border border-gray-200 rounded-lg shadow-xl z-50 py-2"
+                                            style="display: none;">
+                                    
+                                            <!-- Service checkboxes -->
+                                            {% for checkbox in form.servicetype %}
+                                            <label class="flex items-center px-4 py-2 hover:bg-gray-50 transition-colors duration-150 cursor-pointer">
+                                                <input type="checkbox" value="{{ checkbox.choice_label }}" x-model="selectedServices"
+                                                    @change="updateFormInputs()" class="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500">
+                                                <span class="ml-3 text-sm text-gray-700">{{ checkbox.choice_label }}</span>
                                             </label>
-                                            {% if form.servicetype.errors %}
-                                            <div class="text-red-500 text-sm mt-2">{{ form.servicetype.errors }}</div>
-                                            {% endif %}
+                                            {% endfor %}
+                                    
+                                            <div class="border-t border-gray-100 mt-2 pt-2 px-4">
+                                                <button @click="open = false" type="button"
+                                                    class="w-full py-2 text-sm text-blue-600 hover:text-blue-800 font-medium text-center">
+                                                    Apply
+                                                </button>
+                                            </div>
                                         </div>
+                                    
+                                        <!-- Hidden container for actual form checkboxes -->
+                                        <div class="hidden">
+                                            {% for checkbox in form.servicetype %}
+                                            {{ checkbox.tag }}
+                                            {% endfor %}
+                                        </div>
+                                    </div>
+
+
+
 
                                         <!-- Item Category -->
                                         <div class="relative">
@@ -455,8 +538,13 @@
                                     </label>
                                 </div>
                                 <!-- Payment Status -->
-                                
+
                             </div>
+                            <!-- <div class=" flex flex-row justify-between relative w-full h-12 rounded-md relative bg-gray-100 bodder-2 border-gray-300 mt-4 ">
+                                <p class="m-2">Balance</p>
+                                <p class="balnce m-2"></p>
+                            
+                            </div> -->
                         </div>
                     </div>
 
@@ -528,12 +616,12 @@
             });
         });
     </script>
-  
-     
 
 
-<script>
-       setTimeout(function () {
+
+
+    <script>
+        setTimeout(function () {
             const msg = document.getElementById("error-messages");
             if (msg) {
                 msg.style.transition = "opacity 1s ease";
@@ -541,389 +629,392 @@
                 setTimeout(() => msg.remove(), 1000); // remove after fade
             }
         }, 5000); // 5 seconds
-    
-    document.addEventListener('DOMContentLoaded', function () {
-        /** ------------------------------
-         * Utility Functions
-         -------------------------------*/
-        function addClasses(el, ...classes) { el.classList.add(...classes); }
-        function removeClasses(el, ...classes) { el.classList.remove(...classes); }
-        function showToast(message, type) {
-            const toast = document.getElementById('toast');
-            const toastMessage = document.getElementById('toast-message');
-            if (!toast || !toastMessage) return;
 
-            toastMessage.textContent = message;
-            const toastElement = toast.querySelector('div');
-            if (toastElement) {
-                const colors = {
-                    success: "bg-green-500",
-                    error: "bg-red-500",
-                    info: "bg-blue-500",
-                    default: "bg-gray-500"
-                };
-                toastElement.className = `px-6 py-4 rounded-lg shadow-lg text-white font-medium ${colors[type] || colors.default}`;
-            }
+        document.addEventListener('DOMContentLoaded', function () {
+            /** ------------------------------
+             * Utility Functions
+             -------------------------------*/
+            function addClasses(el, ...classes) { el.classList.add(...classes); }
+            function removeClasses(el, ...classes) { el.classList.remove(...classes); }
+            function showToast(message, type) {
+                const toast = document.getElementById('toast');
+                const toastMessage = document.getElementById('toast-message');
+                if (!toast || !toastMessage) return;
 
-            toast.classList.replace("opacity-0", "opacity-100");
-            toast.classList.replace("-translate-y-8", "translate-y-0");
-
-            setTimeout(() => {
-                toast.classList.replace("opacity-100", "opacity-0");
-                toast.classList.replace("translate-y-0", "-translate-y-8");
-            }, 3000);
-        }
-
-        /** ------------------------------
-         * Shop field auto-lock for Shop A and Shop B users
-         -------------------------------*/
-        '{% if not user.is_superuser %}'
-        const shopSelect = document.getElementById('id_shop');
-        if (shopSelect) {
-            // Get the user's shop from the template variable
-            const userShop = '{{ user_shop }}';
-
-            if (userShop) {
-                // Set the shop value and disable the select
-                shopSelect.value = userShop;
-                shopSelect.disabled = true;
-                
-                // Create a hidden input to ensure the value is submitted
-                const hiddenShopInput = document.createElement('input');
-                hiddenShopInput.type = 'hidden';
-                hiddenShopInput.name = 'shop';
-                hiddenShopInput.value = userShop;
-                shopSelect.parentNode.appendChild(hiddenShopInput);
-
-                // Style the disabled select
-                addClasses(shopSelect, 'bg-gray-100', 'cursor-not-allowed');
-
-                // Hide the shop field label and select for better UX
-                const shopLabel = document.querySelector('label[for="id_shop"]');
-                if (shopLabel) {
-                    shopLabel.style.display = 'none';
+                toastMessage.textContent = message;
+                const toastElement = toast.querySelector('div');
+                if (toastElement) {
+                    const colors = {
+                        success: "bg-green-500",
+                        error: "bg-red-500",
+                        info: "bg-blue-500",
+                        default: "bg-gray-500"
+                    };
+                    toastElement.className = `px-6 py-4 rounded-lg shadow-lg text-white font-medium ${colors[type] || colors.default}`;
                 }
-                shopSelect.style.display = 'none';
 
-                // Show a message indicating the auto-assigned shop
-              
+                toast.classList.replace("opacity-0", "opacity-100");
+                toast.classList.replace("-translate-y-8", "translate-y-0");
+
+                setTimeout(() => {
+                    toast.classList.replace("opacity-100", "opacity-0");
+                    toast.classList.replace("translate-y-0", "-translate-y-8");
+                }, 3000);
             }
-        }
-        '{% endif %}'
-        /** ------------------------------
-         * Form fields styling
-         -------------------------------*/
-        document.querySelectorAll('input, select, textarea').forEach(field => {
-            if (field.type === 'hidden' || field.classList.contains('no-style')) return;
-            addClasses(field, 'w-full', 'px-4', 'py-3', 'border', 'border-gray-300',
-                'rounded-lg', 'focus:outline-none', 'transition-all', 'duration-200', 'bg-white');
-            field.addEventListener('focus', () => {
-                addClasses(field, 'ring-2', 'ring-accent-500', 'border-accent-500');
-                removeClasses(field, 'border-gray-300');
-            });
-            field.addEventListener('blur', () => {
-                removeClasses(field, 'ring-2', 'ring-accent-500', 'border-accent-500');
-                addClasses(field, 'border-gray-300');
-            });
-        });
 
-        /** ------------------------------
-         * Multi-step form logic
-         -------------------------------*/
-        const steps = document.querySelectorAll('.form-step');
-        const stepIndicators = document.querySelectorAll('.step');
-        const prevBtn = document.getElementById('prev-btn');
-        const nextBtn = document.getElementById('next-btn');
-        const submitBtn = document.getElementById('submit-btn');
-        const orderForm = document.getElementById('order-form');
-        let currentStep = 1;
+            /** ------------------------------
+             * Shop field auto-lock for Shop A and Shop B users
+             -------------------------------*/
+            '{% if not user.is_superuser %}'
+            const shopSelect = document.getElementById('id_shop');
+            if (shopSelect) {
+                // Get the user's shop from the template variable
+                const userShop = '{{ user_shop }}';
 
-        function updateFormSteps() {
-            steps.forEach(step => step.classList.toggle('hidden', parseInt(step.dataset.step) !== currentStep));
+                if (userShop) {
+                    // Set the shop value and disable the select
+                    shopSelect.value = userShop;
+                    shopSelect.disabled = true;
 
-            stepIndicators.forEach((indicator, idx) => {
-                const stepNumber = idx + 1;
-                const stepElement = indicator.querySelector('div');
-                const stepText = indicator.querySelector('span');
-                const icon = stepElement?.querySelector('i');
-                if (!stepElement || !stepText) return;
+                    // Create a hidden input to ensure the value is submitted
+                    const hiddenShopInput = document.createElement('input');
+                    hiddenShopInput.type = 'hidden';
+                    hiddenShopInput.name = 'shop';
+                    hiddenShopInput.value = userShop;
+                    shopSelect.parentNode.appendChild(hiddenShopInput);
 
-                if (stepNumber === currentStep) {
-                    stepElement.className = "w-10 h-10 md:w-12 md:h-12 rounded-full bg-accent-500 border-2 border-accent-500 flex items-center justify-center shadow-lg mb-2 md:mb-3";
-                    icon?.classList.replace("text-gray-400", "text-white");
-                    stepText.className = "text-xs md:text-sm font-medium text-accent-600 step-text";
-                } else if (stepNumber < currentStep) {
-                    stepElement.className = "w-10 h-10 md:w-12 md:h-12 rounded-full bg-green-500 border-2 border-green-500 flex items-center justify-center shadow-lg mb-2 md:mb-3";
-                    icon?.classList.replace("text-gray-400", "text-white");
-                    stepText.className = "text-xs md:text-sm font-medium text-green-600 step-text";
-                } else {
-                    stepElement.className = "w-10 h-10 md:w-12 md:h-12 rounded-full bg-gray-100 border-2 border-gray-300 flex items-center justify-center shadow-lg mb-2 md:mb-3";
-                    icon?.classList.replace("text-white", "text-gray-400");
-                    stepText.className = "text-xs md:text-sm font-medium text-gray-500 step-text";
-                }
-            });
+                    // Style the disabled select
+                    addClasses(shopSelect, 'bg-gray-100', 'cursor-not-allowed');
 
-            prevBtn?.classList.toggle('hidden', currentStep === 1);
-            if (nextBtn && submitBtn) {
-                nextBtn.classList.toggle('hidden', currentStep === steps.length);
-                submitBtn.classList.toggle('hidden', currentStep !== steps.length);
-            }
-        }
-
-        nextBtn?.addEventListener('click', () => {
-            const currentStepEl = document.querySelector(`.form-step[data-step="${currentStep}"]`);
-            if (!currentStepEl) return;
-
-            const requiredFields = currentStepEl.querySelectorAll('[required]');
-            let isValid = true;
-
-            requiredFields.forEach(field => {
-                const error = field.parentNode.querySelector('.text-red-500');
-                if (!field.value.trim()) {
-                    isValid = false;
-                    addClasses(field, 'border-red-500', 'ring-red-500');
-                    if (!error) {
-                        const errorDiv = document.createElement('div');
-                        errorDiv.className = 'text-red-500 text-sm mt-1';
-                        errorDiv.textContent = 'This field is required';
-                        field.parentNode.appendChild(errorDiv);
+                    // Hide the shop field label and select for better UX
+                    const shopLabel = document.querySelector('label[for="id_shop"]');
+                    if (shopLabel) {
+                        shopLabel.style.display = 'none';
                     }
-                } else {
-                    removeClasses(field, 'border-red-500', 'ring-red-500');
-                    error?.remove();
+                    shopSelect.style.display = 'none';
+
+                    // Show a message indicating the auto-assigned shop
+
+                }
+            }
+            '{% endif %}'
+            /** ------------------------------
+             * Form fields styling
+             -------------------------------*/
+            document.querySelectorAll('input, select, textarea').forEach(field => {
+                if (field.type === 'hidden' || field.classList.contains('no-style')) return;
+                addClasses(field, 'w-full', 'px-4', 'py-3', 'border', 'border-gray-300',
+                    'rounded-lg', 'focus:outline-none', 'transition-all', 'duration-200', 'bg-white');
+                field.addEventListener('focus', () => {
+                    addClasses(field, 'ring-2', 'ring-accent-500', 'border-accent-500');
+                    removeClasses(field, 'border-gray-300');
+                });
+                field.addEventListener('blur', () => {
+                    removeClasses(field, 'ring-2', 'ring-accent-500', 'border-accent-500');
+                    addClasses(field, 'border-gray-300');
+                });
+            });
+
+            /** ------------------------------
+             * Multi-step form logic
+             -------------------------------*/
+            const steps = document.querySelectorAll('.form-step');
+            const stepIndicators = document.querySelectorAll('.step');
+            const prevBtn = document.getElementById('prev-btn');
+            const nextBtn = document.getElementById('next-btn');
+            const submitBtn = document.getElementById('submit-btn');
+            const orderForm = document.getElementById('order-form');
+            let currentStep = 1;
+
+            function updateFormSteps() {
+                steps.forEach(step => step.classList.toggle('hidden', parseInt(step.dataset.step) !== currentStep));
+
+                stepIndicators.forEach((indicator, idx) => {
+                    const stepNumber = idx + 1;
+                    const stepElement = indicator.querySelector('div');
+                    const stepText = indicator.querySelector('span');
+                    const icon = stepElement?.querySelector('i');
+                    if (!stepElement || !stepText) return;
+
+                    if (stepNumber === currentStep) {
+                        stepElement.className = "w-10 h-10 md:w-12 md:h-12 rounded-full bg-accent-500 border-2 border-accent-500 flex items-center justify-center shadow-lg mb-2 md:mb-3";
+                        icon?.classList.replace("text-gray-400", "text-white");
+                        stepText.className = "text-xs md:text-sm font-medium text-accent-600 step-text";
+                    } else if (stepNumber < currentStep) {
+                        stepElement.className = "w-10 h-10 md:w-12 md:h-12 rounded-full bg-green-500 border-2 border-green-500 flex items-center justify-center shadow-lg mb-2 md:mb-3";
+                        icon?.classList.replace("text-gray-400", "text-white");
+                        stepText.className = "text-xs md:text-sm font-medium text-green-600 step-text";
+                    } else {
+                        stepElement.className = "w-10 h-10 md:w-12 md:h-12 rounded-full bg-gray-100 border-2 border-gray-300 flex items-center justify-center shadow-lg mb-2 md:mb-3";
+                        icon?.classList.replace("text-white", "text-gray-400");
+                        stepText.className = "text-xs md:text-sm font-medium text-gray-500 step-text";
+                    }
+                });
+
+                prevBtn?.classList.toggle('hidden', currentStep === 1);
+                if (nextBtn && submitBtn) {
+                    nextBtn.classList.toggle('hidden', currentStep === steps.length);
+                    submitBtn.classList.toggle('hidden', currentStep !== steps.length);
+                }
+            }
+
+            nextBtn?.addEventListener('click', () => {
+                const currentStepEl = document.querySelector(`.form-step[data-step="${currentStep}"]`);
+                if (!currentStepEl) return;
+
+                const requiredFields = currentStepEl.querySelectorAll('[required]');
+                let isValid = true;
+
+                requiredFields.forEach(field => {
+                    const error = field.parentNode.querySelector('.text-red-500');
+                    if (!field.value.trim()) {
+                        isValid = false;
+                        addClasses(field, 'border-red-500', 'ring-red-500');
+                        if (!error) {
+                            const errorDiv = document.createElement('div');
+                            errorDiv.className = 'text-red-500 text-sm mt-1';
+                            errorDiv.textContent = 'This field is required';
+                            field.parentNode.appendChild(errorDiv);
+                        }
+                    } else {
+                        removeClasses(field, 'border-red-500', 'ring-red-500');
+                        error?.remove();
+                    }
+                });
+
+                if (isValid) { currentStep++; updateFormSteps(); }
+                else {
+                    showToast('Please fill in all required fields', 'error');
+                    requiredFields[0]?.scrollIntoView({ behavior: 'smooth', block: 'center' });
                 }
             });
 
-            if (isValid) { currentStep++; updateFormSteps(); }
-            else {
-                showToast('Please fill in all required fields', 'error');
-                requiredFields[0]?.scrollIntoView({ behavior: 'smooth', block: 'center' });
-            }
-        });
+            prevBtn?.addEventListener('click', () => { currentStep--; updateFormSteps(); });
 
-        prevBtn?.addEventListener('click', () => { currentStep--; updateFormSteps(); });
+            /** ------------------------------
+             * Customer search with tooltip
+             -------------------------------*/
+            const customerSearch = document.getElementById('customer-search');
+            const customerResults = document.getElementById('customer-results');
+            const customerIdInput = document.getElementById('customer_id');
+            const customerNameInput = document.getElementById('id_name');
+            const customerPhoneInput = document.getElementById('id_phone');
+            const customerAddressInput = document.getElementById('id_address');
+            if (customerSearch && customerResults) {
+                let searchTimeout;
 
-        /** ------------------------------
-         * Customer search with tooltip
-         -------------------------------*/
-        const customerSearch = document.getElementById('customer-search');
-        const customerResults = document.getElementById('customer-results');
-        const customerIdInput = document.getElementById('customer_id');
-        const customerNameInput = document.getElementById('id_name');
-        const customerPhoneInput = document.getElementById('id_phone');
-        const customerAddressInput = document.getElementById('id_address');
-        if (customerSearch && customerResults) {
-            let searchTimeout;
-
-            // Show loading state
-            function showLoading() {
-                customerResults.innerHTML = '<div class="p-3 text-center text-gray-500">Searching...</div>';
-                customerResults.classList.remove('hidden');
-            }
-
-            // Show error state
-            function showError() {
-                customerResults.innerHTML = '<div class="p-3 text-center text-red-500">Error searching customers</div>';
-                customerResults.classList.remove('hidden');
-            }
-
-            // Show no results
-            function showNoResults() {
-                customerResults.innerHTML = '<div class="p-3 text-center text-gray-500">No customers found</div>';
-                customerResults.classList.remove('hidden');
-            }
-
-            customerSearch.addEventListener('input', function () {
-                clearTimeout(searchTimeout);
-                const query = this.value.trim();
-
-                if (query.length < 2) {
-                    customerResults.classList.add('hidden');
-                    return;
+                // Show loading state
+                function showLoading() {
+                    customerResults.innerHTML = '<div class="p-3 text-center text-gray-500">Searching...</div>';
+                    customerResults.classList.remove('hidden');
                 }
 
-                showLoading();
+                // Show error state
+                function showError() {
+                    customerResults.innerHTML = '<div class="p-3 text-center text-red-500">Error searching customers</div>';
+                    customerResults.classList.remove('hidden');
+                }
 
-                searchTimeout = setTimeout(() => {
-                    fetch(`/Laundry/search-customers/?q=${encodeURIComponent(query)}`)
-                        .then(res => {
-                            if (!res.ok) throw new Error('Network response was not ok');
-                            return res.json();
-                        })
-                        .then(data => {
-                            customerResults.innerHTML = '';
+                // Show no results
+                function showNoResults() {
+                    customerResults.innerHTML = '<div class="p-3 text-center text-gray-500">No customers found</div>';
+                    customerResults.classList.remove('hidden');
+                }
 
-                            if (data.customers && data.customers.length) {
-                                data.customers.forEach(c => {
-                                    const div = document.createElement('div');
-                                    div.className = 'p-3 border-b border-gray-200 hover:bg-gray-50 cursor-pointer transition-colors';
-                                    div.innerHTML = `
+                customerSearch.addEventListener('input', function () {
+                    clearTimeout(searchTimeout);
+                    const query = this.value.trim();
+
+                    if (query.length < 2) {
+                        customerResults.classList.add('hidden');
+                        return;
+                    }
+
+                    showLoading();
+
+                    searchTimeout = setTimeout(() => {
+                        fetch(`/Laundry/search-customers/?q=${encodeURIComponent(query)}`)
+                            .then(res => {
+                                if (!res.ok) throw new Error('Network response was not ok');
+                                return res.json();
+                            })
+                            .then(data => {
+                                customerResults.innerHTML = '';
+
+                                if (data.customers && data.customers.length) {
+                                    data.customers.forEach(c => {
+                                        const div = document.createElement('div');
+                                        div.className = 'p-3 border-b border-gray-200 hover:bg-gray-50 cursor-pointer transition-colors';
+                                        div.innerHTML = `
                                     <div class="font-medium text-gray-800">${c.name}</div>
                                     <div class="text-sm text-gray-600">${c.phone}</div>
                                      <div class="text-sm text-gray-600">${c.address}</div>
                                 `;
-                                    div.onclick = () => {
-                                        customerIdInput.value = c.id;
-                                        customerNameInput.value = c.name;
-                                        customerPhoneInput.value = c.phone;
-                                        customerAddressInput.value = c.address;
-                                        customerResults.classList.add('hidden');
-                                        customerSearch.value = '';
-                                        showToast(`Customer selected: ${c.name}`, 'success');
-                                    };
-                                    customerResults.appendChild(div);
-                                });
-                                customerResults.classList.remove('hidden');
-                            } else {
-                                showNoResults();
-                            }
-                        })
-                        .catch(error => {
-                            console.error('Error fetching customers:', error);
-                            showError();
-                        });
-                }, 300);
-            });
+                                        div.onclick = () => {
+                                            customerIdInput.value = c.id;
+                                            customerNameInput.value = c.name;
+                                            customerPhoneInput.value = c.phone;
+                                            customerAddressInput.value = c.address;
+                                            customerResults.classList.add('hidden');
+                                            customerSearch.value = '';
+                                            showToast(`Customer selected: ${c.name}`, 'success');
+                                        };
+                                        customerResults.appendChild(div);
+                                    });
+                                    customerResults.classList.remove('hidden');
+                                } else {
+                                    showNoResults();
+                                }
+                            })
+                            .catch(error => {
+                                console.error('Error fetching customers:', error);
+                                showError();
+                            });
+                    }, 300);
+                });
 
-            // Hide results when clicking outside
-            document.addEventListener('click', e => {
-                if (!customerSearch.contains(e.target) && !customerResults.contains(e.target)) {
-                    customerResults.classList.add('hidden');
-                }
-            });
+                // Hide results when clicking outside
+                document.addEventListener('click', e => {
+                    if (!customerSearch.contains(e.target) && !customerResults.contains(e.target)) {
+                        customerResults.classList.add('hidden');
+                    }
+                });
 
-            // Show results when focusing on search (if there's a query)
-            customerSearch.addEventListener('focus', function () {
-                const query = this.value.trim();
-                if (query.length >= 2 && customerResults.children.length > 0) {
-                    customerResults.classList.remove('hidden');
-                }
-            });
-        }
-
-        /** ------------------------------
-         * Items management & total calculation
-         -------------------------------*/
-        let itemCount = parseInt("{{ item_formset.total_form_count }}");
-        const addItemBtn = document.getElementById('add-item-btn');
-        const orderItemsContainer = document.getElementById('order-items-container');
-        const totalFormsInput = document.getElementById('id_items-TOTAL_FORMS');
-
-        function calculateTotal() {
-            const orderTotalElement = document.getElementById('order-total');
-            if (!orderTotalElement) return;
-            let total = 0;
-            document.querySelectorAll('.item-form').forEach(item => {
-                if (item.style.display === 'none') return;
-                //const qty = parseFloat(item.querySelector('input[name$="quantity"]')?.value) || 0;
-                const price = parseFloat(item.querySelector('input[name$="unit_price"]')?.value) || 0;
-                total += price;
-            });
-            orderTotalElement.textContent = `KSh ${total.toFixed(2)}`;
-        }
-
-        addItemBtn?.addEventListener('click', () => {
-            const template = document.querySelector('.item-form:last-child');
-            if (!template) return;
-
-            const newItem = template.cloneNode(true);
-            const newIndex = itemCount;
-
-            newItem.querySelectorAll('input, select, textarea').forEach(input => {
-                if (input.name) {
-                    input.name = input.name.replace(/items-\d+-/, `items-${newIndex}-`);
-                    input.id = input.id.replace(/items-\d+-/, `items-${newIndex}-`);
-                    input.value = '';
-                }
-            });
-
-            const itemNumber = newItem.querySelector('.font-semibold.text-gray-700');
-            if (itemNumber) itemNumber.textContent = `Item #${newIndex + 1}`;
-
-            const qtyInput = newItem.querySelector('input[name$="quantity"]');
-            if (qtyInput) qtyInput.value = 1;
-            const priceInput = newItem.querySelector('input[name$="unit_price"]');
-            if (priceInput) priceInput.value = 0;
-
-            let removeBtn = newItem.querySelector('.remove-item');
-            if (!removeBtn) {
-                removeBtn = document.createElement('button');
-                removeBtn.type = 'button';
-                removeBtn.className = 'remove-item text-red-500 hover:text-red-700 transition-colors';
-                removeBtn.innerHTML = '<i class="fas fa-times-circle text-xl"></i>';
-                newItem.querySelector('.flex.justify-between.items-start')?.appendChild(removeBtn);
+                // Show results when focusing on search (if there's a query)
+                customerSearch.addEventListener('focus', function () {
+                    const query = this.value.trim();
+                    if (query.length >= 2 && customerResults.children.length > 0) {
+                        customerResults.classList.remove('hidden');
+                    }
+                });
             }
-            removeBtn.onclick = () => {
-                if (document.querySelectorAll('.item-form').length > 1) {
-                    newItem.querySelector('input[name$="DELETE"]')?.setAttribute('value', 'on');
-                    newItem.style.display = 'none';
+
+            /** ------------------------------
+             * Items management & total calculation
+             -------------------------------*/
+            let itemCount = parseInt("{{ item_formset.total_form_count }}");
+            const addItemBtn = document.getElementById('add-item-btn');
+            const orderItemsContainer = document.getElementById('order-items-container');
+            const totalFormsInput = document.getElementById('id_items-TOTAL_FORMS');
+
+            function calculateTotal() {
+                const orderTotalElement = document.getElementById('order-total');
+                if (!orderTotalElement) return;
+                let total = 0;
+                document.querySelectorAll('.item-form').forEach(item => {
+                    if (item.style.display === 'none') return;
+                    //const qty = parseFloat(item.querySelector('input[name$="quantity"]')?.value) || 0;
+                    const price = parseFloat(item.querySelector('input[name$="unit_price"]')?.value) || 0;
+                    total += price;
+                    // const balance = document.querySelector('.balnce')
+                    // balance = total - amount_paid
+                });
+                orderTotalElement.textContent = `KSh ${total.toFixed(2)}`;
+            }
+
+            addItemBtn?.addEventListener('click', () => {
+                const template = document.querySelector('.item-form:last-child');
+                if (!template) return;
+
+                const newItem = template.cloneNode(true);
+                const newIndex = itemCount;
+
+                newItem.querySelectorAll('input, select, textarea').forEach(input => {
+                    if (input.name) {
+                        input.name = input.name.replace(/items-\d+-/, `items-${newIndex}-`);
+                        input.id = input.id.replace(/items-\d+-/, `items-${newIndex}-`);
+                        input.value = '';
+                    }
+                });
+
+                const itemNumber = newItem.querySelector('.font-semibold.text-gray-700');
+                if (itemNumber) itemNumber.textContent = `Item #${newIndex + 1}`;
+
+                const qtyInput = newItem.querySelector('input[name$="quantity"]');
+                if (qtyInput) qtyInput.value = 1;
+                const priceInput = newItem.querySelector('input[name$="unit_price"]');
+                if (priceInput) priceInput.value = 0;
+
+                let removeBtn = newItem.querySelector('.remove-item');
+                if (!removeBtn) {
+                    removeBtn = document.createElement('button');
+                    removeBtn.type = 'button';
+                    removeBtn.className = 'remove-item text-red-500 hover:text-red-700 transition-colors';
+                    removeBtn.innerHTML = '<i class="fas fa-times-circle text-xl"></i>';
+                    newItem.querySelector('.flex.justify-between.items-start')?.appendChild(removeBtn);
+                }
+                removeBtn.onclick = () => {
+                    if (document.querySelectorAll('.item-form').length > 1) {
+                        newItem.querySelector('input[name$="DELETE"]')?.setAttribute('value', 'on');
+                        newItem.style.display = 'none';
+                        calculateTotal();
+                    }
+                };
+
+                orderItemsContainer.appendChild(newItem);
+                itemCount++; totalFormsInput.value = itemCount;
+                calculateTotal();
+            });
+
+            document.addEventListener('click', e => {
+                if (e.target.closest('.remove-item')) {
+                    const item = e.target.closest('.item-form');
+                    if (item && document.querySelectorAll('.item-form').length > 1) {
+                        item.querySelector('input[name$="DELETE"]')?.setAttribute('value', 'on');
+                        item.style.display = 'none';
+                        calculateTotal();
+                    }
+                }
+            });
+
+            document.addEventListener('input', e => {
+                if (e.target.name?.includes('quantity') || e.target.name?.includes('unit_price')) {
                     calculateTotal();
                 }
-            };
+            });
 
-            orderItemsContainer.appendChild(newItem);
-            itemCount++; totalFormsInput.value = itemCount;
+            /** ------------------------------
+             * Final form submission
+             -------------------------------*/
+            orderForm?.addEventListener('submit', e => {
+                let isValid = true;
+                orderForm.querySelectorAll('[required]').forEach(field => {
+                    const error = field.parentNode.querySelector('.text-red-500');
+                    if (!field.value.trim()) {
+                        isValid = false;
+                        addClasses(field, 'border-red-500', 'ring-red-500');
+                        if (!error) {
+                            const errorDiv = document.createElement('div');
+                            errorDiv.className = 'text-red-500 text-sm mt-1';
+                            errorDiv.textContent = 'This field is required';
+                            field.parentNode.appendChild(errorDiv);
+                        }
+                    } else {
+                        removeClasses(field, 'border-red-500', 'ring-red-500');
+                        error?.remove();
+                    }
+                });
+
+                if (!isValid) {
+                    e.preventDefault();
+                    showToast('Please fill in all required fields before submitting', 'error');
+                    const firstError = orderForm.querySelector('.border-red-500');
+                    firstError?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    const errorStep = firstError?.closest('.form-step');
+                    if (errorStep) { currentStep = parseInt(errorStep.dataset.step); updateFormSteps(); }
+                } else {
+                    submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i> Creating Order...';
+                    submitBtn.disabled = true;
+                }
+            });
+
+            /** ------------------------------
+             * Init
+             -------------------------------*/
+            updateFormSteps();
             calculateTotal();
         });
-
-        document.addEventListener('click', e => {
-            if (e.target.closest('.remove-item')) {
-                const item = e.target.closest('.item-form');
-                if (item && document.querySelectorAll('.item-form').length > 1) {
-                    item.querySelector('input[name$="DELETE"]')?.setAttribute('value', 'on');
-                    item.style.display = 'none';
-                    calculateTotal();
-                }
-            }
-        });
-
-        document.addEventListener('input', e => {
-            if (e.target.name?.includes('quantity') || e.target.name?.includes('unit_price')) {
-                calculateTotal();
-            }
-        });
-
-        /** ------------------------------
-         * Final form submission
-         -------------------------------*/
-        orderForm?.addEventListener('submit', e => {
-            let isValid = true;
-            orderForm.querySelectorAll('[required]').forEach(field => {
-                const error = field.parentNode.querySelector('.text-red-500');
-                if (!field.value.trim()) {
-                    isValid = false;
-                    addClasses(field, 'border-red-500', 'ring-red-500');
-                    if (!error) {
-                        const errorDiv = document.createElement('div');
-                        errorDiv.className = 'text-red-500 text-sm mt-1';
-                        errorDiv.textContent = 'This field is required';
-                        field.parentNode.appendChild(errorDiv);
-                    }
-                } else {
-                    removeClasses(field, 'border-red-500', 'ring-red-500');
-                    error?.remove();
-                }
-            });
-
-            if (!isValid) {
-                e.preventDefault();
-                showToast('Please fill in all required fields before submitting', 'error');
-                const firstError = orderForm.querySelector('.border-red-500');
-                firstError?.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                const errorStep = firstError?.closest('.form-step');
-                if (errorStep) { currentStep = parseInt(errorStep.dataset.step); updateFormSteps(); }
-            } else {
-                submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i> Creating Order...';
-                submitBtn.disabled = true;
-            }
-        });
-
-        /** ------------------------------
-         * Init
-         -------------------------------*/
-        updateFormSteps();
-        calculateTotal();
-    });
-        </script>
+    </script>
 </body>
 {% endblock %}
+

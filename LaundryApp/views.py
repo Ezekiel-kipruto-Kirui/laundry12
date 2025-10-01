@@ -108,43 +108,7 @@ def apply_customer_permissions(queryset, request):
     
     return queryset
 
-@login_required
-def debug_user_info(request):
-    """Debug view to check user shop assignments"""
-    user_shops = get_user_shops(request)
-    laundry_profile = getattr(request.user, 'laundry_profile', None)
-    
-    debug_info = {
-        'username': request.user.username,
-        'is_superuser': request.user.is_superuser,
-        'is_staff': request.user.is_staff,
-        'user_shops': user_shops,
-        'laundry_profile_exists': laundry_profile is not None,
-        'laundry_profile_shop': laundry_profile.shop if laundry_profile else None,
-        'user_type': getattr(request.user, 'user_type', None),
-        'app_type': getattr(request.user, 'app_type', None),
-    }
-    
-    return JsonResponse(debug_info)
 
-@login_required
-def debug_shop_values(request):
-    """Debug view to check all shop values in the database"""
-    # Get unique shop values from orders
-    order_shops = Order.objects.values_list('shop', flat=True).distinct()
-    order_shops = [shop for shop in order_shops if shop]  # Remove None values
-    
-    # Get unique shop values from laundry profiles
-    laundry_shops = LaundryProfile.objects.values_list('shop', flat=True).distinct()
-    laundry_shops = [shop for shop in laundry_shops if shop]  # Remove None values
-    
-    debug_info = {
-        'order_shops': list(order_shops),
-        'laundry_shops': list(laundry_shops),
-        'current_user_shops': get_user_shops(request),
-    }
-    
-    return JsonResponse(debug_info)
 
 def is_admin(user):
     return (user.is_superuser or 
@@ -269,6 +233,16 @@ def dashboard_view(request):
     data = analytics.get_dashboard_data(request, selected_year, selected_month, from_date, to_date)
     context = analytics.prepare_dashboard_context(request, data, selected_year, selected_month, from_date, to_date)
     
+    # ADD DEBUG OUTPUT TO CONSOLE
+    import json
+    print("=== DASHBOARD DEBUG ===")
+    print(f"Selected Year: {selected_year}")
+    print(f"Total Orders: {data['order_stats']['total_orders']}")
+    print(f"Top Services Raw: {data['top_services']}")
+    print(f"Services Labels for Template: {context.get('services_labels')}")
+    print(f"Services Counts for Template: {context.get('services_counts')}")
+    print("=======================")
+    
     context.update({
         'selected_year': selected_year,
         'selected_month': selected_month,
@@ -277,80 +251,187 @@ def dashboard_view(request):
     })
     
     return render(request, 'Admin/reports.html', context)
+@login_required
+@admin_required
+def debug_dashboard_data(request):
+    """Debug view to see exactly what data is being generated"""
+    current_year = timezone.now().year
+    selected_year = int(request.GET.get('year', current_year))
+    
+    class MockAdmin:
+        def get_user_shops(self, request):
+            return get_user_shops(request)
+    
+    mock_admin = MockAdmin()
+    analytics = DashboardAnalytics(mock_admin)
+    
+    data = analytics.get_dashboard_data(request, selected_year)
+    
+    # Debug output
+    debug_info = {
+        'selected_year': selected_year,
+        'total_orders': data['order_stats']['total_orders'],
+        'top_services_raw': data['top_services'],
+        'common_items_raw': data['common_items'],
+        'service_types_raw': data['service_types'],
+        'revenue_by_shop': data['revenue_by_shop'],
+    }
+    
+    return JsonResponse(debug_info)
 
 @login_required
 @shop_required
 def customordertable(request):
-    # Start with base queryset - include ALL orders (excluding Delivered_picked)
-    orders = get_base_order_queryset().exclude(
-        order_status__in=['Delivered_picked']
-    ).exclude(
-        Q(uniquecode__isnull=True) | Q(uniquecode='')
-    )
-
-    # Apply permission filtering
-    orders = apply_order_permissions(orders, request)
-
-    # Apply shop filter for admin users
-    if request.user.is_superuser:
-        shop_filter = request.GET.get('shop', '')
-        if shop_filter:
-            orders = orders.filter(shop=shop_filter)
-
-    # Apply filters in a single optimized block
-    filters = Q()
+    # Check if it's an AJAX request
+    if request.headers.get('x-requested-with') == 'XMLHttpRequest':
+        return handle_ajax_request(request)
     
-    status_filter = request.GET.get('order_status', '')
-    if status_filter:
-        filters &= Q(order_status=status_filter)
-        
-    payment_filter = request.GET.get('payment_status', '')
-    if payment_filter:
-        filters &= Q(payment_status=payment_filter)
-
-    search_query = request.GET.get('search', '')
-    if search_query:
-        filters &= (
-            Q(uniquecode__icontains=search_query) |
-            Q(customer__name__icontains=search_query) |
-            Q(customer__phone__icontains=search_query) |
-            Q(items__servicetype__icontains=search_query) |
-            Q(items__itemname__icontains=search_query)
-        )
-
-    if filters:
-        orders = orders.filter(filters).distinct()
-
-    # Handle export before pagination
-    export_format = request.GET.get('export', '')
-    if export_format:
-        return handle_export(orders, export_format)
-
-    # Order by creation date and paginate
-    orders = orders.order_by('-created_at')
-
-    # Get counts for stats cards before pagination
-    stats = get_order_stats(orders)
-
-    # Pagination
-    paginator = Paginator(orders, 15)
-    page_number = request.GET.get('page')
-    page_obj = get_page_obj(paginator, page_number)
-
+    # For initial page load, return basic context
     context = {
-        'orders': page_obj,
-        **stats,
         'order_status_choices': Order.ORDER_STATUS_CHOICES,
         'payment_status_choices': Order.PAYMENT_STATUS_CHOICES,
         'today': timezone.now().date(),
-        'current_status_filter': status_filter,
-        'current_payment_filter': payment_filter,
-        'search_query': search_query,
-        'shop_filter': request.GET.get('shop', '') if request.user.is_superuser else '',
     }
     return render(request, 'Admin/orders_table.html', context)
 
-# Helper functions for better organization
+def handle_ajax_request(request):
+    """Handle AJAX requests for order data"""
+    try:
+        # Start with base queryset - include ALL orders (excluding Delivered_picked)
+        orders = get_base_order_queryset().exclude(
+            order_status__in=['Delivered_picked']
+        ).exclude(
+            Q(uniquecode__isnull=True) | Q(uniquecode='')
+        )
+
+        # Apply permission filtering
+        orders = apply_order_permissions(orders, request)
+
+        # Apply shop filter for admin users
+        if request.user.is_superuser:
+            shop_filter = request.GET.get('shop', '')
+            if shop_filter:
+                orders = orders.filter(shop=shop_filter)
+
+        # Apply filters in a single optimized block
+        filters = Q()
+        
+        payment_filter = request.GET.get('payment_status', '')
+        if payment_filter:
+            filters &= Q(payment_status=payment_filter)
+
+        search_query = request.GET.get('search', '')
+        if search_query:
+            filters &= (
+                Q(uniquecode__icontains=search_query) |
+                Q(customer__name__icontains=search_query) |
+                Q(customer__phone__icontains=search_query) |
+                Q(items__servicetype__icontains=search_query) |
+                Q(items__itemname__icontains=search_query)
+            )
+
+        if filters:
+            orders = orders.filter(filters).distinct()
+
+        # Handle export
+        export_format = request.GET.get('export', '')
+        if export_format:
+            return handle_export(orders, export_format)
+
+        # Order by creation date and paginate
+        orders = orders.order_by('-created_at')
+
+        # Get counts for stats cards before pagination
+        stats = get_order_stats(orders)
+
+        # Pagination
+        paginator = Paginator(orders, 15)
+        page_number = request.GET.get('page')
+        page_obj = get_page_obj(paginator, page_number)
+
+        # Prepare data for AJAX response
+        data = {
+            'success': True,
+            'orders': [],
+            'stats': stats,
+            'pagination': {
+                'has_other_pages': page_obj.has_other_pages(),
+                'has_previous': page_obj.has_previous(),
+                'has_next': page_obj.has_next(),
+                'number': page_obj.number,
+                'num_pages': page_obj.paginator.num_pages,
+                'start_index': page_obj.start_index(),
+                'end_index': page_obj.end_index(),
+                'count': page_obj.paginator.count,
+            }
+        }
+
+        # Serialize orders with proper handling of PhoneNumber fields
+        for order in page_obj:
+            order_data = {
+                'id': order.id,
+                'uniquecode': order.uniquecode,
+                'customer': {
+                    'name': order.customer.name,
+                    'phone': str(order.customer.phone),  # Convert PhoneNumber to string
+                    'address': order.customer.address,
+                },
+                'items': [],
+                'amount_paid': float(order.amount_paid),
+                'balance': float(order.balance),
+                'total_price': float(order.total_price),
+                'order_status': order.order_status,
+                'payment_status': order.payment_status,
+                'created_at': order.created_at.strftime('%Y-%m-%d %H:%M'),
+            }
+
+            # Serialize items
+            for item in order.items.all():
+                order_data['items'].append({
+                    'servicetype': item.servicetype,
+                    'itemtype': item.itemtype,
+                    'itemname': item.itemname,
+                    'itemcondition': item.itemcondition,
+                })
+
+            data['orders'].append(order_data)
+
+        return JsonResponse(data)
+    
+    except Exception as e:
+        import traceback
+        print(f"Error in handle_ajax_request: {str(e)}")
+        print(traceback.format_exc())
+        return JsonResponse({
+            'success': False,
+            'error': str(e),
+            'message': 'An error occurred while loading orders'
+        }, status=500)
+
+@login_required
+@shop_required
+def update_order_status_ajax(request, order_id, status):
+    """Update order status via AJAX"""
+    try:
+        order = Order.objects.get(id=order_id)
+        order.order_status = status
+        order.save()
+        
+        return JsonResponse({
+            'success': True,
+            'message': f'Order status updated to {status}'
+        })
+    except Order.DoesNotExist:
+        return JsonResponse({
+            'success': False,
+            'message': 'Order not found'
+        }, status=404)
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'message': str(e)
+        }, status=500)
+
 def handle_export(orders, export_format):
     """Handle export functionality"""
     dataset = OrderResource().export(queryset=orders)
@@ -401,219 +482,321 @@ def get_page_obj(paginator, page_number):
 
 @login_required
 @shop_required
-def order_detail(request, order_code):
-    """View detailed information about a specific order"""
+def order_detail(request, order_id):
+    """Get order details for AJAX modal"""
     try:
-        order = get_base_order_queryset().get(uniquecode=order_code)
+        order = get_base_order_queryset().get(id=order_id)
         
         # Check if user has permission to view this order
         if not check_order_permission(request, order):
-            raise Http404("You don't have permission to view this order.")
-            
-        context = {
-            'order': order,
-            'today': timezone.now().date(),
+            return JsonResponse({
+                'success': False,
+                'message': "You don't have permission to view this order."
+            }, status=403)
+        
+        # Convert PhoneNumber to string for JSON serialization
+        customer_phone = str(order.customer.phone) if order.customer.phone else ''
+        
+        # Prepare order data for JSON response
+        order_data = {
+            'id': order.id,
+            'uniquecode': order.uniquecode,
+            'order_status': order.order_status,
+            'payment_status': order.payment_status,
+            'amount_paid': float(order.amount_paid) if order.amount_paid else 0,
+            'total_price': float(order.total_price) if order.total_price else 0,
+            'balance': float(order.balance) if order.balance else 0,
+            'created_at': order.created_at.strftime('%Y-%m-%d %H:%M') if order.created_at else '',
+            'customer': {
+                'id': order.customer.id,
+                'name': order.customer.name,
+                'phone': customer_phone,  # Use the converted string
+                'address': order.customer.address or '',
+            },
+            'items': []
         }
-        return render(request, 'Admin/order_detail.html', context)
+        
+        # Add order items
+        for item in order.items.all():
+            item_data = {
+                'id': item.id,
+                'itemname': item.itemname or '',
+                'servicetype': item.servicetype or '',
+                'itemtype': item.itemtype or '',
+                'itemcondition': item.itemcondition or '',
+                'unit_price': float(item.unit_price) if item.unit_price else 0,
+                'quantity': item.quantity or 1,
+                'total_item_price': float(item.total_item_price) if item.total_item_price else 0,
+            }
+            order_data['items'].append(item_data)
+        
+        return JsonResponse({
+            'success': True,
+            'order': order_data
+        })
         
     except Order.DoesNotExist:
-        raise Http404("Order not found")
+        return JsonResponse({
+            'success': False,
+            'message': "Order not found."
+        }, status=404)
+    except Exception as e:
+        logger.error(f"Error fetching order details for order {order_id}: {str(e)}")
+        return JsonResponse({
+            'success': False,
+            'message': f"Error fetching order details: {str(e)}"  # Include error in response for debugging
+        }, status=500)
 
 @login_required
 @shop_required
-def order_edit(request, order_code):
-    """Edit an existing order with proper payment status and balance recalculation"""
-    try:
-        order = get_base_order_queryset().get(uniquecode=order_code)
-        
-        # Check if user has permission to edit this order
-        if not check_order_permission(request, order):
-            messages.error(request, "You don't have permission to edit this order.")
-            return redirect('laundry:customordertable')
-        
-        # Get user shops here so it's available for both GET and POST requests
-        user_shops = get_user_shops(request)
-        
-        if request.method == 'POST':
-            # Create a mutable copy of the POST data
-            post_data = request.POST.copy()
+def order_edit(request):
+    """Update order via AJAX"""
+    print(f"DEBUG: order_edit view called with method: {request.method}")
+    print(f"DEBUG: Headers: {dict(request.headers)}")
+    print(f"DEBUG: POST data: {dict(request.POST)}")
+    
+    # Check if it's an AJAX request
+    is_ajax = request.headers.get('x-requested-with') == 'XMLHttpRequest'
+    print(f"DEBUG: Is AJAX request: {is_ajax}")
+    
+    if request.method == 'POST' and is_ajax:
+        try:
+            order_id = request.POST.get('order_id')
+            print(f"DEBUG: Processing order ID: {order_id}")
             
-            # For users with only one shop, override the shop value
-            if user_shops and len(user_shops) == 1:
-                post_data['shop'] = user_shops[0]
+            if not order_id:
+                return JsonResponse({
+                    'success': False,
+                    'message': "Order ID is required."
+                }, status=400)
+                
+            order = Order.objects.get(id=order_id)
+            print(f"DEBUG: Found order: {order.uniquecode}")
+            
+            # Check if user has permission to update this order
+            if not check_order_permission(request, order):
+                return JsonResponse({
+                    'success': False,
+                    'message': "You don't have permission to update this order."
+                }, status=403)
             
             # Update customer information
             customer = order.customer
-            customer_form = CustomerForm(post_data, instance=customer)
+            customer.name = request.POST.get('name', customer.name)
+            
+            # Handle phone number
+            phone = request.POST.get('phone')
+            if phone:
+                customer.phone = phone
+            
+            customer.save()
+            print(f"DEBUG: Updated customer: {customer.name}")
             
             # Update order information
-            order_form = OrderForm(post_data, instance=order)
+            order.order_status = request.POST.get('order_status', order.order_status)
+            order.payment_status = request.POST.get('payment_status', order.payment_status)
+            
+            # Update amount paid and recalculate balance
+            amount_paid = request.POST.get('amount_paid')
+            if amount_paid is not None:
+                try:
+                    order.amount_paid = Decimal(amount_paid)
+                    order.balance = order.total_price - order.amount_paid
+                    print(f"DEBUG: Updated amount paid: {order.amount_paid}")
+                except (InvalidOperation, ValueError):
+                    return JsonResponse({
+                        'success': False,
+                        'message': "Invalid amount format."
+                    }, status=400)
             
             # Handle order items
-            OrderItemFormSet = forms.formset_factory(OrderItemForm, extra=0)
-            item_formset = OrderItemFormSet(post_data, prefix='items')
+            items_to_keep = []
+            item_count = 0
             
-            if customer_form.is_valid() and order_form.is_valid() and item_formset.is_valid():
-                try:
-                    with transaction.atomic():
-                        # Save customer
-                        customer_form.save()
-                        
-                        # Save order first without recalculating totals
-                        updated_order = order_form.save(commit=False)
-                        
-                        # Handle order items - delete existing and create new ones
-                        order.items.all().delete()
-                        total_price = Decimal('0.00')
-                        
-                        for form in item_formset:
-                            if form.cleaned_data and not form.cleaned_data.get('DELETE', False):
-                                order_item = form.save(commit=False)
-                                order_item.order = updated_order
-                                order_item.save()
-                                # Calculate total item price and add to order total
-                                order_item.total_item_price = (order_item.unit_price or Decimal('0.00'))
-                                order_item.save()
-                                total_price += order_item.total_item_price
-                        
-                        # Update order totals and payment status
-                        updated_order.total_price = total_price
-                        updated_order.balance = total_price - updated_order.amount_paid
-                        
-                        # Payment status will be automatically set in the save() method
-                        # based on amount_paid and balance
-                        updated_order.save()
-                    
-                    messages.success(request, f'Order {order.uniquecode} updated successfully!')
-                    return redirect('laundry:customordertable')
-                    
-                except Exception as e:
-                    messages.error(request, f'Error updating order: {str(e)}')
-                    logger.error(f"Order update error: {str(e)}")
-            else:
-                # Collect all form errors
-                error_messages = []
-                if not customer_form.is_valid():
-                    for field, errors in customer_form.errors.items():
-                        for error in errors:
-                            error_messages.append(f"Customer {field}: {error}")
-                
-                if not order_form.is_valid():
-                    for field, errors in order_form.errors.items():
-                        for error in errors:
-                            error_messages.append(f"Order {field}: {error}")
-                
-                if not item_formset.is_valid():
-                    for i, form in enumerate(item_formset):
-                        if not form.is_valid():
-                            for field, errors in form.errors.items():
-                                for error in errors:
-                                    error_messages.append(f"Item {i+1} {field}: {error}")
-                
-                messages.error(request, 'Please correct the following errors: ' + '; '.join(error_messages))
-        else:
-            # GET request - populate forms with existing data
-            customer_form = CustomerForm(instance=order.customer)
-            order_form = OrderForm(instance=order)
+            print(f"DEBUG: Processing order items...")
             
-            # Prepare initial data for order items
-            initial_items = []
+            # Process existing items
             for item in order.items.all():
-                initial_items.append({
-                    'servicetype': item.servicetype,
-                    'itemtype': item.itemtype,
-                    'itemname': item.itemname,
-                    'quantity': item.quantity,
-                    'itemcondition': item.itemcondition,
-                    'unit_price': item.unit_price,
-                    'additional_info': item.additional_info,
-                })
+                item_name = request.POST.get(f'items-{item_count}-itemname')
+                service_type = request.POST.get(f'items-{item_count}-servicetype')
+                unit_price = request.POST.get(f'items-{item_count}-unit_price')
+                
+                if item_name and service_type and unit_price:
+                    # Update existing item
+                    item.itemname = item_name
+                    item.servicetype = service_type
+                    try:
+                        item.unit_price = Decimal(unit_price)
+                    except (InvalidOperation, ValueError):
+                        item.unit_price = Decimal('0.00')
+                    
+                    # Calculate total item price
+                    item.total_item_price = item.unit_price * (item.quantity or 1)
+                    item.save()
+                    items_to_keep.append(item.id)
+                    item_count += 1
+                    print(f"DEBUG: Updated item {item_count}: {item_name}")
+                else:
+                    # Delete item if fields are empty
+                    item.delete()
+                    print(f"DEBUG: Deleted item {item.id}")
             
-            OrderItemFormSet = forms.formset_factory(OrderItemForm, extra=1)
-            item_formset = OrderItemFormSet(prefix='items', initial=initial_items)
-        
-        context = {
-            'customer_form': customer_form,
-            'order_form': order_form,
-            'item_formset': item_formset,
-            'order': order,
-            'user_has_single_shop': user_shops and len(user_shops) == 1,
-            'user_shop': user_shops[0] if user_shops else '',
-            'editing': True,
-        }
-        
-        return render(request, 'Admin/order_edit_form.html', context)
-        
-    except Order.DoesNotExist:
-        raise Http404("Order not found")
+            # Add new items
+            while f'items-{item_count}-itemname' in request.POST:
+                item_name = request.POST.get(f'items-{item_count}-itemname')
+                service_type = request.POST.get(f'items-{item_count}-servicetype')
+                unit_price = request.POST.get(f'items-{item_count}-unit_price')
+                
+                if item_name and service_type and unit_price:
+                    try:
+                        unit_price_decimal = Decimal(unit_price)
+                    except (InvalidOperation, ValueError):
+                        unit_price_decimal = Decimal('0.00')
+                    
+                    new_item = OrderItem.objects.create(
+                        order=order,
+                        itemname=item_name,
+                        servicetype=service_type,
+                        unit_price=unit_price_decimal,
+                        quantity=1,  # Default quantity
+                        total_item_price=unit_price_decimal
+                    )
+                    items_to_keep.append(new_item.id)
+                    print(f"DEBUG: Created new item: {item_name}")
+                
+                item_count += 1
+            
+            # Recalculate total price
+            total_price = sum(
+                (item.total_item_price or Decimal('0.00'))
+                for item in order.items.all()
+            )
+            order.total_price = total_price
+            order.balance = total_price - (order.amount_paid or Decimal('0.00'))
+            order.save()
+            
+            print(f"DEBUG: Order update successful!")
+            
+            return JsonResponse({
+                'success': True,
+                'message': f'Order {order.uniquecode} updated successfully!',
+                'order_code': order.uniquecode
+            })
+            
+        except Order.DoesNotExist:
+            print(f"DEBUG: Order not found: {order_id}")
+            return JsonResponse({
+                'success': False,
+                'message': "Order not found."
+            }, status=404)
+        except Exception as e:
+            print(f"DEBUG: Error updating order: {str(e)}")
+            import traceback
+            print(f"DEBUG: Traceback: {traceback.format_exc()}")
+            logger.error(f"Error updating order {order_id}: {str(e)}")
+            return JsonResponse({
+                'success': False,
+                'message': f"Error updating order: {str(e)}"
+            }, status=500)
+    
+    print(f"DEBUG: Invalid request - method: {request.method}, is_ajax: {is_ajax}")
+    return JsonResponse({
+        'success': False,
+        'message': "Invalid request method or not an AJAX request."
+    }, status=400)
+# Add this to your views.py temporarily
+
+
+
+@login_required
+def debug_urls(request):
+    """Debug view to see all registered URLs"""
+    from django.urls import get_resolver
+    from django.http import JsonResponse
+    
+    def extract_urls(urlpatterns, base=''):
+        urls = []
+        for pattern in urlpatterns:
+            if hasattr(pattern, 'url_patterns'):
+                # This is an include
+                urls.extend(extract_urls(pattern.url_patterns, base + str(pattern.pattern)))
+            else:
+                urls.append({
+                    'pattern': base + str(pattern.pattern),
+                    'name': getattr(pattern, 'name', 'No name'),
+                    'lookup_str': getattr(pattern, 'lookup_str', 'No lookup'),
+                })
+        return urls
+    
+    resolver = get_resolver()
+    all_urls = extract_urls(resolver.url_patterns)
+    
+    # Filter to show only laundry app URLs
+    laundry_urls = [url for url in all_urls if 'laundry' in url['lookup_str'].lower() or 'Laundry' in url['pattern']]
+    
+    return JsonResponse({
+        'all_urls': all_urls,
+        'laundry_urls': laundry_urls,
+        'current_path': request.path
+    })
 
 @login_required
 @shop_required
 def order_delete(request, order_code):
-    """Delete an order"""
+    """Delete an order via AJAX"""
     try:
-        # Only include fields that exist in your Order model
+        # Get the order
         order = Order.objects.only('uniquecode', 'shop').get(uniquecode=order_code)
         
         # Check if user has permission to delete this order
         if not check_order_permission(request, order):
-            messages.error(request, "You don't have permission to delete this order.")
-            return redirect('laundry:customordertable')
+            if request.headers.get('x-requested-with') == 'XMLHttpRequest':
+                return JsonResponse({
+                    'success': False,
+                    'message': "You don't have permission to delete this order."
+                }, status=403)
+            else:
+                messages.error(request, "You don't have permission to delete this order.")
+                return redirect('laundry:customordertable')
         
         if request.method == 'POST':
             order_code = order.uniquecode
             order.delete()
-            messages.success(request, f'Order {order_code} deleted successfully!')
-            return redirect('laundry:customordertable')
+            
+            if request.headers.get('x-requested-with') == 'XMLHttpRequest':
+                return JsonResponse({
+                    'success': True,
+                    'message': f'Order {order_code} deleted successfully!'
+                })
+            else:
+                messages.success(request, f'Order {order_code} deleted successfully!')
+                return redirect('laundry:customordertable')
         
+        # If it's a GET request and AJAX, return confirmation data
+        if request.headers.get('x-requested-with') == 'XMLHttpRequest':
+            return JsonResponse({
+                'success': True,
+                'order': {
+                    'uniquecode': order.uniquecode,
+                    'customer_name': order.customer.name,
+                },
+                'message': f'Are you sure you want to delete order {order.uniquecode}?'
+            })
+        
+        # Regular GET request - render confirmation page
         context = {
             'order': order,
         }
         return render(request, 'Admin/order_confirm_delete.html', context)
         
     except Order.DoesNotExist:
-        raise Http404("Order not found")
-
-@login_required
-@shop_required
-@require_POST
-def update_order_status(request, order_code, status):
-    order = get_object_or_404(Order, uniquecode=order_code)
-
-    # Permission check
-    if not check_order_permission(request, order):
-        message = "You don't have permission to update this order."
-        if request.headers.get("x-requested-with") == "XMLHttpRequest":
-            return JsonResponse({"success": False, "message": message}, status=403)
-        messages.error(request, message)
-        return redirect('laundry:customordertable')
-
-    # Validate status
-    valid_statuses = dict(Order.ORDER_STATUS_CHOICES).keys()
-    if status not in valid_statuses:
-        message = f"Invalid status: {status}"
-        if request.headers.get("x-requested-with") == "XMLHttpRequest":
-            return JsonResponse({"success": False, "message": message}, status=400)
-        messages.error(request, message)
-        return redirect('laundry:customordertable')
-
-    # Update order
-    order.order_status = status
-    order.save()
-
-    message = f"Order {order_code} has been marked as {order.get_order_status_display()}."
-
-    if request.headers.get("x-requested-with") == "XMLHttpRequest":
-        return JsonResponse({
-            "success": True,
-            "message": message,
-            "new_status": status,
-            "status_display": order.get_order_status_display()
-        })
-
-    # fallback for normal POST (non-AJAX)
-    messages.success(request, message)
-    return redirect(request.META.get('HTTP_REFERER', 'laundry:customordertable'))
+        if request.headers.get('x-requested-with') == 'XMLHttpRequest':
+            return JsonResponse({
+                'success': False,
+                'message': "Order not found."
+            }, status=404)
+        else:
+            raise Http404("Order not found")
 
 @login_required
 @shop_required
@@ -700,7 +883,6 @@ def createorder(request):
 
         # Force shop if user has only one
         if user_shops and len(user_shops) == 1:
-            # Use the shop name directly instead of trying to get id from string
             post_data['shop'] = user_shops[0]
 
         # Default order_status
@@ -713,23 +895,19 @@ def createorder(request):
         customer = None
         customer_exists = False
 
-        # Check if we have a customer ID (from selection)
         if customer_id:
             try:
                 customer = Customer.objects.get(id=customer_id)
                 customer_exists = True
-                # Update customer details if changed
                 if customer.name != post_data.get('name', ''):
                     customer.name = post_data.get('name', '')
                     customer.save()
             except Customer.DoesNotExist:
                 customer_exists = False
         elif phone:
-            # Fallback to phone lookup
             try:
                 customer = Customer.objects.get(phone=phone)
                 customer_exists = True
-                # Update name if different
                 if customer.name != post_data.get('name', ''):
                     customer.name = post_data.get('name', '')
                     customer.save()
@@ -740,7 +918,6 @@ def createorder(request):
             customer_form_is_valid = True
             customer_form = None
         else:
-            # Validate new customer form
             customer_form = CustomerForm(post_data)
             customer_form_is_valid = customer_form.is_valid()
 
@@ -754,25 +931,16 @@ def createorder(request):
 
         if all([customer_form_is_valid, order_form_is_valid, item_formset_is_valid]):
             try:
-                # Save or reuse customer
                 if not customer_exists:
                     customer = customer_form.save()
 
-                # Save order - don't commit yet to let the model generate the unique code
                 order = order_form.save(commit=False)
                 order.customer = customer
                 order.created_by = request.user
-                
                 if not order.order_status:
                     order.order_status = 'pending'
-                
-                # Let the model's save() method generate the unique code
-                # Don't set total_price yet as items haven't been saved
-                order.total_price = 0  # Temporary value
-                
-                order.balance = -order.amount_paid  # Temporary value
-                
-                # Save the order to generate the unique code
+                order.total_price = 0
+                order.balance = -order.amount_paid
                 order.save()
 
                 # Save items
@@ -780,21 +948,28 @@ def createorder(request):
                     if form.cleaned_data and not form.cleaned_data.get('DELETE', False):
                         order_item = form.save(commit=False)
                         order_item.order = order
-                        # Calculate item total if needed
+
+                        # ✅ Ensure servicetype saves as a list/string depending on your model
+                        if "servicetype" in form.cleaned_data:
+                            services = form.cleaned_data["servicetype"]
+                            if isinstance(services, list):
+                                order_item.servicetype = services  # ArrayField/JSONField
+                                # OR join into a string if using CharField
+                                # order_item.servicetype = ",".join(services)
+
                         if hasattr(order_item, 'quantity') and hasattr(order_item, 'unit_price'):
                             if hasattr(order_item, 'total_item_price'):
                                 order_item.total_item_price = order_item.quantity * order_item.unit_price
+
                         order_item.save()
 
-                # Now update the totals after all items are saved
+                # Update totals
                 total_price = sum(
-                   item.unit_price 
+                    (item.total_item_price or item.unit_price)
                     for item in order.items.all()
                 )
                 order.total_price = total_price
                 order.balance = total_price - (order.amount_paid or 0)
-                
-                # Save again to update totals
                 order.save()
 
                 messages.success(request, f'Order created successfully! Code: {order.uniquecode}')
@@ -802,7 +977,6 @@ def createorder(request):
 
             except IntegrityError as e:
                 if 'uniquecode' in str(e):
-                    # This shouldn't happen with your model's save method, but just in case
                     logger.error(f"Order creation error (unique code conflict): {str(e)}")
                     messages.error(request, 'Could not create order due to system error. Please try again.')
                 else:
@@ -813,7 +987,6 @@ def createorder(request):
                 messages.error(request, f'Error creating order: {str(e)}')
 
         else:
-            # Collect errors
             error_messages = []
             if customer_form and not customer_form_is_valid:
                 for field, errors in customer_form.errors.items():
@@ -835,7 +1008,6 @@ def createorder(request):
         customer_form = CustomerForm()
         order_form = OrderForm()
         if user_shops and len(user_shops) == 1:
-            # Set the initial value to the shop name, not the id
             order_form.fields['shop'].initial = user_shops[0]
         order_form.fields['order_status'].initial = 'pending'
         OrderItemFormSet = forms.formset_factory(OrderItemForm, extra=1)
@@ -849,7 +1021,6 @@ def createorder(request):
         'user_shop': default_shop,
     }
     return render(request, 'Admin/order_form.html', context)
-
 
 @login_required
 def laundrydashboard(request):
@@ -875,7 +1046,7 @@ def laundrydashboard(request):
         orders = Order.objects.none()
         count_orders = Order.objects.none()
 
-    # Calculate stats using count_orders (which excludes delivered orders)
+    # Calculate overall stats using count_orders (which excludes delivered orders)
     total_orders = count_orders.count()
     pending_orders = count_orders.filter(order_status='pending').count()
     completed_orders = count_orders.filter(order_status='Completed').count()
@@ -883,9 +1054,13 @@ def laundrydashboard(request):
     # Get recent orders (including delivered)
     recent_orders = orders.select_related('customer').order_by('-created_at')[:10]
 
-    # For superusers, get shop performance data (excluding delivered orders)
+    # Shop-specific data for superuser
+    shop_a_data = None
+    shop_b_data = None
     shop_performance = None
+    
     if request.user.is_superuser:
+        # Get shop performance data for all shops
         shop_performance = {}
         shops = Order.objects.values_list('shop', flat=True).distinct()
         for shop in shops:
@@ -894,10 +1069,29 @@ def laundrydashboard(request):
                 shop_performance[shop] = {
                     'total_orders': shop_orders.count(),
                     'completed_orders': shop_orders.filter(order_status='Completed').count(),
+                    'pending_orders': shop_orders.filter(order_status='pending').count(),
                     'total_revenue': shop_orders.aggregate(
                         total=Sum('total_price')
                     )['total'] or 0
                 }
+        
+        # Specific data for Shop A and Shop B
+        shop_a_orders = Order.objects.filter(shop='Shop A').exclude(order_status='Delivered_picked')
+        shop_b_orders = Order.objects.filter(shop='Shop B').exclude(order_status='Delivered_picked')
+        
+        shop_a_data = {
+            'total_orders': shop_a_orders.count(),
+            'completed_orders': shop_a_orders.filter(order_status='Completed').count(),
+            'pending_orders': shop_a_orders.filter(order_status='pending').count(),
+            'total_revenue': shop_a_orders.aggregate(total=Sum('total_price'))['total'] or 0
+        }
+        
+        shop_b_data = {
+            'total_orders': shop_b_orders.count(),
+            'completed_orders': shop_b_orders.filter(order_status='Completed').count(),
+            'pending_orders': shop_b_orders.filter(order_status='pending').count(),
+            'total_revenue': shop_b_orders.aggregate(total=Sum('total_price'))['total'] or 0
+        }
 
     context = {
         'user_shops': user_shops,
@@ -906,81 +1100,101 @@ def laundrydashboard(request):
         'completed_orders': completed_orders,
         'recent_orders': recent_orders,
         'shop_performance': shop_performance,
+        'shop_a_data': shop_a_data,
+        'shop_b_data': shop_b_data,
     }
     return render(request, 'Admin/dashboard.html', context)
 
-# OR: from datetime import datetime
+
 def get_laundry_profit_and_hotel(request, selected_year=None):
     """
-    Highly optimized version with minimal database queries
+    Optimized version that properly uses DashboardAnalytics without redundant queries
     """
     if not request.user.is_authenticated or not request.user.is_superuser:
         return redirect('login')
 
     try:
         current_date = now()
-        current_year = current_date.year
-        current_month = current_date.month
+        current_year = selected_year if selected_year else current_date.year
         
-        # Calculate date range once
-        start_date = datetime(current_year, current_month, 1).date()
-        end_date = datetime(current_year + 1, 1, 1).date() if current_month == 12 else \
-                  datetime(current_year, current_month + 1, 1).date()
+        # Create a simple admin instance wrapper
+        class SimpleAdmin:
+            def get_user_shops(self, request):
+                # For superusers, return None to show all shops
+                if request.user.is_superuser:
+                    return None
+                # Add your shop logic here for non-superusers
+                return ['Shop A', 'Shop B']
         
-        # HOTEL CALCULATIONS - 2 queries total
-        from HotelApp.models import HotelOrderItem, HotelExpenseRecord
+        # Initialize DashboardAnalytics with the simple admin
+        from .analytics import DashboardAnalytics
+        analytics = DashboardAnalytics(SimpleAdmin())
         
-        # Use database-level calculation for hotel revenue
-        hotel_data = HotelOrderItem.objects.select_related('food_item', 'order').filter(
-            order__created_at__date__range=[start_date, end_date]
-        ).aggregate(
-            revenue=Sum(F('quantity') * F('food_item__price'), 
-                       output_field=DecimalField(max_digits=12, decimal_places=2))
+        # Get comprehensive dashboard data for the selected year
+        dashboard_data = analytics.get_dashboard_data(
+            request=request,
+            selected_year=current_year,
+            selected_month=None,  # Get full year data
+            from_date=None,
+            to_date=None,
+            payment_status=None,
+            shop=None
         )
         
-        hotel_expenses_data = HotelExpenseRecord.objects.filter(
-            date__range=[start_date, end_date]
-        ).aggregate(expenses=Sum('amount'))
+        # Debug: Check what data we're getting
+        print(f"DEBUG: Dashboard data keys: {dashboard_data.keys()}")
+        print(f"DEBUG: Order stats: {dashboard_data.get('order_stats', {})}")
+        print(f"DEBUG: Hotel stats: {dashboard_data.get('hotel_stats', {})}")
+        print(f"DEBUG: Expense stats: {dashboard_data.get('expense_stats', {})}")
         
-        hotel_revenue = hotel_data['revenue'] or Decimal('0')
-        hotel_expenses = hotel_expenses_data['expenses'] or Decimal('0')
-        hotel_profit = hotel_revenue - hotel_expenses
+        # Extract laundry data from dashboard_data with fallbacks
+        order_stats = dashboard_data.get('order_stats', {})
+        expense_stats = dashboard_data.get('expense_stats', {})
+        hotel_stats = dashboard_data.get('hotel_stats', {})
+        business_growth = dashboard_data.get('business_growth', {})
         
-        # LAUNDRY CALCULATIONS - 2 queries total
-        laundry_revenue_data = Order.objects.filter(
-            created_at__date__range=[start_date, end_date]
-        ).aggregate(revenue=Sum('total_price'))
-        
-        laundry_expenses_data = ExpenseRecord.objects.filter(
-            date__range=[start_date, end_date]
-        ).aggregate(expenses=Sum('amount'))
-        
-        laundry_revenue = laundry_revenue_data['revenue'] or Decimal('0')
-        laundry_expenses = laundry_expenses_data['expenses'] or Decimal('0')
+        laundry_revenue = order_stats.get('total_revenue', 0)
+        laundry_expenses = expense_stats.get('total_expenses', 0)
         laundry_profit = laundry_revenue - laundry_expenses
+        
+        hotel_revenue = hotel_stats.get('total_revenue', 0)
+        hotel_expenses = hotel_stats.get('total_expenses', 0)
+        hotel_profit = hotel_stats.get('net_profit', 0)
+        
+        total_revenue = business_growth.get('total_revenue', laundry_revenue + hotel_revenue)
+        total_profit = business_growth.get('net_profit', laundry_profit + hotel_profit)
         
         # Prepare context
         context = {
-            'total_revenue': float(hotel_revenue + laundry_revenue),
+            'total_revenue': float(total_revenue),
             'laundry_revenue': float(laundry_revenue),
             'laundry_expenses': float(laundry_expenses),
             'laundry_profit': float(laundry_profit),
             'hotel_revenue': float(hotel_revenue),
             'hotel_expenses': float(hotel_expenses),
             'hotel_profit': float(hotel_profit),
-            'total_profit': float(hotel_profit + laundry_profit),
-            'current_month': current_date.strftime('%B %Y'),
+            'total_profit': float(total_profit),
+            'current_year': current_year,
+            'available_years': list(range(2020, current_date.year + 1)),
         }
+        
+        print(f"DEBUG: Final context - Laundry: {laundry_revenue}, Hotel: {hotel_revenue}, Total: {total_revenue}")
         
         return render(request, 'Admin/Generaldashboard.html', context)
         
     except Exception as e:
         logger.error(f"Error in get_laundry_profit_and_hotel: {e}")
+        import traceback
+        print(f"ERROR: {traceback.format_exc()}")
+        
         return render(request, 'Admin/Generaldashboard.html', {
             'total_revenue': 0.0, 'laundry_revenue': 0.0, 'laundry_expenses': 0.0,
             'laundry_profit': 0.0, 'hotel_revenue': 0.0, 'hotel_expenses': 0.0,
-            'hotel_profit': 0.0, 'total_profit': 0.0, 'current_month': now().strftime('%B %Y')
+            'hotel_profit': 0.0, 'total_profit': 0.0, 
+            'current_year': current_date.year,
+            'available_years': list(range(2020, current_date.year + 1))
         })
+
 
 def Reportsdashboard(request):
     # Initialize DashboardAnalytics with a mock admin instance

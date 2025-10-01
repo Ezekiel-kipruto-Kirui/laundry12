@@ -18,7 +18,7 @@
         </div>
         <div class="flex items-center gap-3 bg-white rounded-2xl px-4 py-3 shadow-sm">
             <i class="fas fa-calendar-alt text-pink-500"></i>
-            <span class="font-semibold text-gray-700">{{ selected_year }}</span>
+            <span class="font-semibold text-gray-700">{{ current_year }}</span>
             {% if selected_month %}
             <span class="font-semibold text-gray-500">- Month {{ selected_month }}</span>
             {% endif %}
@@ -31,7 +31,7 @@
             <!-- Year Input -->
             <div class="w-full md:w-auto">
                 <label for="year" class="block text-sm font-medium text-gray-700 mb-2">Year</label>
-                <input type="number" id="year" name="year" value="{{ selected_year }}" min="2020" max="2100"
+                <input type="number" id="year" name="year" value="{{ current_year }}" min="2020" max="2100"
                     class="w-full bg-white border border-gray-200 rounded-xl px-4 py-3 text-gray-700 focus:outline-none focus:ring-2 focus:ring-pink-500 focus:border-transparent transition-all duration-200">
             </div>
 
@@ -39,7 +39,7 @@
             <div class="w-full md:w-auto">
                 <label for="month" class="block text-sm font-medium text-gray-700 mb-2">Month</label>
                 <input type="month" id="month" name="month"
-                    value="{% if selected_month %}{{ selected_year }}-{{ selected_month|stringformat:'02d' }}{% endif %}"
+                    value="{% if selected_month %}{{ current_year }}-{{ selected_month|stringformat:'02d' }}{% endif %}"
                     class="w-full bg-white border border-gray-200 rounded-xl px-4 py-3 text-gray-700 focus:outline-none focus:ring-2 focus:ring-pink-500 focus:border-transparent transition-all duration-200">
             </div>
 
@@ -76,8 +76,8 @@
             <h2 class="text-xl md:text-2xl font-bold text-gray-900">Overall Business Overview</h2>
         </div>
 
-        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
-            <!-- Total Revenue -->
+        <div class="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-3 gap-4 md:gap-6">
+            <!-- Total Business Revenue -->
             <div
                 class="bg-white rounded-2xl p-4 md:p-6 shadow-lg hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1">
                 <div class="flex items-center justify-between mb-4">
@@ -86,12 +86,12 @@
                         <i class="fas fa-wallet text-lg md:text-2xl text-green-600"></i>
                     </div>
                     <div class="text-right">
-                        <span class="bg-green-100 text-green-800 text-xs font-semibold px-2 py-1 rounded-full">+{{ business_total_revenue|floatformat:0 }}%</span>
+                        <span class="bg-green-100 text-green-800 text-xs font-semibold px-2 py-1 rounded-full">Total</span>
                     </div>
                 </div>
                 <h3 class="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-1">Total Revenue</h3>
                 <div class="text-xl md:text-2xl font-bold text-gray-900 mb-1">Ksh
-                    {{ business_total_revenue|floatformat:2|default:"0.00" }}</div>
+                    {{ total_business_revenue|floatformat:2|default:"0.00" }}</div>
                 <div class="flex items-center text-xs text-gray-500">
                     <i class="fas fa-trend-up text-green-500 mr-1"></i>
                     <span>Combined earnings</span>
@@ -99,25 +99,7 @@
             </div>
 
             <!-- Total Orders -->
-            <div
-                class="bg-white rounded-2xl p-4 md:p-6 shadow-lg hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1">
-                <div class="flex items-center justify-between mb-4">
-                    <div
-                        class="w-10 h-10 md:w-12 md:h-12 rounded-xl bg-gradient-to-br from-pink-50 to-pink-100 flex items-center justify-center">
-                        <i class="fas fa-shopping-bag text-lg md:text-2xl text-pink-600"></i>
-                    </div>
-                    <div class="text-right">
-                        <span class="bg-pink-100 text-pink-800 text-xs font-semibold px-2 py-1 rounded-full">+{{ business_total_orders }}%</span>
-                    </div>
-                </div>
-                <h3 class="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-1">Total Orders</h3>
-                <div class="text-xl md:text-2xl font-bold text-gray-900 mb-2">{{ business_total_orders }}</div>
-                <div class="flex flex-wrap gap-2 text-xs">
-                    <span class="bg-blue-100 text-blue-800 px-2 py-1 rounded-full font-medium">{{ total_orders }}
-                        laundry</span>
-                    <span class="bg-green-100 text-green-800 px-2 py-1 rounded-full font-medium">{{ hotel_total_orders }} hotel</span>
-                </div>
-            </div>
+        
 
             <!-- Net Profit -->
             <div
@@ -133,7 +115,8 @@
                     </div>
                 </div>
                 <h3 class="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-1">Net Profit</h3>
-                <div class="text-xl md:text-2xl font-bold text-gray-900 mb-1">Ksh {{ business_net_profit|floatformat:2 }}</div>
+                <div class="text-xl md:text-2xl font-bold text-gray-900 mb-1">Ksh {{ total_net_profit|floatformat:2 }}
+                </div>
                 <div class="flex items-center text-xs text-gray-500">
                     <i class="fas fa-dollar-sign text-purple-500 mr-1"></i>
                     <span>After expenses</span>
@@ -149,11 +132,11 @@
                         <i class="fas fa-money-bill-wave text-lg md:text-2xl text-indigo-600"></i>
                     </div>
                     <div class="text-right">
-                        <span class="bg-indigo-100 text-indigo-800 text-xs font-semibold px-2 py-1 rounded-full">-{{ business_total_expenses|floatformat:0 }}%</span>
+                        <span class="bg-indigo-100 text-indigo-800 text-xs font-semibold px-2 py-1 rounded-full">Expenses</span>
                     </div>
                 </div>
                 <h3 class="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-1">Total Expenses</h3>
-                <div class="text-xl md:text-2xl font-bold text-gray-900 mb-1">Ksh {{ business_total_expenses|floatformat:2 }}</div>
+                <div class="text-xl md:text-2xl font-bold text-gray-900 mb-1">Ksh {{ total_business_expenses|floatformat:2 }}</div>
                 <div class="flex items-center text-xs text-gray-500">
                     <i class="fas fa-chart-line text-indigo-500 mr-1"></i>
                     <span>Combined expenses</span>
@@ -163,28 +146,28 @@
     </div>
 
     <!-- Business Comparison Section -->
-    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 md:gap-8 mb-6 md:mb-8">
-        <!-- Profit Comparison Chart -->
+    <div class="grid sm:grid-cols-1 md:grid-cols-3 lg:grid-cols-3 gap-6 md:gap-8 mb-6 md:mb-8">
+        <!-- Revenue Comparison Chart -->
         <div class="bg-white rounded-2xl p-4 md:p-6 shadow-lg lg:col-span-2">
             <div class="flex justify-between items-center mb-4 md:mb-6">
                 <h2 class="text-lg font-bold text-gray-900 flex items-center gap-2">
                     <i class="fas fa-chart-pie text-purple-500"></i>
-                    Profit Comparison
+                    Revenue Comparison
                 </h2>
                 <span
-                    class="bg-purple-100 text-purple-800 px-2 py-1 md:px-3 md:py-1 rounded-full text-xs md:text-sm font-semibold">{{ selected_year }}</span>
+                    class="bg-purple-100 text-purple-800 px-2 py-1 md:px-3 md:py-1 rounded-full text-xs md:text-sm font-semibold">{{ current_year }}</span>
             </div>
             <div class="h-64">
-                <canvas id="profitComparisonChart"></canvas>
+                <canvas id="revenueComparisonChart"></canvas>
             </div>
             <div class="grid grid-cols-2 gap-4 mt-4">
                 <div class="text-center p-3 bg-blue-50 rounded-lg">
                     <div class="text-sm font-semibold text-blue-700">Laundry Business</div>
-                    <div class="text-lg font-bold text-blue-900">Ksh {{ laundry_profit|floatformat:2 }}</div>
+                    <div class="text-lg font-bold text-blue-900">Ksh {{ laundry_revenue|floatformat:2 }}</div>
                 </div>
                 <div class="text-center p-3 bg-red-50 rounded-lg">
                     <div class="text-sm font-semibold text-red-700">Hotel Business</div>
-                    <div class="text-lg font-bold text-red-900">Ksh {{ hotel_profit|floatformat:2 }}</div>
+                    <div class="text-lg font-bold text-red-900">Ksh {{ hotel_revenue|floatformat:2 }}</div>
                 </div>
             </div>
         </div>
@@ -260,25 +243,88 @@
         </div>
 
         <!-- Laundry Stats Cards -->
-        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6 mb-6">
+        <div class="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-3 gap-4 md:gap-6 mb-6">
             <!-- Laundry Revenue -->
-            <div
-                class="bg-white rounded-2xl p-4 md:p-6 shadow-lg hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1">
-                <div class="flex items-center justify-between mb-4">
-                    <div
-                        class="w-10 h-10 md:w-12 md:h-12 rounded-xl bg-gradient-to-br from-blue-50 to-blue-100 flex items-center justify-center">
-                        <i class="fas fa-wallet text-lg md:text-2xl text-blue-600"></i>
-                    </div>
-                </div>
-                <h3 class="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-1">Laundry Revenue</h3>
-                <div class="text-xl md:text-2xl font-bold text-gray-900 mb-1">Ksh {{ total_revenue|floatformat:2 }}
-                </div>
+    <div
+        class="flex flex-row items-center justify-between gap-4 rounded-2xl p-4 shadow-lg hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1 bg-white">
+    
+        <!-- Laundry Revenue Section -->
+        <div class="flex flex-col items-center gap-3 flex-shrink-0">
+            <div class="w-10 h-10 rounded-lg bg-gradient-to-br from-blue-50 to-blue-100 flex items-center justify-center">
+                <i class="fas fa-wallet text-lg text-blue-600"></i>
+            </div>
+            <div>
+                <h3 class="text-xs font-semibold text-gray-500 uppercase tracking-wider">Revenue</h3>
+                <div class="text-xl font-bold text-gray-900">Ksh {{ laundry_revenue|floatformat:2 }}</div>
                 <div class="flex items-center text-xs text-gray-500">
-                    <i class="fas fa-money-bill-wave text-blue-500 mr-1"></i>
-                    <span>From {{ total_orders }} orders</span>
+                    <i class="fas fa-shopping-bag text-blue-500 mr-1"></i>
+                    <span>{{ total_orders }} orders</span>
                 </div>
             </div>
-
+        </div>
+    
+        <!-- Vertical Divider -->
+        <div class="w-px h-10 bg-gray-200"></div>
+    
+        <!-- Payment Methods Section -->
+        <div class="flex-1">
+            <div class="flex flex-col justify-center">
+                <!-- Cash -->
+                <div class="flex justify-between m-2 items-center gap-2 bg-green-50 px-3 py-2 rounded-lg">
+                    
+                    <div class="flex flex-row items-center gap-2">
+                        <i class="fas fa-money-bill-wave text-green-600 text-xs"></i>
+                        <div class="text-xs font-medium text-gray-700">Cash</div>
+                       
+                    </div>
+                    <div class="text-xs font-bold text-gray-900">Ksh {{ cash_payments_amount|floatformat:0 }}</div>
+                </div>
+    
+                <!-- M-Pesa -->
+                <div class="flex justify-between m-2 items-center gap-2 bg-blue-50 px-3 py-2 rounded-lg">
+                   
+                    <div class="flex flex-row items-center gap-2">
+                        <i class="fas fa-mobile-alt text-blue-600 text-xs"></i>
+                        <div class="text-xs font-medium text-gray-700">M-Pesa</div>
+                        
+                    </div>
+                    <div class="text-xs font-bold text-gray-900">Ksh {{ mpesa_payments_amount|floatformat:0 }}</div>
+                </div>
+    
+                <!-- Card -->
+                <div class="flex justify-between items-center gap-2 bg-purple-50 px-3 py-2 rounded-lg">
+                   
+                    <div class="flex flex-row items-center gap-2">
+                        <i class="fas fa-credit-card text-purple-600 text-xs"></i>
+                        <div class="text-xs font-medium text-gray-700">Card</div>
+                   
+                    </div>
+                    <div class="text-xs font-bold text-gray-900">Ksh {{ card_payments_amount|floatformat:0 }}</div>
+                </div>
+    <!-- Bank Transfer -->
+    <div class="flex justify-between items-center gap-2 bg-indigo-50 px-3 py-2 rounded-lg">
+    
+        <div class="flex flex-row items-center gap-2">
+            <i class="fas fa-university text-indigo-600 text-xs"></i>
+            <div class="text-xs font-medium text-gray-700">Bank</div>
+    
+        </div>
+                        <div class="text-xs font-bold text-gray-900">Ksh {{ bank_transfer_payments_amount|floatformat:0 }}
+                        </div>
+                        </div>
+                <!-- Other -->
+                <div class="flex justify-between items-center gap-2 bg-gray-50 px-3 py-2 rounded-lg">
+                
+                    <div class="flex flex-row items-center gap-2">
+                        <i class="fas fa-ellipsis-h text-gray-600 text-xs"></i>
+                        <div class="text-xs font-medium text-gray-700">Other</div>
+                
+                    </div>
+                    <div class="text-xs font-bold text-gray-900">Ksh {{ other_payments_amount|floatformat:0 }}</div>
+                    </div>
+                    </div>
+                    </div>
+                    </div>
             <!-- Payment Status -->
             <div
                 class="bg-white rounded-2xl p-4 md:p-6 shadow-lg hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1">
@@ -288,33 +334,34 @@
                         <i class="fas fa-credit-card text-lg md:text-2xl text-yellow-600"></i>
                     </div>
                 </div>
-                <h3 class="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-1">Payments</h3>
-                <div class="text-xl md:text-2xl font-bold text-gray-900 mb-2">{{ total_orders }}</div>
+                <h3 class="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-1">Payments & Balance</h3>
+                <div class="text-xl md:text-2xl font-bold text-gray-900 mb-2">{{ total_balance_amount|floatformat:2 }}</div>
                 <div class="flex flex-wrap gap-2 text-xs">
-                    <span class="bg-yellow-100 text-yellow-800 px-2 py-1 rounded-full font-medium">{{ pending_payments}} pending</span>
+                    <span class="bg-yellow-100 text-yellow-800 px-2 py-1 rounded-full font-medium">{{ pending_payments}}
+                        Pending Payment</span>
                     <span class="bg-blue-100 text-blue-800 px-2 py-1 rounded-full font-medium">{{ partial_payments }}
-                        partial</span>
+                        Partial Payment</span>
                     <span class="bg-green-100 text-green-800 px-2 py-1 rounded-full font-medium">{{ complete_payments }}
-                        complete</span>
+                        Complete Payment</span>
                 </div>
             </div>
 
             <!-- Balance Information -->
-            <div
+            <!-- <div
                 class="bg-white rounded-2xl p-4 md:p-6 shadow-lg hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1">
                 <div class="flex items-center justify-between mb-4">
                     <div
                         class="w-10 h-10 md:w-12 md:h-12 rounded-xl bg-gradient-to-br from-orange-50 to-orange-100 flex items-center justify-center">
-                        <i class="fas fa-balance-scale text-lg md:text-2xl text-orange-600"></i>
+                        <i class="fas fa-credit-card text-lg md:text-2xl text-yellow-600"></i>
                     </div>
                 </div>
-                <h3 class="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-1">Balance</h3>
-                <div class="text-xl md:text-2xl font-bold text-gray-900 mb-1">Ksh {{ total_balance_amount|floatformat:2 }}</div>
+                <h3 class="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-1">Payment Methods</h3>
+                <div class="text-xl md:text-2xl font-bold text-gray-900 mb-1"></div>
                 <div class="flex items-center text-xs text-gray-500">
                     <i class="fas fa-clock text-orange-500 mr-1"></i>
                     <span>Pending collection</span>
                 </div>
-            </div>
+            </div> -->
 
             <!-- Laundry Expenses -->
             <div
@@ -522,7 +569,7 @@
                     Revenue Trend
                 </h2>
                 <span
-                    class="bg-pink-100 text-pink-800 px-2 py-1 md:px-3 md:py-1 rounded-full text-xs md:text-sm font-semibold">{{ selected_year }}</span>
+                    class="bg-pink-100 text-pink-800 px-2 py-1 md:px-3 md:py-1 rounded-full text-xs md:text-sm font-semibold">{{ current_year }}</span>
             </div>
             <div class="h-64">
                 {% if not selected_month %}
@@ -548,7 +595,7 @@
                     Top Services
                 </h2>
                 <span
-                    class="bg-green-100 text-green-800 px-2 py-1 md:px-3 md:py-1 rounded-full text-xs md:text-sm font-semibold">{{selected_year }}</span>
+                    class="bg-green-100 text-green-800 px-2 py-1 md:px-3 md:py-1 rounded-full text-xs md:text-sm font-semibold">{{ current_year }}</span>
             </div>
             <div class="h-72 min-h-0">
                 {% if services_labels and services_labels|length > 0 %}
@@ -570,7 +617,7 @@
                     Common Items
                 </h2>
                 <span
-                    class="bg-yellow-100 text-yellow-800 px-2 py-1 md:px-3 md:py-1 rounded-full text-xs md:text-sm font-semibold">{{ selected_year }}</span>
+                    class="bg-yellow-100 text-yellow-800 px-2 py-1 md:px-3 md:py-1 rounded-full text-xs md:text-sm font-semibold">{{ current_year }}</span>
             </div>
             <div class="h-72 min-h-0">
                 {% if item_labels and item_labels|length > 0 %}
@@ -592,7 +639,7 @@
                     Top Customers
                 </h2>
                 <span
-                    class="bg-yellow-100 text-yellow-800 px-2 py-1 md:px-3 md:py-1 rounded-full text-xs md:text-sm font-semibold">{{ selected_year }}</span>
+                    class="bg-yellow-100 text-yellow-800 px-2 py-1 md:px-3 md:py-1 rounded-full text-xs md:text-sm font-semibold">{{ current_year }}</span>
             </div>
             <div class="h-72 min-h-0 overflow-y-auto pr-2">
                 {% for customer in common_customers %}
@@ -800,23 +847,23 @@
             return { sortedLabels, sortedData };
         }
 
-        // Profit Comparison Chart
-        const profitComparisonCanvas = document.getElementById('profitComparisonChart');
-        if (profitComparisonCanvas) {
-            const profitLabels = safeJsonParse('{{ profit_comparison_labels|safe }}');
-            const profitData = safeJsonParse('{{ profit_comparison_data|safe }}');
-            const profitColors = safeJsonParse('{{ profit_comparison_colors|safe }}');
+        // Revenue Comparison Chart (Laundry vs Hotel)
+        const revenueComparisonCanvas = document.getElementById('revenueComparisonChart');
+        if (revenueComparisonCanvas) {
+            const revenueLabels = safeJsonParse('{{ revenue_comparison_labels|safe }}');
+            const revenueData = safeJsonParse('{{ revenue_comparison_data|safe }}');
+            const revenueColors = safeJsonParse('{{ revenue_comparison_colors|safe }}');
 
-            if (profitLabels.length > 0 && profitData.length > 0) {
-                const profitCtx = profitComparisonCanvas.getContext('2d');
+            if (revenueLabels.length > 0 && revenueData.length > 0) {
+                const revenueCtx = revenueComparisonCanvas.getContext('2d');
 
-                new Chart(profitCtx, {
+                new Chart(revenueCtx, {
                     type: 'doughnut',
                     data: {
-                        labels: profitLabels,
+                        labels: revenueLabels,
                         datasets: [{
-                            data: profitData,
-                            backgroundColor: profitColors.length > 0 ? profitColors : [
+                            data: revenueData,
+                            backgroundColor: revenueColors.length > 0 ? revenueColors : [
                                 COLOR_PALETTE.blue,
                                 COLOR_PALETTE.red
                             ],
@@ -859,7 +906,7 @@
             }
         }
 
-        // Revenue Chart
+        // Revenue Chart (Shop Distribution)
         const revenueCanvas = document.getElementById('revenueChart');
         if (revenueCanvas) {
             const revenueLabels = safeJsonParse('{{ pie_chart_labels|safe }}');
@@ -1111,4 +1158,5 @@
         }
     });
 </script>
+
 {% endblock %}

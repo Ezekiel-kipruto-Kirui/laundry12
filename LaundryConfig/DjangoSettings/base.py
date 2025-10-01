@@ -45,7 +45,7 @@ INSTALLED_APPS = [
     # IMPORTANT: Add whitenoise to INSTALLED_APPS for it to be recognized
     # by collectstatic and for its static file storage engine to work.
     'whitenoise.runserver_nostatic', # For development
-    
+    'multiselectfield', 
    
     'django_registration',
     'django.contrib.admin',

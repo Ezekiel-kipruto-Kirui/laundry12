@@ -180,7 +180,7 @@ class OrderForm(forms.ModelForm):
             'payment_type': forms.Select(attrs={'class': 'form-control'}),
             'payment_status': forms.Select(attrs={'class': 'form-control'}),
             'order_status': forms.Select(attrs={'class': 'form-control'}),
-            'addressdetails': forms.Textarea(attrs={'class': 'form-control', 'rows': 3}),
+            'addressdetails': forms.TextInput(attrs={'class': 'form-control', 'rows': 3}),
             'amount_paid': forms.NumberInput(attrs={'class': 'form-control'}),
             'balance': forms.NumberInput(attrs={'class': 'form-control'}),
         }
@@ -219,6 +219,7 @@ class OrderForm(forms.ModelForm):
 #             'additional_info': forms.Textarea(attrs={'class': 'form-control', 'rows': 2}),
 #         }
 
+
 class OrderItemForm(forms.ModelForm):
     class Meta:
         model = OrderItem
@@ -232,7 +233,12 @@ class OrderItemForm(forms.ModelForm):
             "focus:border-blue-500 text-sm bg-white"
         )
         widgets = {
-            'servicetype': forms.Select(attrs={'class': base_input_classes}),
+            'servicetype': forms.CheckboxSelectMultiple(
+                attrs={
+                      "class": "flex items-center space-x-2 w-5 h-3 rounded text-md text-gray-900 "
+             "focus:outline-none focus:ring-0" # stack checkboxes neatly
+                }
+            ),
             'itemtype': forms.Select(attrs={'class': base_input_classes}),
             'itemname': forms.TextInput(attrs={'class': base_input_classes}),
             'quantity': forms.NumberInput(attrs={'class': base_input_classes}),
@@ -240,7 +246,10 @@ class OrderItemForm(forms.ModelForm):
             'unit_price': forms.NumberInput(attrs={'class': base_input_classes}),
             'additional_info': forms.TextInput(attrs={'class': base_input_classes}),
         }
-
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # Set initial choices for servicetype
+        self.fields['servicetype'].choices = OrderItem.SERVICE_TYPES
 # ---------------------------
 # Expenses Forms
 # ---------------------------

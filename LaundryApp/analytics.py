@@ -22,14 +22,17 @@ logger = logging.getLogger(__name__)
 
 # --- Constants ---
 MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
-ACTIVE_ORDER_STATUSES = ['pending', 'processing', 'Completed', 'Delivered_picked']  # Statuses that count as active orders
-HOTEL_ACTIVE_STATUSES = ['In Progress', 'Served']  # Hotel order statuses
+ACTIVE_ORDER_STATUSES = ['pending', 'Completed', 'Delivered_picked']
+HOTEL_ACTIVE_STATUSES = ['In Progress', 'Served']
 
 # Payment status constants
 PAYMENT_STATUS_PENDING = 'pending'
 PAYMENT_STATUS_PARTIAL = 'partial'
 PAYMENT_STATUS_COMPLETE = 'complete'
 PAYMENT_STATUS_OVERDUE = 'overdue'
+
+# Payment type constants
+PAYMENT_TYPES = ['cash', 'mpesa', 'card', 'bank_transfer', 'other']
 
 
 class DashboardAnalytics:
@@ -59,6 +62,13 @@ class DashboardAnalytics:
                 'total_partial_amount': 0,
                 'total_collected_amount': 0,
                 'total_balance_amount': 0
+            },
+            'payment_type_stats': {
+                'cash': {'count': 0, 'total_amount': 0, 'amount_collected': 0},
+                'mpesa': {'count': 0, 'total_amount': 0, 'amount_collected': 0},
+                'card': {'count': 0, 'total_amount': 0, 'amount_collected': 0},
+                'bank_transfer': {'count': 0, 'total_amount': 0, 'amount_collected': 0},
+                'other': {'count': 0, 'total_amount': 0, 'amount_collected': 0}
             },
             'expense_stats': {
                 'total_expenses': 0,
@@ -113,31 +123,37 @@ class DashboardAnalytics:
             }
         }
     
-    def _get_payment_status(self, order):
+    def _calculate_payment_type_stats(self, base_queryset):
         """
-        Determine payment status based on order payment information.
+        Calculate payment statistics by payment type including amount collected.
         """
-        total_price = getattr(order, 'total_price', 0) or 0
-        amount_paid = getattr(order, 'amount_paid', 0) or 0
-        balance = getattr(order, 'balance', 0) or 0
+        payment_type_stats = {}
         
-        if amount_paid == 0:
-            return PAYMENT_STATUS_PENDING
-        elif 0 < amount_paid < total_price or balance > 0:
-            return PAYMENT_STATUS_PARTIAL
-        elif amount_paid >= total_price or balance == 0:
-            return PAYMENT_STATUS_COMPLETE
-        else:
-            return PAYMENT_STATUS_PENDING
+        for payment_type in PAYMENT_TYPES:
+            # Get orders with this payment type
+            payment_orders = base_queryset.filter(payment_type=payment_type)
+            
+            stats = payment_orders.aggregate(
+                count=Count('id'),
+                total_amount=Coalesce(Sum('total_price'), 0, output_field=DecimalField()),
+                amount_collected=Coalesce(Sum('amount_paid'), 0, output_field=DecimalField())
+            )
+            
+            payment_type_stats[payment_type] = {
+                'count': stats['count'],
+                'total_amount': stats['total_amount'],
+                'amount_collected': stats['amount_collected']
+            }
+        
+        return payment_type_stats
     
     def _calculate_hotel_stats(self, request, selected_year=None, selected_month=None, from_date=None, to_date=None):
         """
         Calculate hotel statistics including orders, revenue, and expenses.
         """
-        # Base hotel orders queryset
         hotel_orders = HotelOrder.objects.filter(order_status__in=HOTEL_ACTIVE_STATUSES)
         
-        # Apply date filters if provided
+        # Apply date filters
         if selected_year:
             hotel_orders = hotel_orders.filter(created_at__year=selected_year)
         if selected_month:
@@ -145,7 +161,7 @@ class DashboardAnalytics:
         if from_date and to_date:
             hotel_orders = hotel_orders.filter(created_at__date__range=[from_date, to_date])
         
-        # Calculate hotel order statistics
+        # Calculate hotel order statistics with proper aggregation
         hotel_stats = hotel_orders.aggregate(
             total_orders=Count('id'),
             served_orders=Count('id', filter=Q(order_status='Served')),
@@ -157,21 +173,18 @@ class DashboardAnalytics:
                     default=0,
                     output_field=DecimalField()
                 )
-            ), 0, output_field=DecimalField()),
-            avg_order_value=Coalesce(Avg(
-                Case(
-                    When(order_items__isnull=False, 
-                         then=models.F('order_items__quantity') * models.F('order_items__food_item__price')),
-                    default=0,
-                    output_field=DecimalField()
-                )
             ), 0, output_field=DecimalField())
         )
+        
+        # Calculate average order value
+        if hotel_stats['total_orders'] > 0:
+            hotel_stats['avg_order_value'] = hotel_stats['total_revenue'] / hotel_stats['total_orders']
+        else:
+            hotel_stats['avg_order_value'] = 0
         
         # Calculate hotel expenses
         hotel_expenses = HotelExpenseRecord.objects.all()
         
-        # Apply date filters to expenses
         if selected_year:
             hotel_expenses = hotel_expenses.filter(date__year=selected_year)
         if selected_month:
@@ -188,14 +201,47 @@ class DashboardAnalytics:
         
         return hotel_stats
     
+    def _calculate_laundry_revenue(self, base_queryset):
+        """
+        Calculate laundry revenue by summing up all order items properly.
+        """
+        # Get all order IDs from the base queryset
+        order_ids = base_queryset.values_list('id', flat=True)
+        
+        # Calculate total revenue from order items
+        revenue_stats = OrderItem.objects.filter(order_id__in=order_ids).aggregate(
+            total_revenue=Coalesce(Sum('total_item_price'), 0, output_field=DecimalField())
+        )
+        
+        return revenue_stats['total_revenue']
+    
+    def _calculate_order_stats(self, base_queryset):
+        """
+        Calculate order statistics including balance information.
+        """
+        # First get basic order stats
+        order_stats = base_queryset.aggregate(
+            total_orders=Count('id'),
+            pending_orders=Count('id', filter=Q(order_status='pending')),
+            completed_orders=Count('id', filter=Q(order_status='Completed')),
+            delivered_orders=Count('id', filter=Q(order_status='Delivered_picked')),
+            total_amount_paid=Coalesce(Sum('amount_paid'), 0, output_field=DecimalField()),
+            total_balance=Coalesce(Sum('balance'), 0, output_field=DecimalField()),
+            avg_order_value=Coalesce(Avg('total_price'), 0, output_field=DecimalField())
+        )
+        
+        # Calculate total revenue from order items (correct method)
+        order_stats['total_revenue'] = self._calculate_laundry_revenue(base_queryset)
+        
+        return order_stats
+    
     def _calculate_expense_stats(self, request, selected_year=None, selected_month=None, from_date=None, to_date=None):
         """
         Calculate expense statistics for the dashboard.
         """
-        # Base expense queryset
         expenses = ExpenseRecord.objects.all()
         
-        # Apply date filters if provided
+        # Apply date filters
         if selected_year:
             expenses = expenses.filter(date__year=selected_year)
         if selected_month:
@@ -203,15 +249,15 @@ class DashboardAnalytics:
         if from_date and to_date:
             expenses = expenses.filter(date__range=[from_date, to_date])
         
-        # Apply shop filtering based on user permissions
+        # Apply shop filtering
         user_shops = self.get_user_shops(request)
-        if user_shops is not None:  # Not superuser
-            if user_shops:  # User has shop assignments
+        if user_shops is not None:
+            if user_shops:
                 expenses = expenses.filter(shop__in=user_shops)
-            else:  # User has no shop assignments
+            else:
                 expenses = ExpenseRecord.objects.none()
         
-        # Calculate overall expense statistics
+        # Calculate expense statistics
         expense_stats = expenses.aggregate(
             total_expenses=Coalesce(Sum('amount'), 0, output_field=DecimalField()),
             average_expense=Coalesce(Avg('amount'), 0, output_field=DecimalField()),
@@ -240,7 +286,7 @@ class DashboardAnalytics:
         """
         expenses = ExpenseRecord.objects.all()
         
-        # Apply date filters if provided
+        # Apply date filters
         if selected_year:
             expenses = expenses.filter(date__year=selected_year)
         if selected_month:
@@ -248,12 +294,12 @@ class DashboardAnalytics:
         if from_date and to_date:
             expenses = expenses.filter(date__range=[from_date, to_date])
         
-        # Apply shop filtering based on user permissions
+        # Apply shop filtering
         user_shops = self.get_user_shops(request)
-        if user_shops is not None:  # Not superuser
-            if user_shops:  # User has shop assignments
+        if user_shops is not None:
+            if user_shops:
                 expenses = expenses.filter(shop__in=user_shops)
-            else:  # User has no shop assignments
+            else:
                 expenses = ExpenseRecord.objects.none()
         
         expenses_by_shop = list(expenses.values('shop').annotate(
@@ -273,8 +319,8 @@ class DashboardAnalytics:
             selected_year = now().year
         
         user_shops = self.get_user_shops(request)
-        if user_shops is None:  # Superuser - show all shops
-            shops = [choice[0] for choice in Order._meta.get_field('shop').choices]
+        if user_shops is None:
+            shops = ['Shop A', 'Shop B']
         else:
             shops = user_shops
         
@@ -314,14 +360,21 @@ class DashboardAnalytics:
         if not selected_year:
             selected_year = now().year
         
-        # Get monthly laundry revenue
+        # Get monthly laundry revenue - FIXED to use order items
         laundry_monthly_data = Order.objects.filter(
             delivery_date__year=selected_year,
             order_status__in=ACTIVE_ORDER_STATUSES
         ).annotate(
             month=ExtractMonth('delivery_date')
         ).values('month').annotate(
-            laundry_revenue=Coalesce(Sum('total_price'), 0, output_field=DecimalField()),
+            laundry_revenue=Coalesce(Sum(
+                Case(
+                    When(items__isnull=False, 
+                         then=models.F('items__total_item_price')),
+                    default=0,
+                    output_field=DecimalField()
+                )
+            ), 0, output_field=DecimalField()),
             laundry_orders=Count('id')
         ).order_by('month')
         
@@ -389,25 +442,21 @@ class DashboardAnalytics:
 
     def _get_base_queryset(self, request, selected_year, selected_month=None, from_date=None, to_date=None, payment_status=None, shop=None):
         """
-        Get the base queryset with proper filtering for active orders, user permissions, and payment status.
+        Get the base queryset with proper filtering.
         """
         base_queryset = Order.objects.filter(order_status__in=ACTIVE_ORDER_STATUSES)
 
-        # Apply shop filtering if provided
+        # Apply filters
         if shop:
             base_queryset = base_queryset.filter(shop=shop)
-
-        # Apply year/month if provided
         if selected_year:
             base_queryset = base_queryset.filter(delivery_date__year=selected_year)
         if selected_month:
             base_queryset = base_queryset.filter(delivery_date__month=selected_month)
-
-        # Apply date range filter if provided
         if from_date and to_date:
             base_queryset = base_queryset.filter(delivery_date__range=[from_date, to_date])
 
-        # Apply payment status filtering if provided
+        # Apply payment status filtering
         if payment_status:
             if payment_status == PAYMENT_STATUS_PENDING:
                 base_queryset = base_queryset.filter(
@@ -431,7 +480,7 @@ class DashboardAnalytics:
                      Q(amount_paid__isnull=True))
                 )
 
-        # Apply shop filtering if user is not superuser
+        # Apply shop filtering for non-superusers
         user_shops = self.get_user_shops(request)
         if user_shops is not None:
             if user_shops:
@@ -443,7 +492,7 @@ class DashboardAnalytics:
     
     def _calculate_payment_stats(self, base_queryset):
         """
-        Calculate comprehensive payment statistics from the base queryset including balance.
+        Calculate comprehensive payment statistics.
         """
         payment_stats = base_queryset.aggregate(
             total_orders=Count('id'),
@@ -471,10 +520,10 @@ class DashboardAnalytics:
                 ), 0, output_field=DecimalField()
             ),
             total_collected_amount=Coalesce(Sum('amount_paid'), 0, output_field=DecimalField()),
-            total_revenue=Coalesce(Sum('total_price'), 0, output_field=DecimalField()),
             total_balance_amount=Coalesce(Sum('balance'), 0, output_field=DecimalField())
         )
         
+        # Calculate overdue stats
         overdue_stats = base_queryset.filter(
             delivery_date__lt=now().date()
         ).aggregate(
@@ -495,25 +544,10 @@ class DashboardAnalytics:
         payment_stats.update(overdue_stats)
         
         return payment_stats
-    
-    def _calculate_order_stats(self, base_queryset):
-        """
-        Calculate order statistics including balance information.
-        """
-        return base_queryset.aggregate(
-            total_orders=Count('id'),
-            pending_orders=Count('id', filter=Q(order_status='pending')),
-            completed_orders=Count('id', filter=Q(order_status='Completed')),
-            delivered_orders=Count('id', filter=Q(order_status='Delivered_picked')),
-            total_revenue=Coalesce(Sum('total_price'), 0, output_field=DecimalField()),
-            total_amount_paid=Coalesce(Sum('amount_paid'), 0, output_field=DecimalField()),
-            total_balance=Coalesce(Sum('balance'), 0, output_field=DecimalField()),
-            avg_order_value=Coalesce(Avg('total_price'), 0, output_field=DecimalField())
-        )
    
     def _get_orders_by_payment_status(self, base_queryset, shop=None):
         """
-        Get actual order objects grouped by payment status for a specific shop or all shops.
+        Get actual order objects grouped by payment status.
         """
         if shop:
             base_queryset = base_queryset.filter(shop=shop)
@@ -545,7 +579,7 @@ class DashboardAnalytics:
     
     def _get_shop_specific_orders(self, base_queryset, shop_name, expense_stats):
         """
-        Get orders and payment statistics for a specific shop including balance and expense information.
+        Get orders and payment statistics for a specific shop.
         """
         shop_orders = base_queryset.filter(shop=shop_name)
         
@@ -569,10 +603,10 @@ class DashboardAnalytics:
         else:
             shop_stats['total_expenses'] = 0
         
-        # Calculate net profit (revenue - expenses)
+        # Calculate net profit
         shop_stats['net_profit'] = shop_stats['revenue'] - shop_stats['total_expenses']
         
-        # Get actual orders for each payment status for this shop
+        # Get orders by payment status for this shop
         shop_orders_by_status = self._get_orders_by_payment_status(base_queryset, shop=shop_name)
         
         return {
@@ -580,8 +614,35 @@ class DashboardAnalytics:
             'orders_by_payment_status': shop_orders_by_status
         }
     
+    def _process_multiselect_services(self, order_ids):
+        """
+        Process MultiSelectField service data to count individual services.
+        """
+        order_item_data = OrderItem.objects.filter(order_id__in=order_ids)
+        
+        # Count individual services from MultiSelectField
+        service_counter = Counter()
+        
+        for item in order_item_data.only('servicetype'):
+            if item.servicetype:
+                # MultiSelectField returns a list of selected values
+                services = item.servicetype
+                if services:
+                    # Count individual services
+                    for service in services:
+                        service_counter[service] += 1
+        
+        # Get top individual services
+        top_services = [{'servicetype': service, 'count': count} 
+                       for service, count in service_counter.most_common(10)]
+        
+        return top_services
+    
     @lru_cache(maxsize=32)
     def _get_common_items_data(self, order_ids):
+        """
+        Get common items data with caching.
+        """
         order_item_data = OrderItem.objects.filter(order_id__in=order_ids)
         all_items = []
         for item in order_item_data.only('itemname'):
@@ -593,48 +654,49 @@ class DashboardAnalytics:
     
     def get_dashboard_data(self, request, selected_year, selected_month=None, from_date=None, to_date=None, payment_status=None, shop=None):
         """
-        Fetch comprehensive dashboard data with optimized queries and shop-based filtering.
+        Fetch comprehensive dashboard data with optimized queries.
         """
         try:
             base_queryset = self._get_base_queryset(request, selected_year, selected_month, from_date, to_date, payment_status, shop)
             
-            # Calculate expense statistics
+            # Calculate statistics
             expense_stats = self._calculate_expense_stats(request, selected_year, selected_month, from_date, to_date)
             expenses_by_shop = self._get_expenses_by_shop(request, selected_year, selected_month, from_date, to_date)
-            
-            # Calculate hotel statistics
             hotel_stats = self._calculate_hotel_stats(request, selected_year, selected_month, from_date, to_date)
             
             if not base_queryset.exists() and expense_stats['total_expenses'] == 0 and hotel_stats['total_orders'] == 0:
                 return self._get_empty_dashboard_data()
 
-            # Get order statistics including balance
+            # Get various statistics
             order_stats = self._calculate_order_stats(base_queryset)
-
-            # Get payment statistics including balance
             payment_stats = self._calculate_payment_stats(base_queryset)
-
-            # Get orders grouped by payment status
+            payment_type_stats = self._calculate_payment_type_stats(base_queryset)
             orders_by_payment_status = self._get_orders_by_payment_status(base_queryset)
 
-            # Shop-specific statistics including balance and expenses
+            # Shop-specific statistics
             shop_a_data = self._get_shop_specific_orders(base_queryset, 'Shop A', expense_stats)
             shop_b_data = self._get_shop_specific_orders(base_queryset, 'Shop B', expense_stats)
 
-            # Calculate overall business growth statistics
-            total_laundry_revenue = order_stats['total_revenue']
+            # Calculate total business revenue (laundry + hotel)
+            total_laundry_revenue = order_stats['total_revenue']  # This now uses the correct calculation
             total_hotel_revenue = hotel_stats['total_revenue']
+            total_business_revenue = total_laundry_revenue + total_hotel_revenue
+            
             total_laundry_expenses = expense_stats['total_expenses']
             total_hotel_expenses = hotel_stats['total_expenses']
+            total_business_expenses = total_laundry_expenses + total_hotel_expenses
             
+            total_net_profit = total_business_revenue - total_business_expenses
+
+            # Business growth statistics
             business_growth = {
-                'total_revenue': total_laundry_revenue + total_hotel_revenue,
+                'total_revenue': total_business_revenue,
                 'total_orders': order_stats['total_orders'] + hotel_stats['total_orders'],
-                'total_expenses': total_laundry_expenses + total_hotel_expenses,
-                'net_profit': (total_laundry_revenue + total_hotel_revenue) - (total_laundry_expenses + total_hotel_expenses)
+                'total_expenses': total_business_expenses,
+                'net_profit': total_net_profit
             }
 
-            # Additional analytics data
+            # Additional analytics
             revenue_by_shop = list(base_queryset.values('shop').annotate(
                 total_revenue=Sum('total_price'),
                 total_amount_paid=Sum('amount_paid'),
@@ -663,20 +725,12 @@ class DashboardAnalytics:
 
             order_ids = list(base_queryset.values_list('id', flat=True))
             
-            top_services = list(OrderItem.objects.filter(
-                order_id__in=order_ids
-            ).values('servicetype').annotate(
-                count=Count('id')
-            ).order_by('-count')[:5])
-
+            # Use the MultiSelectField processor
+            top_services = self._process_multiselect_services(order_ids)
             common_items = self._get_common_items_data(tuple(order_ids))
+            service_types_data = self._process_multiselect_services(order_ids)
 
-            service_types = list(OrderItem.objects.filter(
-                order_id__in=order_ids
-            ).values('servicetype').annotate(
-                count=Count('id')
-            ).order_by('-count'))
-
+            # Chart data
             line_chart_data = []
             monthly_order_volume = []
             monthly_expenses_data = []
@@ -685,18 +739,15 @@ class DashboardAnalytics:
             if not selected_month and not (from_date and to_date):
                 user_shops = self.get_user_shops(request)
                 if user_shops is None:
-                    shops = [choice[0] for choice in Order._meta.get_field('shop').choices]
+                    shops = ['Shop A', 'Shop B']
                 else:
                     shops = user_shops
 
                 for shop_name in shops:
-                    # Revenue chart data
                     monthly_data = base_queryset.filter(shop=shop_name).annotate(
                         month=ExtractMonth('delivery_date')
                     ).values('month').annotate(
-                        revenue=Coalesce(Sum('total_price'), 0, output_field=DecimalField()),
-                        amount_paid=Coalesce(Sum('amount_paid'), 0, output_field=DecimalField()),
-                        balance=Coalesce(Sum('balance'), 0, output_field=DecimalField())
+                        revenue=Coalesce(Sum('total_price'), 0, output_field=DecimalField())
                     ).order_by('month')
 
                     revenue_by_month = {item['month']: float(item['revenue']) for item in monthly_data}
@@ -718,15 +769,13 @@ class DashboardAnalytics:
                     for month in range(1, 13)
                 ]
                 
-                # Expenses chart data
                 monthly_expenses_data = self._get_monthly_expenses_data(request, selected_year)
-                
-                # Business growth chart data
                 monthly_business_growth_data = self._get_monthly_business_growth(request, selected_year)
 
             return {
                 'order_stats': order_stats,
                 'payment_stats': payment_stats,
+                'payment_type_stats': payment_type_stats,
                 'expense_stats': expense_stats,
                 'hotel_stats': hotel_stats,
                 'business_growth': business_growth,
@@ -738,7 +787,7 @@ class DashboardAnalytics:
                 'payment_methods': payment_methods,
                 'top_services': top_services,
                 'common_items': common_items,
-                'service_types': service_types,
+                'service_types': service_types_data,
                 'line_chart_data': line_chart_data,
                 'monthly_order_volume': monthly_order_volume,
                 'monthly_expenses_data': monthly_expenses_data,
@@ -755,7 +804,7 @@ class DashboardAnalytics:
     
     def get_orders_by_payment_status(self, request, payment_status, shop=None, selected_year=None, selected_month=None):
         """
-        Get orders filtered by payment status and optionally by shop.
+        Get orders filtered by payment status.
         """
         try:
             base_queryset = self._get_base_queryset(request, selected_year, selected_month, shop=shop)
@@ -791,6 +840,9 @@ class DashboardAnalytics:
             return Order.objects.none()
     
     def sanitize_for_json(self, value):
+        """
+        Sanitize values for JSON serialization.
+        """
         if isinstance(value, str):
             cleaned = ''.join(char for char in value if ord(char) >= 32 or char in '\t\n\r')
             cleaned = cleaned.replace('\\', '\\\\').replace('"', '\\"').replace('\n', '\\n').replace('\r', '\\r').replace('\t', '\\t')
@@ -800,22 +852,26 @@ class DashboardAnalytics:
         elif value is None:
             return None
         else:
-            return self.sanitize_for_json(str(value))
+            return str(value)
     
     def prepare_dashboard_context(self, request, data, selected_year, selected_month=None, from_date=None, to_date=None, payment_status=None, shop=None):
+        """
+        Prepare the complete dashboard context for templates.
+        """
+        # Get available years and shops
         years = Order.objects.filter(
             order_status__in=ACTIVE_ORDER_STATUSES
         ).annotate(
             year=ExtractYear('delivery_date')
         ).values_list('year', flat=True).distinct().order_by('year')
 
-        # Get available shops for filter
         user_shops = self.get_user_shops(request)
         if user_shops is None:
-            available_shops = [choice[0] for choice in Order._meta.get_field('shop').choices]
+            available_shops = ['Shop A', 'Shop B']
         else:
             available_shops = user_shops
 
+        # Sanitize data for JSON
         sanitized_revenue_by_shop = [
             {
                 'shop': self.sanitize_for_json(item['shop']), 
@@ -834,64 +890,55 @@ class DashboardAnalytics:
             for item in data['balance_by_shop']
         ]
 
-        sanitized_expenses_by_shop = [
-            {
-                'shop': self.sanitize_for_json(item['shop']), 
-                'total_expenses': item.get('total_expenses', 0),
-                'expense_count': item.get('expense_count', 0)
-            }
-            for item in data['expenses_by_shop']
-        ]
-
-        sanitized_top_services = [
-            {'servicetype': self.sanitize_for_json(item['servicetype']), 'count': item['count']}
-            for item in data['top_services']
-        ]
+        # Fix service labels for MultiSelectField data
+        sanitized_top_services = []
+        for item in data['top_services']:
+            servicetype = item['servicetype']
+            # Handle both single services and lists from MultiSelectField
+            if isinstance(servicetype, list):
+                if len(servicetype) == 1:
+                    service_label = servicetype[0]
+                else:
+                    service_label = ' + '.join(servicetype)
+            else:
+                service_label = str(servicetype)
+            
+            sanitized_top_services.append({
+                'servicetype': service_label,
+                'count': item['count']
+            })
 
         sanitized_common_items = [
             {'itemname': self.sanitize_for_json(item['itemname']), 'count': item['count']}
             for item in data['common_items']
         ]
 
-        sanitized_payment_methods = [
-            {
-                'payment_type': self.sanitize_for_json(item['payment_type']), 
-                'count': item['count'],
-                'total_amount': item.get('total_amount', 0),
-                'total_paid': item.get('total_paid', 0),
-                'total_balance': item.get('total_balance', 0)
-            }
-            for item in data['payment_methods']
-        ]
+        # Prepare payment type data for charts - now includes amount collected
+        payment_type_stats = data.get('payment_type_stats', {})
+        payment_type_labels = []
+        payment_type_amounts = []
+        payment_type_collected = []
+        payment_type_counts = []
+        payment_type_colors = ['#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0', '#9966FF']
+        
+        for i, payment_type in enumerate(PAYMENT_TYPES):
+            stats = payment_type_stats.get(payment_type, {'count': 0, 'total_amount': 0, 'amount_collected': 0})
+            payment_type_labels.append(payment_type.title())
+            payment_type_amounts.append(float(stats['total_amount']))
+            payment_type_collected.append(float(stats['amount_collected']))
+            payment_type_counts.append(stats['count'])
 
-        sanitized_service_types = [
-            {'servicetype': self.sanitize_for_json(item['servicetype']), 'count': item['count']}
-            for item in data['service_types']
-        ]
+        # Get correct revenue values for doughnut chart
+        laundry_revenue = data['order_stats']['total_revenue']  # This now uses the correct calculation
+        hotel_revenue = data['hotel_stats']['total_revenue']
+        total_business_revenue = data['business_growth']['total_revenue']
 
-        sanitized_line_chart_data = []
-        for series in data['line_chart_data']:
-            sanitized_series = series.copy()
-            sanitized_series['label'] = self.sanitize_for_json(series['label'])
-            sanitized_line_chart_data.append(sanitized_series)
-
-        sanitized_monthly_expenses_data = []
-        for series in data.get('monthly_expenses_data', []):
-            sanitized_series = series.copy()
-            sanitized_series['label'] = self.sanitize_for_json(series['label'])
-            sanitized_monthly_expenses_data.append(sanitized_series)
-
-        sanitized_monthly_business_growth = []
-        for series in data.get('monthly_business_growth', []):
-            sanitized_series = series.copy()
-            sanitized_series['label'] = self.sanitize_for_json(series['label'])
-            sanitized_monthly_business_growth.append(sanitized_series)
-
-        # Prepare profit comparison data for doughnut chart
+        # Calculate profits
         laundry_profit = data['order_stats']['total_revenue'] - data['expense_stats']['total_expenses']
         hotel_profit = data['hotel_stats']['net_profit']
-        total_profit = laundry_profit + hotel_profit
+        total_net_profit = data['business_growth']['net_profit']
 
+        # Build context
         context = {
             'title': 'Business Dashboard',
             'current_year': selected_year,
@@ -903,105 +950,77 @@ class DashboardAnalytics:
             'years': list(years),
             'available_shops': available_shops,
 
-            # Order statistics including balance
+            # Core statistics
             'total_revenue': data['order_stats']['total_revenue'],
             'total_orders': data['order_stats']['total_orders'],
             'pending_orders': data['order_stats']['pending_orders'],
             'completed_orders': data['order_stats']['completed_orders'],
-            'delivered_orders': data['order_stats']['delivered_orders'],
-            'avg_order_value': data['order_stats']['avg_order_value'],
             'total_amount_paid': data['order_stats']['total_amount_paid'],
             'total_balance': data['order_stats']['total_balance'],
-
-            # Payment statistics including balance
+            
+            # Payment statistics
             'pending_payments': data['payment_stats']['pending_payments'],
             'partial_payments': data['payment_stats']['partial_payments'],
             'complete_payments': data['payment_stats']['complete_payments'],
-            'overdue_payments': data['payment_stats'].get('overdue_payments', 0),
-            'total_pending_amount': data['payment_stats']['total_pending_amount'],
-            'total_partial_amount': data['payment_stats']['total_partial_amount'],
             'total_collected_amount': data['payment_stats']['total_collected_amount'],
-            'total_overdue_amount': data['payment_stats'].get('total_overdue_amount', 0),
             'total_balance_amount': data['payment_stats']['total_balance_amount'],
+
+            # Payment type statistics with collected amounts
+            'payment_type_stats': payment_type_stats,
+            'cash_payments_count': payment_type_stats.get('cash', {}).get('count', 0),
+            'cash_payments_amount': payment_type_stats.get('cash', {}).get('total_amount', 0),
+            'cash_payments_collected': payment_type_stats.get('cash', {}).get('amount_collected', 0),
+            'mpesa_payments_count': payment_type_stats.get('mpesa', {}).get('count', 0),
+            'mpesa_payments_amount': payment_type_stats.get('mpesa', {}).get('total_amount', 0),
+            'mpesa_payments_collected': payment_type_stats.get('mpesa', {}).get('amount_collected', 0),
+            'card_payments_count': payment_type_stats.get('card', {}).get('count', 0),
+            'card_payments_amount': payment_type_stats.get('card', {}).get('total_amount', 0),
+            'card_payments_collected': payment_type_stats.get('card', {}).get('amount_collected', 0),
+            'bank_transfer_payments_count': payment_type_stats.get('bank_transfer', {}).get('count', 0),
+            'bank_transfer_payments_amount': payment_type_stats.get('bank_transfer', {}).get('total_amount', 0),
+            'bank_transfer_payments_collected': payment_type_stats.get('bank_transfer', {}).get('amount_collected', 0),
+            'other_payments_count': payment_type_stats.get('other', {}).get('count', 0),
+            'other_payments_amount': payment_type_stats.get('other', {}).get('total_amount', 0),
+            'other_payments_collected': payment_type_stats.get('other', {}).get('amount_collected', 0),
 
             # Expense statistics
             'total_expenses': data['expense_stats']['total_expenses'],
             'shop_a_expenses': data['expense_stats']['shop_a_expenses'],
             'shop_b_expenses': data['expense_stats']['shop_b_expenses'],
-            'average_expense': data['expense_stats']['average_expense'],
-            'expense_count': data['expense_stats'].get('expense_count', 0),
 
             # Hotel statistics
             'hotel_total_orders': data['hotel_stats']['total_orders'],
-            'hotel_served_orders': data['hotel_stats']['served_orders'],
-            'hotel_in_progress_orders': data['hotel_stats']['in_progress_orders'],
             'hotel_total_revenue': data['hotel_stats']['total_revenue'],
-            'hotel_avg_order_value': data['hotel_stats']['avg_order_value'],
-            'hotel_total_expenses': data['hotel_stats']['total_expenses'],
             'hotel_net_profit': data['hotel_stats']['net_profit'],
 
-            # Business growth statistics
-            'business_total_revenue': data['business_growth']['total_revenue'],
-            'business_total_orders': data['business_growth']['total_orders'],
-            'business_total_expenses': data['business_growth']['total_expenses'],
-            'business_net_profit': data['business_growth']['net_profit'],
+            # Total Business Statistics
+            'total_business_revenue': total_business_revenue,
+            'total_business_expenses': data['business_growth']['total_expenses'],
+            'total_net_profit': total_net_profit,
 
-            # Profit comparison data
+            # Individual business revenues (for doughnut chart)
+            'laundry_revenue': laundry_revenue,
+            'hotel_revenue': hotel_revenue,
+
+            # Individual business profits
             'laundry_profit': laundry_profit,
             'hotel_profit': hotel_profit,
-            'total_profit': total_profit,
 
-            # Shop A statistics including balance and expenses
+            # Shop statistics
             'shop_a_revenue': data['shop_a_stats']['revenue'],
             'shop_a_total_orders': data['shop_a_stats']['total_orders'],
-            'shop_a_pending_orders': data['shop_a_stats']['pending_orders'],
-            'shop_a_completed_orders': data['shop_a_stats']['completed_orders'],
-            'shop_a_pending_payments': data['shop_a_stats']['pending_payments'],
-            'shop_a_partial_payments': data['shop_a_stats']['partial_payments'],
-            'shop_a_complete_payments': data['shop_a_stats']['complete_payments'],
-            'shop_a_total_amount_paid': data['shop_a_stats']['total_amount_paid'],
-            'shop_a_total_balance': data['shop_a_stats']['total_balance'],
-            'shop_a_total_expenses': data['shop_a_stats']['total_expenses'],
             'shop_a_net_profit': data['shop_a_stats']['net_profit'],
 
-            # Shop B statistics including balance and expenses
             'shop_b_revenue': data['shop_b_stats']['revenue'],
             'shop_b_total_orders': data['shop_b_stats']['total_orders'],
-            'shop_b_pending_orders': data['shop_b_stats']['pending_orders'],
-            'shop_b_completed_orders': data['shop_b_stats']['completed_orders'],
-            'shop_b_pending_payments': data['shop_b_stats']['pending_payments'],
-            'shop_b_partial_payments': data['shop_b_stats']['partial_payments'],
-            'shop_b_complete_payments': data['shop_b_stats']['complete_payments'],
-            'shop_b_total_amount_paid': data['shop_b_stats']['total_amount_paid'],
-            'shop_b_total_balance': data['shop_b_stats']['total_balance'],
-            'shop_b_total_expenses': data['shop_b_stats']['total_expenses'],
             'shop_b_net_profit': data['shop_b_stats']['net_profit'],
 
-            # Orders by payment status
-            'pending_orders_list': data['orders_by_payment_status']['pending'],
-            'partial_orders_list': data['orders_by_payment_status']['partial'],
-            'complete_orders_list': data['orders_by_payment_status']['complete'],
-            'overdue_orders_list': data['orders_by_payment_status']['overdue'],
-
-            # Shop-specific orders
-            'shop_a_pending_orders_list': data.get('shop_a_orders', {}).get('pending', []),
-            'shop_a_partial_orders_list': data.get('shop_a_orders', {}).get('partial', []),
-            'shop_a_complete_orders_list': data.get('shop_a_orders', {}).get('complete', []),
-            'shop_a_overdue_orders_list': data.get('shop_a_orders', {}).get('overdue', []),
-
-            'shop_b_pending_orders_list': data.get('shop_b_orders', {}).get('pending', []),
-            'shop_b_partial_orders_list': data.get('shop_b_orders', {}).get('partial', []),
-            'shop_b_complete_orders_list': data.get('shop_b_orders', {}).get('complete', []),
-            'shop_b_overdue_orders_list': data.get('shop_b_orders', {}).get('overdue', []),
-
-            # Chart data
+            # Chart data - properly serialized
             'pie_chart_labels': json.dumps([item['shop'] for item in sanitized_revenue_by_shop]),
             'pie_chart_values': json.dumps([float(item['total_revenue']) for item in sanitized_revenue_by_shop]),
 
             'balance_pie_chart_labels': json.dumps([item['shop'] for item in sanitized_balance_by_shop]),
             'balance_pie_chart_values': json.dumps([float(item['total_balance']) for item in sanitized_balance_by_shop]),
-
-            'line_chart_data': json.dumps(sanitized_line_chart_data),
 
             'services_labels': json.dumps([item['servicetype'] for item in sanitized_top_services]),
             'services_counts': json.dumps([item['count'] for item in sanitized_top_services]),
@@ -1009,26 +1028,29 @@ class DashboardAnalytics:
             'item_labels': json.dumps([item['itemname'] for item in sanitized_common_items]),
             'item_counts': json.dumps([item['count'] for item in sanitized_common_items]),
 
-            'payment_method_labels': json.dumps([item['payment_type'] for item in sanitized_payment_methods]),
-            'payment_method_counts': json.dumps([item['count'] for item in sanitized_payment_methods]),
+            # Payment type charts - both total amounts and collected amounts
+            'payment_type_labels': json.dumps(payment_type_labels),
+            'payment_type_amounts': json.dumps(payment_type_amounts),
+            'payment_type_collected': json.dumps(payment_type_collected),
+            'payment_type_counts': json.dumps(payment_type_counts),
+            'payment_type_colors': json.dumps(payment_type_colors),
 
-            'service_type_labels': json.dumps([item['servicetype'] for item in sanitized_service_types]),
-            'service_type_counts': json.dumps([item['count'] for item in sanitized_service_types]),
+            # REVENUE COMPARISON DOUGHNUT CHART - Fixed to show revenue, not profit
+            'revenue_comparison_labels': json.dumps(['Laundry Revenue', 'Hotel Revenue']),
+            'revenue_comparison_data': json.dumps([float(laundry_revenue), float(hotel_revenue)]),
+            'revenue_comparison_colors': json.dumps(['#36A2EB', '#FF6384']),
 
-            'monthly_order_volume': json.dumps(data['monthly_order_volume']),
-            'monthly_expenses_data': json.dumps(sanitized_monthly_expenses_data),
-            'monthly_business_growth': json.dumps(sanitized_monthly_business_growth),
-            
-            # Profit comparison chart data
-            'profit_comparison_labels': json.dumps(['Laundry Business', 'Hotel Business']),
+            # Profit comparison chart (separate from revenue)
+            'profit_comparison_labels': json.dumps(['Laundry Profit', 'Hotel Profit']),
             'profit_comparison_data': json.dumps([float(laundry_profit), float(hotel_profit)]),
-            'profit_comparison_colors': json.dumps(['#36A2EB', '#FF6384']),
+            'profit_comparison_colors': json.dumps(['#4BC0C0', '#FF9F40']),
+
+            'line_chart_data': json.dumps(data.get('line_chart_data', [])),
+            'monthly_order_volume': json.dumps(data.get('monthly_order_volume', [])),
+            'monthly_expenses_data': json.dumps(data.get('monthly_expenses_data', [])),
+            'monthly_business_growth': json.dumps(data.get('monthly_business_growth', [])),
 
             'common_customers': data['common_customers'],
-            
-            # Additional balance information
-            'revenue_by_shop_data': sanitized_revenue_by_shop,
-            'balance_by_shop_data': sanitized_balance_by_shop,
         }
 
         return context
