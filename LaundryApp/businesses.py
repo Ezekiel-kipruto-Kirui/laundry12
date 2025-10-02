@@ -7,7 +7,7 @@ from django.utils import timezone
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
 
-from HotelApp.models import Order as HotelOrder, HotelExpenseRecord, FoodItem
+from HotelApp.models import HotelOrder, HotelExpenseRecord, FoodItem
 from LaundryApp.models import Order as LaundryOrder, ExpenseRecord, OrderItem, Customer
 
 def dashboard_home(request):

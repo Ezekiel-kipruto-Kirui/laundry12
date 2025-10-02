@@ -15,7 +15,7 @@ from django.http import JsonResponse
 
 # Local imports
 from .models import Order, OrderItem, ExpenseRecord
-from HotelApp.models import Order as HotelOrder, HotelExpenseRecord, HotelOrderItem
+from HotelApp.models import HotelOrder, HotelExpenseRecord, HotelOrderItem
 
 # Setup logger
 logger = logging.getLogger(__name__)
@@ -23,7 +23,8 @@ logger = logging.getLogger(__name__)
 # --- Constants ---
 MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
 ACTIVE_ORDER_STATUSES = ['pending', 'Completed', 'Delivered_picked']
-HOTEL_ACTIVE_STATUSES = ['In Progress', 'Served']
+# Hotel orders don't have status anymore, so we'll use all hotel orders
+HOTEL_ACTIVE_STATUSES = []  # Empty since no status field
 
 # Payment status constants
 PAYMENT_STATUS_PENDING = 'pending'
@@ -78,8 +79,6 @@ class DashboardAnalytics:
             },
             'hotel_stats': {
                 'total_orders': 0,
-                'served_orders': 0,
-                'in_progress_orders': 0,
                 'total_revenue': 0,
                 'avg_order_value': 0,
                 'total_expenses': 0,
@@ -151,7 +150,8 @@ class DashboardAnalytics:
         """
         Calculate hotel statistics including orders, revenue, and expenses.
         """
-        hotel_orders = HotelOrder.objects.filter(order_status__in=HOTEL_ACTIVE_STATUSES)
+        # Hotel orders don't have status field anymore, so get all
+        hotel_orders = HotelOrder.objects.all()
         
         # Apply date filters
         if selected_year:
@@ -161,15 +161,13 @@ class DashboardAnalytics:
         if from_date and to_date:
             hotel_orders = hotel_orders.filter(created_at__date__range=[from_date, to_date])
         
-        # Calculate hotel order statistics with proper aggregation
+        # Calculate hotel order statistics - use price from HotelOrderItem
         hotel_stats = hotel_orders.aggregate(
             total_orders=Count('id'),
-            served_orders=Count('id', filter=Q(order_status='Served')),
-            in_progress_orders=Count('id', filter=Q(order_status='In Progress')),
             total_revenue=Coalesce(Sum(
                 Case(
                     When(order_items__isnull=False, 
-                         then=models.F('order_items__quantity') * models.F('order_items__food_item__price')),
+                         then=models.F('order_items__quantity') * models.F('order_items__price')),
                     default=0,
                     output_field=DecimalField()
                 )
@@ -378,17 +376,16 @@ class DashboardAnalytics:
             laundry_orders=Count('id')
         ).order_by('month')
         
-        # Get monthly hotel revenue
+        # Get monthly hotel revenue - FIXED to use HotelOrderItem price
         hotel_monthly_data = HotelOrder.objects.filter(
-            created_at__year=selected_year,
-            order_status__in=HOTEL_ACTIVE_STATUSES
+            created_at__year=selected_year
         ).annotate(
             month=ExtractMonth('created_at')
         ).values('month').annotate(
             hotel_revenue=Coalesce(Sum(
                 Case(
                     When(order_items__isnull=False, 
-                         then=models.F('order_items__quantity') * models.F('order_items__food_item__price')),
+                         then=models.F('order_items__quantity') * models.F('order_items__price')),
                     default=0,
                     output_field=DecimalField()
                 )
@@ -678,7 +675,7 @@ class DashboardAnalytics:
             shop_b_data = self._get_shop_specific_orders(base_queryset, 'Shop B', expense_stats)
 
             # Calculate total business revenue (laundry + hotel)
-            total_laundry_revenue = order_stats['total_revenue']  # This now uses the correct calculation
+            total_laundry_revenue = order_stats['total_revenue']
             total_hotel_revenue = hotel_stats['total_revenue']
             total_business_revenue = total_laundry_revenue + total_hotel_revenue
             
@@ -929,7 +926,7 @@ class DashboardAnalytics:
             payment_type_counts.append(stats['count'])
 
         # Get correct revenue values for doughnut chart
-        laundry_revenue = data['order_stats']['total_revenue']  # This now uses the correct calculation
+        laundry_revenue = data['order_stats']['total_revenue']
         hotel_revenue = data['hotel_stats']['total_revenue']
         total_business_revenue = data['business_growth']['total_revenue']
 

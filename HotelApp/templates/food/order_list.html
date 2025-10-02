@@ -1,4 +1,5 @@
 {% extends 'home.html' %}
+{% load static %}
 
 {% block title %}Order Management - FoodOrder{% endblock %}
 
@@ -12,31 +13,133 @@
                 Order Management
             </h1>
             <p class="text-gray-600 mt-2">Manage and track all customer orders</p>
+            {% if date_filter_description %}
+            <p class="text-sm text-blue-600 font-medium mt-1">
+                <i class="fas fa-filter mr-1"></i>
+                {{ date_filter_description }}
+            </p>
+            {% endif %}
         </div>
 
-        <!-- Status Filter -->
-        <div class="flex flex-col sm:flex-row gap-3">
-            <span class="text-sm font-semibold text-gray-700 self-center">Filter by status:</span>
-            <div class="flex bg-gray-100 rounded-xl p-1.5 shadow-inner">
-                <a href="{% url 'hotel:order_list' %}"
-                    class="px-4 py-2 text-sm font-medium rounded-xl transition-all duration-200 
-                          {% if not status_filter %}bg-white text-blue-600 shadow-lg border border-blue-200{% else %}text-gray-600 hover:text-gray-800 hover:bg-gray-200{% endif %}">
-                    <i class="fas fa-list mr-1"></i> All
-                </a>
-                <a href="{% url 'hotel:order_list' %}?order_status=Served"
-                    class="px-4 py-2 text-sm font-medium rounded-xl transition-all duration-200 
-                          {% if status_filter == 'Served' %}bg-white text-green-600 shadow-lg border border-green-200{% else %}text-gray-600 hover:text-gray-800 hover:bg-gray-200{% endif %}">
-                    <i class="fas fa-check-circle mr-1"></i> Served
-                </a>
-                <a href="{% url 'hotel:order_list' %}?order_status=In Progress"
-                    class="px-4 py-2 text-sm font-medium rounded-xl transition-all duration-200 
-                          {% if status_filter == 'In Progress' %}bg-white text-yellow-600 shadow-lg border border-yellow-200{% else %}text-gray-600 hover:text-gray-800 hover:bg-gray-200{% endif %}">
-                    <i class="fas fa-clock mr-1"></i> In Progress
-                </a>
+        <!-- Export and Filter Controls -->
+        <div class="flex flex-col sm:flex-row gap-3 items-start sm:items-center">
+            <!-- Date Filter Form -->
+            <form method="get"
+                class="flex flex-col sm:flex-row gap-2 mb-2 sm:mb-0 bg-white p-3 rounded-lg border border-gray-200 shadow-sm">
+                <div class="flex flex-col sm:flex-row gap-2 items-start sm:items-center">
+                    <div class="flex items-center gap-2">
+                        <label class="text-sm font-medium text-gray-700 whitespace-nowrap">From:</label>
+                        <input type="date" name="start_date" value="{{ start_date|date:'Y-m-d' }}"
+                            class="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <label class="text-sm font-medium text-gray-700 whitespace-nowrap">To:</label>
+                        <input type="date" name="end_date" value="{{ end_date|date:'Y-m-d' }}"
+                            class="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                    </div>
+                    <div class="flex gap-2">
+                        <button type="submit"
+                            class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition duration-200 flex items-center">
+                            <i class="fas fa-filter mr-1"></i> Filter
+                        </button>
+                        <a href="{% url 'hotel:order_list' %}"
+                            class="bg-gray-300 hover:bg-gray-400 text-gray-800 px-4 py-2 rounded-lg text-sm font-medium flex items-center">
+                            <i class="fas fa-redo mr-1"></i> Reset
+                        </a>
+                    </div>
+                </div>
+            </form>
+
+            <!-- Export Dropdown -->
+            <div class="relative inline-block">
+                <button type="button" id="exportDropdownButton"
+                    class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition duration-200 flex items-center">
+                    <i class="fas fa-file-export mr-1"></i> Export
+                    <i class="fas fa-chevron-down ml-1 text-xs"></i>
+                </button>
+
+                <!-- Export Dropdown Menu -->
+                <div id="exportDropdown"
+                    class="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border border-gray-200 z-10 hidden">
+                    <form method="post" action="{% url 'hotel:export_orders' %}" class="p-2">
+                        {% csrf_token %}
+                        <input type="hidden" name="start_date" value="{{ start_date|date:'Y-m-d' }}">
+                        <input type="hidden" name="end_date" value="{{ end_date|date:'Y-m-d' }}">
+
+                        <button type="submit" name="format" value="csv"
+                            class="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 rounded-md flex items-center">
+                            <i class="fas fa-file-csv text-green-600 mr-2"></i>
+                            Export as CSV
+                        </button>
+
+                        <button type="submit" name="format" value="xlsx"
+                            class="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 rounded-md flex items-center">
+                            <i class="fas fa-file-excel text-green-600 mr-2"></i>
+                            Export as Excel
+                        </button>
+
+                        <button type="submit" name="format" value="json"
+                            class="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 rounded-md flex items-center">
+                            <i class="fas fa-file-code text-green-600 mr-2"></i>
+                            Export as JSON
+                        </button>
+                    </form>
+                </div>
             </div>
         </div>
     </div>
+    {% if user.is_superuser %}
+    <!-- Summary Cards -->
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+        <!-- Total Orders Card -->
+        <div class="bg-white rounded-2xl shadow-lg border border-gray-100 p-6">
+            <div class="flex items-center">
+                <div class="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center mr-4">
+                    <i class="fas fa-receipt text-blue-600 text-xl"></i>
+                </div>
+                <div>
+                    <p class="text-sm font-medium text-gray-600">Total Orders</p>
+                    <p class="text-2xl font-bold text-gray-900">{{ summary.total_orders }}</p>
+                    {% if summary.date_range_description %}
+                    <p class="text-xs text-gray-500 mt-1">{{ summary.date_range_description }}</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
 
+        <!-- Total Revenue Card -->
+        <div class="bg-white rounded-2xl shadow-lg border border-gray-100 p-6">
+            <div class="flex items-center">
+                <div class="w-12 h-12 bg-green-100 rounded-xl flex items-center justify-center mr-4">
+                    <i class="fas fa-money-bill-wave text-green-600 text-xl"></i>
+                </div>
+                <div>
+                    <p class="text-sm font-medium text-gray-600">Total Revenue</p>
+                    <p class="text-2xl font-bold text-gray-900">Ksh {{ summary.total_revenue|floatformat:2 }}</p>
+                    {% if summary.date_range_description %}
+                    <p class="text-xs text-gray-500 mt-1">{{ summary.date_range_description }}</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Average Order Value Card -->
+        <div class="bg-white rounded-2xl shadow-lg border border-gray-100 p-6">
+            <div class="flex items-center">
+                <div class="w-12 h-12 bg-purple-100 rounded-xl flex items-center justify-center mr-4">
+                    <i class="fas fa-chart-line text-purple-600 text-xl"></i>
+                </div>
+                <div>
+                    <p class="text-sm font-medium text-gray-600">Average Order Value</p>
+                    <p class="text-2xl font-bold text-gray-900">Ksh {{ summary.average_order_value|floatformat:2 }}</p>
+                    {% if summary.date_range_description %}
+                    <p class="text-xs text-gray-500 mt-1">{{ summary.date_range_description }}</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+{% endif %}
     {% if orders %}
     <!-- Orders Table -->
     <div class="bg-white rounded-2xl shadow-lg border border-gray-100 overflow-hidden p-4">
@@ -47,13 +150,14 @@
                         <th class="pl-6 pr-4 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                             Order Details</th>
                         <th class="px-4 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                            Customer</th>
+                            Served by</th>
                         <th class="px-4 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Items
+                        </th>
+                        <th class="px-4 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            Quantity
                         </th>
                         <th class="px-4 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Total
                         </th>
-                        <th class="px-4 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                            Status</th>
                         <th class="pr-6 pl-4 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                             Actions</th>
                     </tr>
@@ -62,24 +166,37 @@
                     {% for order in orders %}
                     <tr class="hover:bg-gray-50 transition-colors">
                         <!-- Order Details -->
-                        <td class="pl-6 pr-4 py-4 whitespace-nowrap h-32">
+                        <td class="pl-6 pr-4 py-4 whitespace-nowrap">
                             <div>
-                                <div class="text-sm font-bold text-gray-900">{{ order.id }}</div>
+                                <div class="text-sm font-bold text-gray-900">#{{ order.id }}</div>
                                 <div class="text-xs text-gray-500">{{ order.created_at|date:"M d, Y • H:i" }}</div>
                             </div>
                         </td>
 
                         <!-- Customer -->
                         <td class="px-4 py-4 whitespace-nowrap">
-                            <div class="text-sm text-gray-900">{{ order.customer.username }}</div>
-                            <div class="text-xs text-gray-500">{{ order.customer.email }}</div>
+                            <div class="text-sm text-gray-900">{{ order.created_by.username }}</div>
+                            <div class="text-xs text-gray-500">{{ order.created_by.email }}</div>
                         </td>
 
                         <!-- Items -->
                         <td class="px-4 py-4">
                             <div class="text-sm text-gray-900">
                                 {% for order_item in order.order_items.all|slice:":2" %}
-                                {{ order_item.food_item.name }} ×{{ order_item.quantity }}{% if not forloop.last %}, {% endif %}
+                                {{ order_item.food_item.name }}{% if not forloop.last %}, {% endif %}
+                                {% endfor %}
+                                {% if order.order_items.all|length > 2 %}
+                                <span class="text-xs text-gray-500">+{{ order.order_items.all|length|add:"-2" }}
+                                    more</span>
+                                {% endif %}
+                            </div>
+                        </td>
+
+                        <!-- Quantity -->
+                        <td class="px-4 py-4">
+                            <div class="text-sm text-gray-900">
+                                {% for order_item in order.order_items.all|slice:":2" %}
+                                {{ order_item.quantity }}{% if not forloop.last %}, {% endif %}
                                 {% endfor %}
                                 {% if order.order_items.all|length > 2 %}
                                 <span class="text-xs text-gray-500">+{{ order.order_items.all|length|add:"-2" }}
@@ -91,26 +208,6 @@
                         <!-- Total -->
                         <td class="px-4 py-4 whitespace-nowrap text-sm font-bold text-blue-600">
                             Ksh {{ order.total_amount|floatformat:2 }}
-                        </td>
-
-                        <!-- Status -->
-                        <td class="px-4 py-4 whitespace-nowrap">
-                            {% if order.order_status == 'Served' %}
-                            <span
-                                class="px-3 py-1.5 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">
-                                <i class="fas fa-check-circle mr-1"></i> Served
-                            </span>
-                            {% elif order.order_status == 'In Progress' %}
-                            <span
-                                class="px-3 py-1.5 inline-flex text-xs leading-5 font-semibold rounded-full bg-yellow-100 text-yellow-800">
-                                <i class="fas fa-clock mr-1"></i> In Progress
-                            </span>
-                            {% else %}
-                            <span
-                                class="px-3 py-1.5 inline-flex text-xs leading-5 font-semibold rounded-full bg-gray-100 text-gray-800">
-                                <i class="fas fa-hourglass-half mr-1"></i> {{ order.get_order_status_display }}
-                            </span>
-                            {% endif %}
                         </td>
 
                         <!-- Actions -->
@@ -130,32 +227,6 @@
                                     <i class="fas fa-edit"></i>
                                 </a>
 
-                                <!-- Status Dropdown -->
-                                <div class="relative">
-                                    <button
-                                        class="p-2 text-purple-600 hover:text-purple-800 hover:bg-purple-50 rounded-lg transition-colors"
-                                        onclick="toggleDropdown('status-dropdown-{{ order.id }}')"
-                                        title="Change Status">
-                                        <i class="fas fa-cog"></i>
-                                    </button>
-                                    <div id="status-dropdown-{{ order.id }}"
-                                        class="absolute right-0 mt-2 w-40 bg-white border border-gray-200 rounded-xl shadow-lg py-1 z-10 hidden">
-                                        <form method="post" action="{% url 'hotel:order_edit' order.pk %}">
-                                            {% csrf_token %}
-                                            <button type="submit" name="order_status" value="In Progress"
-                                                class="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-700 transition-colors flex items-center gap-2 {% if order.order_status == 'In Progress' %}bg-blue-50 text-blue-700{% endif %}">
-                                                <i class="fas fa-clock text-yellow-500"></i>
-                                                In Progress
-                                            </button>
-                                            <button type="submit" name="order_status" value="Served"
-                                                class="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-green-50 hover:text-green-700 transition-colors flex items-center gap-2 {% if order.order_status == 'Served' %}bg-green-50 text-green-700{% endif %}">
-                                                <i class="fas fa-check-circle text-green-500"></i>
-                                                Mark Served
-                                            </button>
-                                        </form>
-                                    </div>
-                                </div>
-
                                 <!-- Delete Button -->
                                 <button onclick="confirmDelete('{{ order.id }}')"
                                     class="p-2 text-red-600 hover:text-red-800 hover:bg-red-50 rounded-lg transition-colors"
@@ -169,6 +240,49 @@
                 </tbody>
             </table>
         </div>
+
+        <!-- Pagination -->
+        {% if orders.has_other_pages %}
+        <div class="border-t border-gray-200 px-6 py-4">
+            <div class="flex items-center justify-between">
+                <div class="text-sm text-gray-700">
+                    Showing {{ orders.start_index }} to {{ orders.end_index }} of {{ orders.paginator.count }} orders
+                    {% if date_filter_description %}
+                    <span class="text-gray-500">({{ date_filter_description }})</span>
+                    {% endif %}
+                </div>
+                <div class="flex space-x-2">
+                    {% if orders.has_previous %}
+                    <a href="?page={{ orders.previous_page_number }}{% if start_date %}&start_date={{ start_date|date:'Y-m-d' }}{% endif %}{% if end_date %}&end_date={{ end_date|date:'Y-m-d' }}{% endif %}"
+                        class="px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 transition duration-200">
+                        Previous
+                    </a>
+                    {% endif %}
+
+                    {% for num in orders.paginator.page_range %}
+                    {% if orders.number == num %}
+                    <span
+                        class="px-3 py-2 bg-blue-600 border border-blue-600 rounded-lg text-sm font-medium text-white">
+                        {{ num }}
+                    </span>
+                    {% elif num > orders.number|add:'-3' and num < orders.number|add:'3' %} <a
+                        href="?page={{ num }}{% if start_date %}&start_date={{ start_date|date:'Y-m-d' }}{% endif %}{% if end_date %}&end_date={{ end_date|date:'Y-m-d' }}{% endif %}"
+                        class="px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 transition duration-200">
+                        {{ num }}
+                        </a>
+                        {% endif %}
+                        {% endfor %}
+
+                        {% if orders.has_next %}
+                        <a href="?page={{ orders.next_page_number }}{% if start_date %}&start_date={{ start_date|date:'Y-m-d' }}{% endif %}{% if end_date %}&end_date={{ end_date|date:'Y-m-d' }}{% endif %}"
+                            class="px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 transition duration-200">
+                            Next
+                        </a>
+                        {% endif %}
+                </div>
+            </div>
+        </div>
+        {% endif %}
     </div>
     {% else %}
     <!-- No Orders State -->
@@ -180,12 +294,18 @@
             </div>
             <h3 class="text-2xl font-bold text-gray-900 mb-2">No Orders Found</h3>
             <p class="text-gray-600 mb-6">
-                {% if status_filter %}
-                No orders match the "{{ status_filter }}" status filter.
+                {% if date_filter_description %}
+                No orders found {{ date_filter_description }}.
                 {% else %}
                 You haven't received any orders yet. Orders will appear here once customers start ordering.
                 {% endif %}
             </p>
+            {% if date_filter_description %}
+            <a href="{% url 'hotel:order_list' %}"
+                class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg font-semibold transition duration-200 inline-flex items-center">
+                <i class="fas fa-list mr-2"></i> View All Orders
+            </a>
+            {% endif %}
         </div>
     </div>
     {% endif %}
@@ -219,18 +339,6 @@
 </div>
 
 <script>
-    function toggleDropdown(dropdownId) {
-        const dropdown = document.getElementById(dropdownId);
-        dropdown.classList.toggle('hidden');
-
-        // Close other dropdowns
-        document.querySelectorAll('.absolute > div').forEach(item => {
-            if (item.id !== dropdownId && !item.classList.contains('hidden')) {
-                item.classList.add('hidden');
-            }
-        });
-    }
-
     function confirmDelete(orderId) {
         const form = document.getElementById('deleteForm');
         form.action = "{% url 'hotel:order_delete' 0 %}".replace('0', orderId);
@@ -257,12 +365,43 @@
         }, 200);
     }
 
-    // Close dropdowns when clicking outside
-    document.addEventListener('click', function (event) {
-        if (!event.target.closest('.relative')) {
-            document.querySelectorAll('.absolute > div').forEach(dropdown => {
-                dropdown.classList.add('hidden');
+    // Export dropdown functionality
+    document.addEventListener('DOMContentLoaded', function () {
+        const exportDropdownButton = document.getElementById('exportDropdownButton');
+        const exportDropdown = document.getElementById('exportDropdown');
+
+        if (exportDropdownButton && exportDropdown) {
+            exportDropdownButton.addEventListener('click', function (e) {
+                e.stopPropagation();
+                exportDropdown.classList.toggle('hidden');
             });
+
+            // Close dropdown when clicking outside
+            document.addEventListener('click', function () {
+                exportDropdown.classList.add('hidden');
+            });
+
+            // Prevent dropdown from closing when clicking inside
+            exportDropdown.addEventListener('click', function (e) {
+                e.stopPropagation();
+            });
+        }
+
+        // Set default dates for date inputs
+        const startDateInput = document.querySelector('input[name="start_date"]');
+        const endDateInput = document.querySelector('input[name="end_date"]');
+
+        // Set end date to today if not set
+        if (!endDateInput.value) {
+            const today = new Date().toISOString().split('T')[0];
+            endDateInput.value = today;
+        }
+
+        // Set start date to first day of current month if not set
+        if (!startDateInput.value) {
+            const today = new Date();
+            const firstDay = new Date(today.getFullYear(), today.getMonth(), 1).toISOString().split('T')[0];
+            startDateInput.value = firstDay;
         }
     });
 

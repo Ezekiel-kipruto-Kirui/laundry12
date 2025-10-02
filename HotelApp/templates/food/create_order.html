@@ -8,61 +8,42 @@
     </h1>
 
     <!-- ✅ Show Django messages (success or error alerts) -->
-{% if item_formset.non_form_errors %}
-<div id="form-messages" class="p-4 mb-4 text-yellow-800 bg-yellow-100 border border-yellow-300 rounded-lg">
-    {% for error in item_formset.non_form_errors %}
-    <p>{{ error }}</p>
-    {% endfor %}
-</div>
-{% endif %}
+    {% if item_formset.non_form_errors %}
+    <div id="form-messages" class="p-4 mb-4 text-yellow-800 bg-yellow-100 border border-yellow-300 rounded-lg">
+        {% for error in item_formset.non_form_errors %}
+        <p>{{ error }}</p>
+        {% endfor %}
+    </div>
+    {% endif %}
 
-{% if order_form.errors %}
-<div id="form-messages" class="p-4 mb-4 text-yellow-800 bg-yellow-100 border border-yellow-300 rounded-lg">
-    {% for field, errors in order_form.errors.items %}
-    {% for error in errors %}
-    <p>{{ error }}</p>
-    {% endfor %}
-    {% endfor %}
-</div>
-{% endif %}
+    {% if order_form.errors %}
+    <div id="form-messages" class="p-4 mb-4 text-yellow-800 bg-yellow-100 border border-yellow-300 rounded-lg">
+        {% for field, errors in order_form.errors.items %}
+        {% for error in errors %}
+        <p>{{ error }}</p>
+        {% endfor %}
+        {% endfor %}
+    </div>
+    {% endif %}
 
-{% if item_formset.errors %}
-<div id="form-messages" class="p-4 mb-4 text-yellow-800 bg-yellow-100 border border-yellow-300 rounded-lg">
-    {% for form in item_formset.forms %}
-    {% for field, errors in form.errors.items %}
-    {% for error in errors %}
-    <p>{{ error }}</p>
-    {% endfor %}
-    {% endfor %}
-    {% endfor %}
-</div>
-{% endif %}
-
-
+    {% if item_formset.errors %}
+    <div id="form-messages" class="p-4 mb-4 text-yellow-800 bg-yellow-100 border border-yellow-300 rounded-lg">
+        {% for form in item_formset.forms %}
+        {% for field, errors in form.errors.items %}
+        {% for error in errors %}
+        <p>{{ error }}</p>
+        {% endfor %}
+        {% endfor %}
+        {% endfor %}
+    </div>
+    {% endif %}
 
     <div class="bg-white p-4 rounded-2xl shadow-lg p-8">
         <form method="post" id="orderForm" class="space-y-8">
             {% csrf_token %}
 
             <!-- Order Details -->
-            <div>
-                <h2 class="text-xl font-semibold text-gray-800 mb-4 flex items-center">
-                    <i class="fas fa-info-circle text-blue-500 mr-2"></i> Order Details
-                </h2>
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    {% for field in order_form %}
-                    <div>
-                        <label for="{{ field.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-2">
-                            {{ field.label }}
-                        </label>
-                        {{ field }}
-                        {% if field.errors %}
-                        <p class="mt-1 text-sm text-red-600">{{ field.errors.0 }}</p>
-                        {% endif %}
-                    </div>
-                    {% endfor %}
-                </div>
-            </div>
+           
 
             <!-- Order Items -->
             <div>
@@ -76,17 +57,43 @@
                     {% for form in item_formset %}
                     <div
                         class="item-row grid grid-cols-1 md:grid-cols-3 gap-4 p-4 border border-gray-200 rounded-lg relative">
-                        {% for field in form %}
+                        <!-- Food Item -->
                         <div>
-                            <label for="{{ field.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-2">
-                                {{ field.label }}
+                            <label for="{{ form.food_item.id_for_label }}"
+                                class="block text-sm font-medium text-gray-700 mb-2">
+                                {{ form.food_item.label }}
                             </label>
-                            {{ field }}
-                            {% if field.errors %}
-                            <p class="mt-1 text-sm text-red-600">{{ field.errors.0 }}</p>
+                            {{ form.food_item }}
+                            {% if form.food_item.errors %}
+                            <p class="mt-1 text-sm text-red-600">{{ form.food_item.errors.0 }}</p>
                             {% endif %}
                         </div>
-                        {% endfor %}
+
+                        <!-- Quantity -->
+                        <div>
+                            <label for="{{ form.quantity.id_for_label }}"
+                                class="block text-sm font-medium text-gray-700 mb-2">
+                                {{ form.quantity.label }}
+                            </label>
+                            {{ form.quantity }}
+                            {% if form.quantity.errors %}
+                            <p class="mt-1 text-sm text-red-600">{{ form.quantity.errors.0 }}</p>
+                            {% endif %}
+                        </div>
+
+                        <!-- Price -->
+                        <div>
+                            <label for="{{ form.price.id_for_label }}"
+                                class="block text-sm font-medium text-gray-700 mb-2">
+                                Price
+                            </label>
+                            {{ form.price }}
+                            {% if form.price.errors %}
+                            <p class="mt-1 text-sm text-red-600">{{ form.price.errors.0 }}</p>
+                            {% endif %}
+                            <p class="text-xs text-gray-500 mt-1">Enter price per item</p>
+                        </div>
+
                         {% if forloop.counter0 > 0 %}
                         <button type="button" onclick="removeItem(this)"
                             class="absolute top-2 right-2 text-red-500 hover:text-red-700 transition">
@@ -96,12 +103,28 @@
                     </div>
                     {% endfor %}
                 </div>
+
+                <!-- Order Summary -->
+                <div class="mt-6 p-4 bg-gray-50 rounded-lg border border-gray-200">
+                    <h3 class="text-lg font-semibold text-gray-800 mb-3">Order Summary</h3>
+                    <div class="grid grid-cols-2 gap-4 text-sm">
+                        
+                        
+
+                        <div class="text-gray-600 font-semibold border-t pt-2">Total:</div>
+                        <div class="flex flex-row">
+                            <p class="text-right font-bold text-lg border-t pt-2">Ksh </p>
+                            <div class="text-right font-bold text-lg border-t pt-2" id="total"> 0.00</div>
+                        </div>
+                       
+                    </div>
+                </div>
             </div>
 
             <!-- Buttons -->
             <div class="flex flex-row mr-4 gap-4 justify-between items-center">
                 <div class="pt-4">
-                    <button type="button" onclick="addItem()"
+                    <button type="button" id="add-item-btn"
                         class="inline-flex items-center px-4 py-2 bg-green-600 hover:bg-green-700 text-white text-sm font-medium rounded-lg shadow-md transition">
                         <i class="fas fa-plus mr-2"></i> Add Another Item
                     </button>
@@ -138,24 +161,42 @@
         box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
     }
 </style>
-<script>
-    // Hide warning after 10 seconds
-   
-</script>
 
 <script>
-     setTimeout(function () {
-            const messages = document.querySelectorAll('#form-messages');
-            messages.forEach(msg => {
-                msg.style.transition = "opacity 1s ease";
-                msg.style.opacity = "0";
-                setTimeout(() => msg.remove(), 1000); // Remove after fade-out
-            });
-        }, 10000);
+    // Hide warning after 10 seconds
+    setTimeout(function () {
+        const messages = document.querySelectorAll('#form-messages');
+        messages.forEach(msg => {
+            msg.style.transition = "opacity 1s ease";
+            msg.style.opacity = "0";
+            setTimeout(() => msg.remove(), 1000);
+        });
+    }, 10000);
+
     function updateFormCount() {
         const totalForms = document.getElementById('id_items-TOTAL_FORMS');
         const itemRows = document.querySelectorAll('.item-row');
         totalForms.value = itemRows.length;
+    }
+
+    function updateOrderSummary() {
+        let subtotal = 0;
+
+        document.querySelectorAll('.item-row').forEach(row => {
+            const quantityInput = row.querySelector('input[name*="-quantity"]');
+            const priceInput = row.querySelector('input[name*="-price"]');
+
+            const quantity = parseInt(quantityInput?.value) || 0;
+            const price = parseFloat(priceInput?.value) || 0;
+
+            subtotal += quantity * price;
+        });
+
+        
+        const total = subtotal
+
+    
+        document.getElementById('total').textContent = `${total.toFixed(2)}`;
     }
 
     function addItem() {
@@ -166,6 +207,7 @@
         const firstRow = container.querySelector(".item-row");
         const newRow = firstRow.cloneNode(true);
 
+        // Update all input names and IDs
         newRow.querySelectorAll('input, select, textarea').forEach(input => {
             if (input.name && input.name.includes('items-')) {
                 input.name = input.name.replace(/items-\d+-/, `items-${formIdx}-`);
@@ -175,12 +217,15 @@
                     input.selectedIndex = 0;
                 } else if (input.type === 'number') {
                     input.value = '1';
+                } else if (input.name.includes('-price')) {
+                    input.value = '';
                 } else if (input.type !== 'hidden') {
                     input.value = '';
                 }
             }
         });
 
+        // Add remove button if not present
         if (!newRow.querySelector('.remove-btn')) {
             const removeBtn = document.createElement('button');
             removeBtn.type = 'button';
@@ -192,6 +237,20 @@
 
         container.appendChild(newRow);
         totalForms.value = formIdx + 1;
+
+        // Add event listeners to new inputs
+        const quantityInput = newRow.querySelector('input[name*="-quantity"]');
+        const priceInput = newRow.querySelector('input[name*="-price"]');
+
+        if (quantityInput) {
+            quantityInput.addEventListener('input', updateOrderSummary);
+        }
+
+        if (priceInput) {
+            priceInput.addEventListener('input', updateOrderSummary);
+        }
+
+        updateOrderSummary();
     }
 
     function removeItem(button) {
@@ -202,6 +261,7 @@
         if (itemRows.length > 1) {
             row.remove();
             updateFormIndices();
+            updateOrderSummary();
         } else {
             alert("You must have at least one item in the order.");
         }
@@ -224,8 +284,22 @@
         });
     }
 
+    // Initialize event listeners when page loads
     document.addEventListener('DOMContentLoaded', function () {
         updateFormCount();
+        updateOrderSummary();
+
+        // Add event listener to Add Item button
+        document.getElementById('add-item-btn').addEventListener('click', addItem);
+
+        // Add event listeners to existing form elements
+        document.querySelectorAll('input[name*="-quantity"]').forEach(input => {
+            input.addEventListener('input', updateOrderSummary);
+        });
+
+        document.querySelectorAll('input[name*="-price"]').forEach(input => {
+            input.addEventListener('input', updateOrderSummary);
+        });
     });
 </script>
 {% endblock %}

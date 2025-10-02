@@ -4,6 +4,8 @@ from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.db.models import Sum, Avg
+from django.utils import timezone
+from datetime import datetime
 
 from django.contrib.auth import login as auth_login, logout as auth_logout
 from ..models import (
@@ -157,21 +159,60 @@ def expense_form(request):
 
 @login_required
 def expense_list(request):
-    records = ExpenseRecord.objects.select_related("field").order_by("-date")
+    # Get date filters from request
+    start_date_str = request.GET.get('start_date')
+    end_date_str = request.GET.get('end_date')
+    
+    # Default to current month if no dates provided
+    today = timezone.now().date()
+    
+    try:
+        if start_date_str:
+            start_date = datetime.strptime(start_date_str, '%Y-%m-%d').date()
+        else:
+            start_date = today.replace(day=1)  # First day of current month
+    except (ValueError, TypeError):
+        start_date = today.replace(day=1)
+    
+    try:
+        if end_date_str:
+            end_date = datetime.strptime(end_date_str, '%Y-%m-%d').date()
+        else:
+            end_date = today  # Today as default end date
+    except (ValueError, TypeError):
+        end_date = today
+    
+    # Ensure start_date is before or equal to end_date
+    if start_date > end_date:
+        start_date, end_date = end_date, start_date
+    
+    # Filter records by date range
+    records = ExpenseRecord.objects.filter(
+        date__gte=start_date,
+        date__lte=end_date
+    ).select_related("field").order_by("-date")
 
     # Calculate stats for the cards
     total_amount = records.aggregate(Sum('amount'))['amount__sum'] or 0
     record_count = records.count()
     average_expense = records.aggregate(Avg('amount'))['amount__avg'] or 0
 
+    # Build date range description
+    if start_date == end_date:
+        date_range_description = f"for {start_date.strftime('%B %d, %Y')}"
+    else:
+        date_range_description = f"from {start_date.strftime('%B %d, %Y')} to {end_date.strftime('%B %d, %Y')}"
+
     context = {
         "records": records,
         "total_amount": total_amount,
         "record_count": record_count,
         "average_expense": round(average_expense, 2),
+        "start_date": start_date,
+        "end_date": end_date,
+        "date_range_description": date_range_description,
     }
     return render(request, "expenses/expense_list.html", context)
-
 
 @login_required
 def edit_expense_record(request, record_id):

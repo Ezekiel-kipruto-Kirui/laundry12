@@ -1,6 +1,6 @@
 from django import forms
 from django.core.exceptions import ValidationError
-from .models import FoodCategory, FoodItem, Order, HotelOrderItem,HotelExpenseField,HotelExpenseRecord
+from .models import FoodCategory, FoodItem, HotelOrder as Order, HotelOrderItem,HotelExpenseField,HotelExpenseRecord
 
 class FoodCategoryForm(forms.ModelForm):
     class Meta:
@@ -17,7 +17,7 @@ class FoodCategoryForm(forms.ModelForm):
 class FoodItemForm(forms.ModelForm):
     class Meta:
         model = FoodItem
-        fields = ['category', 'name', 'price', 'image', 'quantity', 'is_available']
+        fields = ['category', 'name', 'quantity', 'is_available']
         widgets = {
             'category': forms.Select(attrs={
                 'class': 'w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-white transition duration-200'
@@ -26,16 +26,7 @@ class FoodItemForm(forms.ModelForm):
                 'class': 'w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-white transition duration-200',
                 'placeholder': 'Enter food item name'
             }),
-          
-            'price': forms.NumberInput(attrs={
-                'class': 'w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-white transition duration-200',
-                'placeholder': 'Enter price',
-                'step': '0.01',
-                'min': '0'
-            }),
-            'image': forms.ClearableFileInput(attrs={
-                'class': 'w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-white transition duration-200'
-            }),
+            
             'quantity': forms.NumberInput(attrs={
                 'class': 'w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-white transition duration-200',
                 'placeholder': 'Enter quantity',
@@ -89,54 +80,35 @@ class FoodItemAvailabilityForm(forms.ModelForm):
 class OrderForm(forms.ModelForm):
     class Meta:
         model = Order
-        fields = ['order_status']
-        widgets = {
-            'order_status': forms.Select(attrs={
-                'class': 'w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition duration-200'
-            })
-        }
-
+        fields = []
+       
 
 class HotelOrderItemForm(forms.ModelForm):
     class Meta:
         model = HotelOrderItem
-        fields = ['food_item', 'quantity']
+        fields = ['food_item', 'quantity', 'price']
         widgets = {
             'food_item': forms.Select(attrs={
-                'class': 'w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition duration-200'
+                'class': 'w-full p-3 border border-gray-300 rounded-lg'
             }),
             'quantity': forms.NumberInput(attrs={
-                'class': 'w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition duration-200',
-                'min': '1',
-                'value': '1'
+                'class': 'w-full p-3 border border-gray-300 rounded-lg quantity-input',
+                'min': '1'
             }),
+            'price': forms.NumberInput(attrs={
+                'class': 'w-full p-3 border border-gray-300 rounded-lg price-input',
+                'step': '0.01',
+                'min': '0'
+            })
         }
-
+    
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        # Only show available food items with stock > 0
-        self.fields['food_item'].queryset = FoodItem.objects.filter(
-            is_available=True, 
-            quantity__gt=0  # This ensures only items with stock are shown
-        )
-
-    def clean_quantity(self):
-        quantity = self.cleaned_data.get('quantity')
-        if quantity < 1:
-            raise ValidationError("Quantity must be at least 1.")
-        return quantity
-
-    def clean(self):
-        cleaned_data = super().clean()
-        food_item = cleaned_data.get('food_item')
-        quantity = cleaned_data.get('quantity')
-
-        if food_item and quantity:
-            if food_item.quantity < quantity:
-                raise ValidationError(
-                    f"Only {food_item.quantity} portions of {food_item.name} are available."
-                )
-        return cleaned_data
+        # Make sure the price field is required and has initial value
+        if self.instance and self.instance.pk and self.instance.price:
+            self.initial['price'] = self.instance.price
+        elif not self.initial.get('price'):
+            self.initial['price'] = 0.00
 
 class BulkOrderForm(forms.Form):
     """Form for creating multiple order items at once"""

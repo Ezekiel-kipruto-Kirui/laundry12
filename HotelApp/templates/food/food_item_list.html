@@ -18,7 +18,7 @@
                 <!-- <th class="px-6 py-3 text-left text-sm font-semibold">Image</th> -->
                 <th class="px-6 py-3 text-left text-sm font-semibold">Name</th>
                 <th class="px-6 py-3 text-left text-sm font-semibold">Category</th>
-                <th class="px-6 py-3 text-left text-sm font-semibold">Price</th>
+                
                 <th class="px-6 py-3 text-left text-sm font-semibold">Status</th>
                 <th class="px-6 py-3 text-center text-sm font-semibold">Actions</th>
             </tr>
@@ -39,7 +39,7 @@
                 <td class="px-6 py-4 font-semibold text-gray-900">{{ item.name }}</td>
                 <td class="px-6 py-4 text-gray-600">{{ item.category.name }}</td>
                 
-                <td class="px-6 py-4 font-bold text-indigo-600">Ksh{{ item.price }}</td>
+               
                 <td class="px-6 py-4">
                     {% if item.is_available %}
                     <span class="px-3 py-1 text-xs font-medium bg-green-100 text-green-800 rounded-full">
