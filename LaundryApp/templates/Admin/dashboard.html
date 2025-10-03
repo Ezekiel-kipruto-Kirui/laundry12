@@ -371,9 +371,11 @@
             <div class="stat-content">
                 <div class="stat-label">Total Orders</div>
                 <div class="stat-value">{{ total_orders }}</div>
-                <div class="flex flex-row gap-2 text-xs">
+                <div class="flex sm:flex-col md:flex-col flex-row gap-2 text-xs">
+                    {% if user.is_superuser %}
                     <span class="text-yellow-600">{{ shop_a_data.total_orders }} Shop A total orders</span>
-                    | <span class="text-green-600">{{ shop_b_data.total_orders }} Shop B total orders</span>
+                    |<span class="text-green-600">{{ shop_b_data.total_orders }} Shop B total orders</span>
+                    {% endif %}
                 </div>
             </div>
         </div>
@@ -390,9 +392,11 @@
             <div class="stat-content">
                 <div class="stat-label">Pending</div>
                 <div class="stat-value">{{pending_orders}}</div>
-                <div class="flex flex-row gap-2 text-xs">
+                <div class="flex sm:flex-col md:flex-col flex-row gap-2 text-xs">
+                    {% if user.is_superuser %} 
                     <span class="text-yellow-600">{{ shop_a_data.pending_orders }} Shop A pending orders</span>
                     | <span class="text-green-600">{{ shop_b_data.pending_orders }} Shop B pending orders</span>
+                    {% endif %}
                 </div>
             </div>
         </div>
@@ -411,9 +415,11 @@
             <div class="stat-content">
                 <div class="stat-label">Completed</div>
                 <div class="stat-value">{{ completed_orders }}</div>
-                <div class="flex flex-row gap-2 text-xs">
+                <div class="flex sm:flex-col md:flex-col flex-row gap-2 text-xs">
+                    {% if user.is_superuser %}
                     <span class="text-yellow-600">{{ shop_a_data.completed_orders }} Shop A pending orders</span>
                     | <span class="text-green-600">{{ shop_b_data.completed_orders }} Shop B pending orders</span>
+                     {% endif %}
                 </div>
             </div>
         </div>

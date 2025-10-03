@@ -9,338 +9,10 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Laundry Orders Management</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-   
-    <style>
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
-
-        body {
-            font-family: 'Inter', sans-serif;
-        }
-
-        .compact-table {
-            border-collapse: separate;
-            border-spacing: 0;
-            width: 100%;
-        }
-
-        .compact-table th {
-            background-color: #f8fafc;
-            padding: 12px 8px;
-            font-weight: 600;
-            text-transform: uppercase;
-            font-size: 0.7rem;
-            color: #64748b;
-            border-bottom: 2px solid #e2e8f0;
-            white-space: nowrap;
-            text-align: center;
-            position: sticky;
-            top: 0;
-            z-index: 10;
-        }
-
-        .compact-table td {
-            padding: 10px 8px;
-            border-bottom: 1px solid #f1f5f9;
-            vertical-align: middle;
-            font-size: 0.8rem;
-            white-space: nowrap;
-            text-align: center;
-        }
-
-        .item-pill {
-            display: inline-block;
-            background-color: #f1f5f9;
-            border-radius: 4px;
-            padding: 4px 8px;
-            margin: 2px 0;
-            font-size: 0.7rem;
-            color: #475569;
-            white-space: nowrap;
-            max-width: 100px;
-            overflow: hidden;
-            text-overflow: ellipsis;
-        }
-
-        .dropdown-menu {
-            display: none;
-            position: absolute;
-            background: white;
-            border-radius: 8px;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-            padding: 8px 0;
-            z-index: 20;
-            min-width: 160px;
-        }
-
-        .dropdown:hover .dropdown-menu {
-            display: block;
-        }
-
-        .btn-primary {
-            background: linear-gradient(135deg, #e91e63, #d81b60);
-            box-shadow: 0 4px 6px -1px rgba(233, 30, 99, 0.3), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
-            transition: all 0.3s ease;
-            position: relative;
-            overflow: hidden;
-        }
-
-        .btn-primary:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 10px 15px -3px rgba(233, 30, 99, 0.3), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
-        }
-
-        .btn-primary:active {
-            transform: translateY(0);
-        }
-
-        .btn-secondary {
-            background: linear-gradient(135deg, #0ea5e9, #0284c7);
-            box-shadow: 0 4px 6px -1px rgba(14, 165, 233, 0.3), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
-            transition: all 0.3s ease;
-        }
-
-        .btn-secondary:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 10px 15px -3px rgba(14, 165, 233, 0.3), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
-        }
-
-        .stat-card {
-            background: linear-gradient(to bottom, #ffffff, #fafafa);
-            border-radius: 12px;
-            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
-            border: 1px solid rgba(229, 231, 235, 0.8);
-            transition: all 0.3s ease;
-            border-left: 4px solid;
-        }
-
-        .stat-card:hover {
-            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.08), 0 4px 6px -2px rgba(0, 0, 0, 0.03);
-            transform: translateY(-2px);
-        }
-
-        .filter-pill {
-            transition: all 0.2s;
-        }
-
-        .filter-pill:hover {
-            transform: translateY(-1px);
-            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
-        }
-
-        .action-btn {
-            padding: 6px;
-            border-radius: 6px;
-            transition: all 0.2s;
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-        }
-
-        .action-btn:hover {
-            transform: translateY(-1px);
-        }
-
-        .view-btn:hover {
-            background-color: #dbeafe;
-            color: #1d4ed8;
-        }
-
-        .edit-btn:hover {
-            background-color: #dcfce7;
-            color: #16a34a;
-        }
-
-        .delete-btn:hover {
-            background-color: #fee2e2;
-            color: #dc2626;
-        }
-
-        .loading-spinner {
-            display: none;
-            text-align: center;
-            padding: 2rem;
-        }
-
-        .status-updating {
-            opacity: 0.6;
-            pointer-events: none;
-        }
-
-        .checkbox-cell {
-            width: 40px;
-            text-align: center;
-        }
-
-        .bulk-actions-container {
-            display: none;
-            background: #f8fafc;
-            border: 1px solid #e2e8f0;
-            border-radius: 8px;
-            padding: 12px 16px;
-            margin-bottom: 16px;
-        }
-
-        .bulk-actions-container.show {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-        }
-
-        /* Modal Styles */
-        .modal-overlay {
-            display: none;
-            position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: rgba(0, 0, 0, 0.6);
-            z-index: 1000;
-            align-items: center;
-            justify-content: center;
-        }
-
-        .modal-overlay.active {
-            display: flex;
-        }
-
-        .modal-content {
-            background: white;
-            border-radius: 12px;
-            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
-            width: 90%;
-            max-width: 600px;
-            max-height: 90vh;
-            overflow-y: auto;
-            animation: modalSlideIn 0.3s ease-out;
-        }
-
-        @keyframes modalSlideIn {
-            from {
-                opacity: 0;
-                transform: translateY(-20px) scale(0.95);
-            }
-
-            to {
-                opacity: 1;
-                transform: translateY(0) scale(1);
-            }
-        }
-
-        .modal-header {
-            padding: 20px 24px 0;
-            border-bottom: 1px solid #e5e7eb;
-        }
-
-        .modal-body {
-            padding: 24px;
-        }
-
-        .modal-footer {
-            padding: 0 24px 24px;
-            display: flex;
-            gap: 12px;
-            justify-content: flex-end;
-        }
-
-        .form-group {
-            margin-bottom: 20px;
-        }
-
-        .form-label {
-            display: block;
-            margin-bottom: 6px;
-            font-weight: 500;
-            color: #374151;
-            font-size: 0.875rem;
-        }
-
-        .form-input {
-            width: 100%;
-            padding: 10px 12px;
-            border: 1px solid #d1d5db;
-            border-radius: 6px;
-            font-size: 0.875rem;
-            transition: all 0.2s;
-        }
-
-        .form-input:focus {
-            outline: none;
-            border-color: #3b82f6;
-            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
-        }
-
-        .form-select {
-            width: 100%;
-            padding: 10px 12px;
-            border: 1px solid #d1d5db;
-            border-radius: 6px;
-            font-size: 0.875rem;
-            background-color: white;
-            transition: all 0.2s;
-        }
-
-        .form-select:focus {
-            outline: none;
-            border-color: #3b82f6;
-            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
-        }
-
-        .items-container {
-            border: 1px solid #e5e7eb;
-            border-radius: 6px;
-            overflow: hidden;
-        }
-
-        .item-row {
-            display: grid;
-            grid-template-columns: 1fr 1fr 1fr auto;
-            gap: 12px;
-            padding: 16px;
-            border-bottom: 1px solid #e5e7eb;
-            align-items: end;
-        }
-
-        .item-row:last-child {
-            border-bottom: none;
-        }
-
-        .remove-item {
-            background: #ef4444;
-            color: white;
-            border: none;
-            border-radius: 4px;
-            padding: 8px 12px;
-            cursor: pointer;
-            font-size: 0.75rem;
-            transition: background 0.2s;
-        }
-
-        .remove-item:hover {
-            background: #dc2626;
-        }
-
-        .add-item {
-            background: #10b981;
-            color: white;
-            border: none;
-            border-radius: 4px;
-            padding: 10px 16px;
-            cursor: pointer;
-            font-size: 0.875rem;
-            transition: background 0.2s;
-            display: inline-flex;
-            align-items: center;
-            gap: 6px;
-        }
-
-        .add-item:hover {
-            background: #059669;
-        }
-    </style>
+    <script src="https://cdn.tailwindcss.com"></script>
 </head>
 
-<body class="min-h-screen bg-gray-50 font-inter">
+<body class="min-h-screen bg-gray-50 font-sans">
     <div class="max-w-full mx-auto p-4 lg:p-6">
         <!-- Header -->
         <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
@@ -357,14 +29,15 @@
             </div>
             <div class="flex flex-wrap gap-3">
                 <!-- Export Button -->
-                <div class="dropdown relative">
-                    <button
-                        class="btn-secondary inline-flex items-center gap-2 px-4 py-2.5 text-white rounded-lg font-medium">
+                <div class="relative">
+                    <button id="exportDropdownBtn"
+                        class="inline-flex items-center gap-2 px-4 py-2.5 bg-gradient-to-r from-cyan-500 to-blue-500 text-white rounded-lg font-medium shadow-md hover:shadow-lg transition-all duration-200">
                         <i class="fas fa-download"></i>
                         <span>Export</span>
                         <i class="fas fa-chevron-down text-xs"></i>
                     </button>
-                    <div class="dropdown-menu mt-1 right-0">
+                    <div id="exportDropdown"
+                        class="absolute right-0 mt-1 hidden bg-white rounded-lg shadow-lg py-2 z-20 w-48">
                         <a class="flex items-center gap-2 px-4 py-2 text-gray-700 hover:bg-gray-100 transition-colors duration-150 export-btn"
                             href="#" data-format="csv">
                             <i class="fas fa-file-csv text-green-600"></i> CSV Format
@@ -377,7 +50,7 @@
                 </div>
 
                 <a href="{% url 'laundry:createorder' %}"
-                    class="btn-primary inline-flex items-center gap-2 px-4 py-2.5 text-white rounded-lg font-medium">
+                    class="inline-flex items-center gap-2 px-4 py-2.5 bg-gradient-to-r from-pink-500 to-rose-500 text-white rounded-lg font-medium shadow-md hover:shadow-lg transition-all duration-200">
                     <i class="fas fa-plus-circle"></i>
                     <span>New Order</span>
                 </a>
@@ -385,25 +58,27 @@
         </div>
 
         <!-- Bulk Actions Container -->
-        <div id="bulkActionsContainer" class="bulk-actions-container">
-            <span id="selectedCount" class="text-sm font-medium text-gray-700">0 orders selected</span>
-            <button id="bulkCompleteBtn"
-                class="px-4 py-2 bg-green-500 text-white rounded-lg text-sm font-medium hover:bg-green-600 transition-colors">
-                <i class="fas fa-check-circle mr-2"></i>Mark Selected as Completed
-            </button>
-            <button id="bulkDeliverBtn"
-                class="px-4 py-2 bg-purple-500 text-white rounded-lg text-sm font-medium hover:bg-purple-600 transition-colors">
-                <i class="fas fa-truck mr-2"></i>Mark Selected as Delivered
-            </button>
-            <button id="clearSelectionBtn"
-                class="px-4 py-2 bg-gray-500 text-white rounded-lg text-sm font-medium hover:bg-gray-600 transition-colors">
-                <i class="fas fa-times mr-2"></i>Clear Selection
-            </button>
+        <div id="bulkActionsContainer" class="hidden bg-gray-50 border border-gray-200 rounded-lg p-3 mb-4">
+            <div class="flex flex-wrap items-center gap-4">
+                <span id="selectedCount" class="text-sm font-medium text-gray-700">0 orders selected</span>
+                <button id="bulkCompleteBtn"
+                    class="px-4 py-2 bg-green-500 text-white rounded-lg text-sm font-medium hover:bg-green-600 transition-colors">
+                    <i class="fas fa-check-circle mr-2"></i>Mark Selected as Completed
+                </button>
+                <button id="bulkDeliverBtn"
+                    class="px-4 py-2 bg-purple-500 text-white rounded-lg text-sm font-medium hover:bg-purple-600 transition-colors">
+                    <i class="fas fa-truck mr-2"></i>Mark Selected as Delivered
+                </button>
+                <button id="clearSelectionBtn"
+                    class="px-4 py-2 bg-gray-500 text-white rounded-lg text-sm font-medium hover:bg-gray-600 transition-colors">
+                    <i class="fas fa-times mr-2"></i>Clear Selection
+                </button>
+            </div>
         </div>
 
         <!-- Stats Overview -->
         <div class="grid grid-cols-1 md:grid-cols-3 gap-5 mb-6" id="statsContainer">
-            <div class="stat-card p-5 border-l-blue-500">
+            <div class="bg-white p-5 rounded-xl shadow-sm border border-gray-100 border-l-4 border-l-blue-500">
                 <div class="flex flex-col items-center text-center w-full">
                     <div class="p-3 bg-blue-100 rounded-xl mb-3">
                         <i class="fas fa-clipboard-check text-blue-600 text-xl"></i>
@@ -414,7 +89,7 @@
                 </div>
             </div>
 
-            <div class="stat-card p-5 border-l-amber-500">
+            <div class="bg-white p-5 rounded-xl shadow-sm border border-gray-100 border-l-4 border-l-amber-500">
                 <div class="flex flex-col items-center text-center w-full">
                     <div class="p-3 bg-amber-100 rounded-xl mb-3">
                         <i class="fas fa-clock text-amber-600 text-xl"></i>
@@ -425,7 +100,7 @@
                 </div>
             </div>
 
-            <div class="stat-card p-5 border-l-green-500">
+            <div class="bg-white p-5 rounded-xl shadow-sm border border-gray-100 border-l-4 border-l-green-500">
                 <div class="flex flex-col items-center text-center w-full">
                     <div class="p-3 bg-green-100 rounded-xl mb-3">
                         <i class="fas fa-check-circle text-green-600 text-xl"></i>
@@ -444,7 +119,7 @@
                 <div class="flex flex-wrap gap-3">
                     <!-- All Orders Filter -->
                     <button type="button" data-payment=""
-                        class="filter-pill px-4 py-2 bg-blue-100 text-blue-700 shadow-sm rounded-lg text-sm font-medium flex items-center active-filter">
+                        class="px-4 py-2 bg-blue-100 text-blue-700 shadow-sm rounded-lg text-sm font-medium flex items-center active-filter">
                         Active Orders
                     </button>
 
@@ -453,7 +128,7 @@
                         <span class="text-sm text-gray-500 font-medium">Payment:</span>
                         {% for payment_value, payment_label in payment_status_choices %}
                         <button type="button" data-payment="{{ payment_value }}"
-                            class="filter-pill px-3 py-1.5 bg-gray-100 text-gray-700 rounded-full text-sm font-medium payment-filter">
+                            class="px-3 py-1.5 bg-gray-100 text-gray-700 rounded-full text-sm font-medium payment-filter">
                             {{ payment_label }}
                         </button>
                         {% endfor %}
@@ -463,11 +138,11 @@
                     <div class="flex flex-wrap items-center gap-2">
                         <span class="text-sm text-gray-500 font-medium">Actions:</span>
                         <button type="button" data-action="mark-completed"
-                            class="filter-pill px-3 py-1.5 bg-green-100 text-green-700 rounded-full text-sm font-medium action-filter">
+                            class="px-3 py-1.5 bg-green-100 text-green-700 rounded-full text-sm font-medium action-filter">
                             <i class="fas fa-check-circle mr-1"></i> Mark Completed
                         </button>
                         <button type="button" data-action="mark-delivered"
-                            class="filter-pill px-3 py-1.5 bg-purple-100 text-purple-700 rounded-full text-sm font-medium action-filter">
+                            class="px-3 py-1.5 bg-purple-100 text-purple-700 rounded-full text-sm font-medium action-filter">
                             <i class="fas fa-truck mr-1"></i> Mark Delivered
                         </button>
                     </div>
@@ -483,10 +158,10 @@
         <!-- Orders Table -->
         <div class="bg-white rounded-xl overflow-hidden shadow-lg">
             <div class="overflow-x-auto">
-                <table class="compact-table w-full">
+                <table class="w-full">
                     <thead>
                         <tr class="bg-gray-50">
-                            <th class="checkbox-cell">
+                            <th class="w-10 text-center py-3 px-4 font-semibold text-gray-700 text-xs">
                                 <input type="checkbox" id="selectAllCheckbox"
                                     class="h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500">
                             </th>
@@ -512,7 +187,7 @@
             </div>
 
             <!-- Loading Spinner -->
-            <div id="loadingSpinner" class="loading-spinner">
+            <div id="loadingSpinner" class="hidden text-center p-8">
                 <div class="inline-flex items-center">
                     <i class="fas fa-spinner fa-spin text-2xl text-blue-500 mr-3"></i>
                     <span class="text-gray-600">Loading orders...</span>
@@ -527,45 +202,56 @@
     </div>
 
     <!-- Update Order Modal -->
-    <div id="updateOrderModal" class="modal-overlay">
-        <div class="modal-content">
-            <div class="modal-header">
+    <div id="updateOrderModal"
+        class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        <div class="bg-white rounded-xl shadow-xl w-full max-w-4xl max-h-[90vh] overflow-y-auto">
+            <div class="p-6 border-b border-gray-200">
                 <h2 class="text-xl font-bold text-gray-900">Update Order</h2>
-                <button type="button" id="closeModal" class="absolute top-4 right-4 text-gray-400 hover:text-gray-600">
+                <button type="button" id="closeModal" class="absolute top-6 right-6 text-gray-400 hover:text-gray-600">
                     <i class="fas fa-times text-xl"></i>
                 </button>
             </div>
             <form id="updateOrderForm">
-                <div class="modal-body">
+                <div class="p-6">
                     <input type="hidden" id="updateOrderId" name="order_id">
                     <input type="hidden" name="csrfmiddlewaretoken" value="{{ csrf_token }}">
 
                     <!-- Customer Information -->
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-                        <div class="form-group">
-                            <label class="form-label" for="updateCustomerName">Customer Name</label>
-                            <input type="text" id="updateCustomerName" name="name" class="form-input" required>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1"
+                                for="updateCustomerName">Customer Name</label>
+                            <input type="text" id="updateCustomerName" name="name"
+                                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                required>
                         </div>
-                        <div class="form-group">
-                            <label class="form-label" for="updateCustomerPhone">Phone Number</label>
-                            <input type="text" id="updateCustomerPhone" name="phone" class="form-input" required>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1" for="updateCustomerPhone">Phone
+                                Number</label>
+                            <input type="text" id="updateCustomerPhone" name="phone"
+                                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                required>
                         </div>
                     </div>
 
                     <!-- Order Information -->
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-                        <div class="form-group">
-                            <label class="form-label" for="updateOrderStatus">Order Status</label>
-                            <select id="updateOrderStatus" name="order_status" class="form-select">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1" for="updateOrderStatus">Order
+                                Status</label>
+                            <select id="updateOrderStatus" name="order_status"
+                                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
                                 <option value="pending">Pending</option>
                                 <option value="processing">Processing</option>
                                 <option value="Completed">Completed</option>
                                 <option value="Delivered_picked">Delivered</option>
                             </select>
                         </div>
-                        <div class="form-group">
-                            <label class="form-label" for="updatePaymentStatus">Payment Status</label>
-                            <select id="updatePaymentStatus" name="payment_status" class="form-select">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1"
+                                for="updatePaymentStatus">Payment Status</label>
+                            <select id="updatePaymentStatus" name="payment_status"
+                                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
                                 <option value="pending">Pending</option>
                                 <option value="partial">Partial</option>
                                 <option value="completed">Completed</option>
@@ -575,30 +261,56 @@
 
                     <!-- Payment Information -->
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-                        <div class="form-group">
-                            <label class="form-label" for="updateAmountPaid">Amount Paid</label>
-                            <input type="number" id="updateAmountPaid" name="amount_paid" class="form-input" step="0.01"
-                                min="0">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1" for="updateAmountPaid">Amount
+                                Paid</label>
+                            <input type="number" id="updateAmountPaid" name="amount_paid"
+                                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                step="0.01" min="0">
                         </div>
-                        <div class="form-group">
-                            <label class="form-label" for="updateTotalPrice">Total Price</label>
-                            <input type="number" id="updateTotalPrice" name="total_price" class="form-input" step="0.01"
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1" for="updateTotalPrice">Total
+                                Price</label>
+                            <input type="number" id="updateTotalPrice" name="total_price"
+                                class="w-full px-3 py-2 border border-gray-300 rounded-md bg-gray-100" step="0.01"
                                 min="0" readonly>
                         </div>
                     </div>
 
+                    <!-- Balance Information -->
+                    <div class="mb-6">
+                        <div class="bg-blue-50 p-4 rounded-lg">
+                            <h3 class="font-medium text-blue-800 mb-2">Payment Summary</h3>
+                            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                <div>
+                                    <p class="text-sm text-blue-700">Total Amount:</p>
+                                    <p class="text-lg font-bold text-blue-900" id="modalTotalAmount">KSh 0.00</p>
+                                </div>
+                                <div>
+                                    <p class="text-sm text-blue-700">Amount Paid:</p>
+                                    <p class="text-lg font-bold text-blue-900" id="modalAmountPaid">KSh 0.00</p>
+                                </div>
+                                <div>
+                                    <p class="text-sm text-blue-700">Balance:</p>
+                                    <p class="text-lg font-bold text-blue-900" id="modalBalance">KSh 0.00</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
                     <!-- Order Items -->
-                    <div class="form-group">
-                        <label class="form-label">Order Items</label>
-                        <div id="updateItemsContainer" class="items-container">
+                    <div class="mb-6">
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Order Items</label>
+                        <div id="updateItemsContainer" class="border border-gray-300 rounded-md overflow-hidden">
                             <!-- Items will be dynamically added here -->
                         </div>
-                        <button type="button" id="addItemBtn" class="add-item mt-3">
+                        <button type="button" id="addItemBtn"
+                            class="mt-3 inline-flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors">
                             <i class="fas fa-plus"></i> Add Item
                         </button>
                     </div>
                 </div>
-                <div class="modal-footer">
+                <div class="p-6 border-t border-gray-200 flex justify-end gap-3">
                     <button type="button" id="cancelUpdate"
                         class="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors">
                         Cancel
@@ -612,6 +324,118 @@
         </div>
     </div>
 
+    <!-- Receipt Modal -->
+    <div id="receiptModal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        <div class="bg-white rounded-xl shadow-xl w-full max-w-md">
+            <div class="p-6 border-b border-gray-200">
+                <button type="button" id="closeReceiptModal"
+                    class="absolute top-6 right-6 text-gray-400 hover:text-gray-600">
+                    <i class="fas fa-times text-xl"></i>
+                </button>
+            </div>
+            <div class="p-6">
+                <div id="receiptContent" class="bg-white p-6 border border-gray-300">
+                    <div class="text-center mb-4">
+                        <h3 class="text-lg font-bold">CLEAN PAGE LAUNDRY</h3>
+                        <p class="text-sm text-gray-600">Thank you for your business!</p>
+                    </div>
+                    <div class="border-t border-b border-gray-300 py-3 mb-3">
+                        <div class="flex justify-between mb-2">
+                            <span class="font-medium">Order Code:</span>
+                            <span id="receiptOrderCode">-</span>
+                        </div>
+                        <div class="flex justify-between mb-2">
+                            <span class="font-medium">Date:</span>
+                            <span id="receiptDate">-</span>
+                        </div>
+                    </div>
+                    <div class="mb-4">
+                        <h4 class="font-medium mb-2">Customer Details:</h4>
+                        <p id="receiptCustomerName" class="text-sm">-</p>
+                        <p id="receiptCustomerPhone" class="text-sm">-</p>
+                    </div>
+                    <div class="mb-4">
+                        <h4 class="font-medium mb-2">Order Summary:</h4>
+                        <div id="receiptItems" class="text-sm">
+                            <!-- Items will be added here -->
+                        </div>
+                    </div>
+                    <div class="border-t border-gray-300 pt-3">
+                        <div class="flex justify-between font-medium">
+                            <span>Total Amount:</span>
+                            <span id="receiptTotalAmount">KSh 0.00</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span>Amount Paid:</span>
+                            <span id="receiptAmountPaid">KSh 0.00</span>
+                        </div>
+                        <div class="flex justify-between font-bold border-t border-gray-300 mt-2 pt-2">
+                            <span>Balance:</span>
+                            <span id="receiptBalance">KSh 0.00</span>
+                        </div>
+
+                    </div>
+                </div>
+                <div class="mt-6 flex justify-end gap-3">
+                    <button type="button" id="cancelPrint"
+                        class="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors">
+                        Cancel
+                    </button>
+                    <button type="button" id="printReceiptBtn"
+                        class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
+                        <i class="fas fa-print mr-2"></i> Print Receipt
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Payment Complete Modal -->
+    <div id="paymentCompleteModal"
+        class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        <div class="bg-white rounded-xl shadow-xl w-full max-w-md">
+            <div class="p-6 border-b border-gray-200">
+                <h2 class="text-xl font-bold text-gray-900">Complete Payment</h2>
+                <button type="button" id="closePaymentModal"
+                    class="absolute top-6 right-6 text-gray-400 hover:text-gray-600">
+                    <i class="fas fa-times text-xl"></i>
+                </button>
+            </div>
+            <div class="p-6">
+                <div class="mb-4">
+                    <p class="text-gray-700 mb-4">Are you sure you want to mark this payment as complete? This will add
+                        the remaining balance to the amount paid.</p>
+                    <div class="bg-blue-50 p-4 rounded-lg">
+                        <div class="grid grid-cols-2 gap-4">
+                            <div>
+                                <p class="text-sm text-blue-700">Current Amount Paid:</p>
+                                <p class="text-lg font-bold text-blue-900" id="currentAmountPaid">KSh 0.00</p>
+                            </div>
+                            <div>
+                                <p class="text-sm text-blue-700">Balance to Add:</p>
+                                <p class="text-lg font-bold text-blue-900" id="balanceToAdd">KSh 0.00</p>
+                            </div>
+                            <div class="col-span-2">
+                                <p class="text-sm text-blue-700">New Total Paid:</p>
+                                <p class="text-lg font-bold text-blue-900" id="newTotalPaid">KSh 0.00</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="flex justify-end gap-3">
+                    <button type="button" id="cancelPayment"
+                        class="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors">
+                        Cancel
+                    </button>
+                    <button type="button" id="confirmPaymentComplete"
+                        class="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors">
+                        <i class="fas fa-check-circle mr-2"></i> Complete Payment
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <script>
         class OrderManager {
             constructor() {
@@ -621,13 +445,13 @@
                     search: ''
                 };
                 this.selectedOrders = new Set();
+                this.currentOrderForPayment = null;
                 this.init();
             }
 
             init() {
                 this.bindEvents();
                 this.loadOrders();
-                this.startAutoRefresh();
             }
 
             bindEvents() {
@@ -669,12 +493,18 @@
                     this.loadOrders();
                 });
 
+                // Export dropdown
+                document.getElementById('exportDropdownBtn').addEventListener('click', () => {
+                    document.getElementById('exportDropdown').classList.toggle('hidden');
+                });
+
                 // Export buttons
                 document.querySelectorAll('.export-btn').forEach(btn => {
                     btn.addEventListener('click', (e) => {
                         e.preventDefault();
                         const format = e.target.getAttribute('data-format');
                         this.exportOrders(format);
+                        document.getElementById('exportDropdown').classList.add('hidden');
                     });
                 });
 
@@ -714,10 +544,48 @@
                     this.addItemRow();
                 });
 
-                // Close modal when clicking outside
+                // Receipt modal events
+                document.getElementById('closeReceiptModal').addEventListener('click', () => {
+                    this.closeReceiptModal();
+                });
+
+                document.getElementById('cancelPrint').addEventListener('click', () => {
+                    this.closeReceiptModal();
+                });
+
+                document.getElementById('printReceiptBtn').addEventListener('click', () => {
+                    this.printReceipt();
+                });
+
+                // Payment modal events
+                document.getElementById('closePaymentModal').addEventListener('click', () => {
+                    this.closePaymentModal();
+                });
+
+                document.getElementById('cancelPayment').addEventListener('click', () => {
+                    this.closePaymentModal();
+                });
+
+                document.getElementById('confirmPaymentComplete').addEventListener('click', () => {
+                    this.confirmPaymentComplete();
+                });
+
+                // Close modals when clicking outside
                 document.getElementById('updateOrderModal').addEventListener('click', (e) => {
                     if (e.target.id === 'updateOrderModal') {
                         this.closeModal();
+                    }
+                });
+
+                document.getElementById('receiptModal').addEventListener('click', (e) => {
+                    if (e.target.id === 'receiptModal') {
+                        this.closeReceiptModal();
+                    }
+                });
+
+                document.getElementById('paymentCompleteModal').addEventListener('click', (e) => {
+                    if (e.target.id === 'paymentCompleteModal') {
+                        this.closePaymentModal();
                     }
                 });
 
@@ -733,6 +601,20 @@
                         const button = e.target.closest('.edit-order-btn');
                         const orderId = button.getAttribute('data-order-id');
                         this.openEditModal(orderId);
+                    }
+
+                    // Print receipt buttons
+                    if (e.target.closest('.print-receipt-btn')) {
+                        const button = e.target.closest('.print-receipt-btn');
+                        const orderId = button.getAttribute('data-order-id');
+                        this.openReceiptModal(orderId);
+                    }
+
+                    // Mark payment complete buttons
+                    if (e.target.closest('.mark-payment-complete-btn')) {
+                        const button = e.target.closest('.mark-payment-complete-btn');
+                        const orderId = button.getAttribute('data-order-id');
+                        this.openPaymentCompleteModal(orderId);
                     }
 
                     // Update status buttons
@@ -757,34 +639,154 @@
                         this.loadOrders();
                     }
 
-                    // Dropdown menus
-                    if (e.target.closest('.dropdown > button')) {
-                        const button = e.target.closest('.dropdown > button');
+                    // Close dropdowns when clicking outside
+                    if (!e.target.closest('.relative')) {
+                        document.querySelectorAll('.absolute').forEach(menu => {
+                            if (!menu.classList.contains('hidden')) {
+                                menu.classList.add('hidden');
+                            }
+                        });
+                    }
+                });
+
+                // Close dropdowns when clicking on dropdown buttons
+                document.addEventListener('click', (e) => {
+                    if (e.target.closest('.relative > button')) {
+                        const button = e.target.closest('.relative > button');
                         const dropdown = button.parentElement;
-                        const menu = dropdown.querySelector('.dropdown-menu');
+                        const menu = dropdown.querySelector('.absolute');
 
                         // Close all other dropdowns
-                        document.querySelectorAll('.dropdown-menu').forEach(otherMenu => {
-                            if (otherMenu !== menu) {
-                                otherMenu.style.display = 'none';
+                        document.querySelectorAll('.absolute').forEach(otherMenu => {
+                            if (otherMenu !== menu && !otherMenu.classList.contains('hidden')) {
+                                otherMenu.classList.add('hidden');
                             }
                         });
 
                         // Toggle current dropdown
-                        menu.style.display = menu.style.display === 'block' ? 'none' : 'block';
-                    } else {
-                        // Close dropdowns when clicking outside
-                        document.querySelectorAll('.dropdown-menu').forEach(menu => {
-                            menu.style.display = 'none';
-                        });
+                        menu.classList.toggle('hidden');
                     }
                 });
             }
+
+            async openPaymentCompleteModal(orderId) {
+                try {
+                    const response = await fetch(`/Laundry/get-order-details/${orderId}`, {
+                        headers: {
+                            'X-Requested-With': 'XMLHttpRequest'
+                        }
+                    });
+
+                    if (!response.ok) throw new Error('Failed to fetch order details');
+
+                    const data = await response.json();
+
+                    if (data.success) {
+                        this.currentOrderForPayment = data.order;
+                        this.populatePaymentCompleteModal(data.order);
+                        this.showPaymentModal();
+                    } else {
+                        throw new Error(data.message || 'Failed to load order details');
+                    }
+                } catch (error) {
+                    console.error('Error loading order details:', error);
+                    this.showMessage('Failed to load order details', 'error');
+                }
+            }
+
+            populatePaymentCompleteModal(order) {
+                const currentAmountPaid = order.amount_paid || 0;
+                const balance = order.balance || 0;
+                const newTotalPaid = currentAmountPaid + balance;
+
+                document.getElementById('currentAmountPaid').textContent = `KSh ${currentAmountPaid.toLocaleString()}`;
+                document.getElementById('balanceToAdd').textContent = `KSh ${balance.toLocaleString()}`;
+                document.getElementById('newTotalPaid').textContent = `KSh ${newTotalPaid.toLocaleString()}`;
+            }
+
+            async confirmPaymentComplete() {
+                if (!this.currentOrderForPayment) return;
+
+                try {
+                    // Get the complete order details first to ensure we have all data
+                    const response = await fetch(`/Laundry/get-order-details/${this.currentOrderForPayment.id}`, {
+                        headers: {
+                            'X-Requested-With': 'XMLHttpRequest'
+                        }
+                    });
+
+                    if (!response.ok) throw new Error('Failed to fetch order details');
+
+                    const data = await response.json();
+
+                    if (data.success) {
+                        const order = data.order;
+                        const formData = new FormData();
+                        formData.append('csrfmiddlewaretoken', this.getCSRFToken());
+                        formData.append('order_id', order.id);
+
+                        // Preserve all existing data
+                        formData.append('name', order.customer.name || '');
+                        formData.append('phone', order.customer.phone || '');
+                        formData.append('order_status', order.order_status || 'pending');
+                        formData.append('payment_status', 'completed');
+
+                        // Set amount_paid to total_price to complete the payment
+                        formData.append('amount_paid', order.total_price);
+                        formData.append('total_price', order.total_price);
+
+                        // Add all items to preserve them
+                        if (order.items && order.items.length > 0) {
+                            order.items.forEach((item, index) => {
+                                formData.append(`items-${index}-id`, item.id || '');
+                                formData.append(`items-${index}-itemname`, item.itemname || '');
+                                formData.append(`items-${index}-servicetype`, item.servicetype || '');
+                                formData.append(`items-${index}-itemtype`, item.itemtype || '');
+                                formData.append(`items-${index}-unit_price`, item.unit_price || 0);
+                                formData.append(`items-${index}-itemcondition`, item.itemcondition || '');
+                            });
+                        }
+
+                        const updateResponse = await fetch('/Laundry/update-order/', {
+                            method: 'POST',
+                            body: formData,
+                            headers: {
+                                'X-Requested-With': 'XMLHttpRequest',
+                                'X-CSRFToken': this.getCSRFToken()
+                            }
+                        });
+
+                        const updateData = await updateResponse.json();
+
+                        if (updateData.success) {
+                            this.showMessage('Payment marked as complete successfully', 'success');
+                            this.closePaymentModal();
+                            this.loadOrders();
+                        } else {
+                            throw new Error(updateData.message || 'Failed to complete payment');
+                        }
+                    } else {
+                        throw new Error('Failed to load order details for update');
+                    }
+                } catch (error) {
+                    console.error('Error completing payment:', error);
+                    this.showMessage(error.message || 'Failed to complete payment', 'error');
+                }
+            }
+
+            showPaymentModal() {
+                document.getElementById('paymentCompleteModal').classList.remove('hidden');
+            }
+
+            closePaymentModal() {
+                document.getElementById('paymentCompleteModal').classList.add('hidden');
+                this.currentOrderForPayment = null;
+            }
+
             async openEditModal(orderId) {
                 try {
                     this.showLoading();
 
-                    // Use the correct URL pattern - fix this line
                     const response = await fetch(`/Laundry/get-order-details/${orderId}`, {
                         headers: {
                             'X-Requested-With': 'XMLHttpRequest'
@@ -808,8 +810,7 @@
                     this.hideLoading();
                 }
             }
-        
-            
+
             async submitUpdateForm() {
                 try {
                     const formData = new FormData(document.getElementById('updateOrderForm'));
@@ -817,8 +818,6 @@
                     // Add CSRF token
                     const csrfToken = this.getCSRFToken();
                     formData.append('csrfmiddlewaretoken', csrfToken);
-
-                    console.log('DEBUG: Submitting update form...');
 
                     const response = await fetch('/Laundry/update-order/', {
                         method: 'POST',
@@ -829,20 +828,14 @@
                         }
                     });
 
-                    console.log('DEBUG: Response status:', response.status);
-                    console.log('DEBUG: Response headers:', response.headers);
-
                     // Check if response is JSON
                     const contentType = response.headers.get('content-type');
                     if (!contentType || !contentType.includes('application/json')) {
-                        // If not JSON, get the text to see what's returned
                         const text = await response.text();
-                        console.error('DEBUG: Non-JSON response:', text.substring(0, 500));
-                        throw new Error(`Server returned HTML instead of JSON. Status: ${response.status}. This usually means the URL is wrong or there's a server error.`);
+                        throw new Error(`Server returned HTML instead of JSON. Status: ${response.status}`);
                     }
 
                     const data = await response.json();
-                    console.log('DEBUG: Response data:', data);
 
                     if (!response.ok) {
                         throw new Error(data.message || `HTTP error! status: ${response.status}`);
@@ -851,7 +844,7 @@
                     if (data.success) {
                         this.showMessage(data.message, 'success');
                         this.closeModal();
-                        this.loadOrders(); // Refresh the table
+                        this.loadOrders();
                     } else {
                         throw new Error(data.message || 'Failed to update order');
                     }
@@ -860,53 +853,59 @@
                     this.showMessage(error.message || 'Failed to update order', 'error');
                 }
             }
-            
-            // Update the addItemRow method to handle dynamic form fields better
+
             addItemRow(item = {}, index = null) {
                 const itemsContainer = document.getElementById('updateItemsContainer');
                 const currentItemCount = itemsContainer.children.length;
                 const itemIndex = index !== null ? index : currentItemCount;
 
                 const itemRow = document.createElement('div');
-                itemRow.className = 'item-row';
+                itemRow.className = 'grid grid-cols-1 md:grid-cols-4 gap-4 p-4 border-b border-gray-200 last:border-b-0';
                 itemRow.innerHTML = `
-        <div>
-            <label class="form-label">Item Name</label>
-            <input type="text" name="items-${itemIndex}-itemname" 
-                   value="${item.itemname || ''}" 
-                   class="form-input" 
-                   placeholder="Enter item name" 
-                   required>
-        </div>
-        <div>
-            <label class="form-label">Service Type</label>
-            <input type="text" name="items-${itemIndex}-servicetype" 
-                   value="${item.servicetype || ''}" 
-                   class="form-input" 
-                   placeholder="e.g., Wash & Fold" 
-                   required>
-        </div>
-        <div>
-            <label class="form-label">Price</label>
-            <input type="number" name="items-${itemIndex}-unit_price" 
-                   value="${item.unit_price || ''}" 
-                   class="form-input" 
-                   step="0.01" 
-                   min="0" 
-                   placeholder="0.00" 
-                   required>
-        </div>
-        <button type="button" class="remove-item">
-            <i class="fas fa-trash"></i>
-        </button>
-    `;
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Item Name</label>
+                        <input type="text" name="items-${itemIndex}-itemname" 
+                               value="${item.itemname || ''}" 
+                               class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" 
+                               placeholder="Enter item name" 
+                               required>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Service Type</label>
+                        <input type="text" name="items-${itemIndex}-servicetype" 
+                               value="${item.servicetype || ''}" 
+                               class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" 
+                               placeholder="e.g., Wash & Fold" 
+                               required>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Item Type</label>
+                        <input type="text" name="items-${itemIndex}-itemtype" 
+                               value="${item.itemtype || ''}" 
+                               class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" 
+                               placeholder="e.g., Shirt" 
+                               required>
+                    </div>
+                    <div class="flex items-end">
+                        <div class="flex-1 mr-2">
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Price</label>
+                            <input type="number" name="items-${itemIndex}-unit_price" 
+                                   value="${item.unit_price || ''}" 
+                                   class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" 
+                                   step="0.01" 
+                                   min="0" 
+                                   placeholder="0.00" 
+                                   required>
+                        </div>
+                        <button type="button" class="px-3 py-2 bg-red-500 text-white rounded-md hover:bg-red-600 transition-colors remove-item">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </div>
+                `;
                 itemsContainer.appendChild(itemRow);
             }
 
-         
-            // Update the populateEditForm method
             populateEditForm(order) {
-                // Set basic order information
                 document.getElementById('updateOrderId').value = order.id;
                 document.getElementById('updateCustomerName').value = order.customer.name || '';
                 document.getElementById('updateCustomerPhone').value = order.customer.phone || '';
@@ -915,61 +914,100 @@
                 document.getElementById('updateAmountPaid').value = order.amount_paid || 0;
                 document.getElementById('updateTotalPrice').value = order.total_price || 0;
 
-                // Clear existing items
+                document.getElementById('modalTotalAmount').textContent = `KSh ${order.total_price ? order.total_price.toLocaleString() : '0.00'}`;
+                document.getElementById('modalAmountPaid').textContent = `KSh ${order.amount_paid ? order.amount_paid.toLocaleString() : '0.00'}`;
+                document.getElementById('modalBalance').textContent = `KSh ${order.balance ? order.balance.toLocaleString() : '0.00'}`;
+
                 const itemsContainer = document.getElementById('updateItemsContainer');
                 itemsContainer.innerHTML = '';
 
-                // Populate items
                 if (order.items && order.items.length > 0) {
                     order.items.forEach((item, index) => {
                         this.addItemRow(item, index);
                     });
                 } else {
-                    this.addItemRow(); // Add one empty row if no items
+                    this.addItemRow();
                 }
             }
+
             showModal() {
-                document.getElementById('updateOrderModal').classList.add('active');
+                document.getElementById('updateOrderModal').classList.remove('hidden');
             }
 
             closeModal() {
-                document.getElementById('updateOrderModal').classList.remove('active');
+                document.getElementById('updateOrderModal').classList.add('hidden');
             }
-            async deleteOrder(orderId, orderCode) {
-                if (!confirm(`Are you sure you want to delete order ${orderCode}? This action cannot be undone.`)) {
-                    return;
-                }
 
+            async openReceiptModal(orderId) {
                 try {
-                    const formData = new FormData();
-                    formData.append('csrfmiddlewaretoken', this.getCSRFToken());
-
-                    const response = await fetch(`/Laundry/order-delete/${orderCode}/`, {
-                        method: 'POST',
-                        body: formData,
+                    const response = await fetch(`/Laundry/get-order-details/${orderId}`, {
                         headers: {
-                            'X-Requested-With': 'XMLHttpRequest',
-                            'X-CSRFToken': this.getCSRFToken()
+                            'X-Requested-With': 'XMLHttpRequest'
                         }
                     });
 
+                    if (!response.ok) throw new Error('Failed to fetch order details');
+
                     const data = await response.json();
 
-                    if (!response.ok) {
-                        throw new Error(data.message || `HTTP error! status: ${response.status}`);
-                    }
-
                     if (data.success) {
-                        this.showMessage(data.message, 'success');
-                        this.loadOrders(); // Refresh the table
+                        this.populateReceipt(data.order);
+                        this.showReceiptModal();
                     } else {
-                        throw new Error(data.message || 'Failed to delete order');
+                        throw new Error(data.message || 'Failed to load order details');
                     }
                 } catch (error) {
-                    console.error('Error deleting order:', error);
-                    this.showMessage(error.message || 'Failed to delete order', 'error');
+                    console.error('Error loading order details:', error);
+                    this.showMessage('Failed to load order details', 'error');
                 }
             }
+
+            populateReceipt(order) {
+                document.getElementById('receiptOrderCode').textContent = order.uniquecode || '-';
+                document.getElementById('receiptDate').textContent = new Date().toLocaleDateString();
+                document.getElementById('receiptCustomerName').textContent = order.customer.name || '-';
+                document.getElementById('receiptCustomerPhone').textContent = order.customer.phone || '-';
+                document.getElementById('receiptTotalAmount').textContent = `KSh ${order.total_price ? order.total_price.toLocaleString() : '0.00'}`;
+                document.getElementById('receiptAmountPaid').textContent = `KSh ${order.amount_paid ? order.amount_paid.toLocaleString() : '0.00'}`;
+                document.getElementById('receiptBalance').textContent = `KSh ${order.balance ? order.balance.toLocaleString() : '0.00'}`;
+
+                const itemsContainer = document.getElementById('receiptItems');
+                itemsContainer.innerHTML = '';
+
+                if (order.items && order.items.length > 0) {
+                    order.items.forEach(item => {
+                        const itemElement = document.createElement('div');
+                        itemElement.className = 'flex justify-between mb-1';
+                        itemElement.innerHTML = `
+                            <span>${item.itemname || 'N/A'} (${item.servicetype || 'N/A'})</span>
+                            <span>KSh ${item.unit_price ? item.unit_price.toLocaleString() : '0.00'}</span>
+                        `;
+                        itemsContainer.appendChild(itemElement);
+                    });
+                } else {
+                    itemsContainer.innerHTML = '<p>No items found</p>';
+                }
+            }
+
+            showReceiptModal() {
+                document.getElementById('receiptModal').classList.remove('hidden');
+            }
+
+            closeReceiptModal() {
+                document.getElementById('receiptModal').classList.add('hidden');
+            }
+
+            printReceipt() {
+                const receiptContent = document.getElementById('receiptContent').innerHTML;
+                const originalContent = document.body.innerHTML;
+
+                document.body.innerHTML = receiptContent;
+                window.print();
+                document.body.innerHTML = originalContent;
+                this.closeReceiptModal();
+                this.loadOrders();
+            }
+
             handleOrderSelection(checkbox) {
                 const orderId = checkbox.getAttribute('data-order-id');
 
@@ -1015,19 +1053,17 @@
                 selectedCountElement.textContent = `${selectedCount} order${selectedCount !== 1 ? 's' : ''} selected`;
 
                 if (selectedCount > 0) {
-                    bulkContainer.classList.add('show');
+                    bulkContainer.classList.remove('hidden');
                 } else {
-                    bulkContainer.classList.remove('show');
+                    bulkContainer.classList.add('hidden');
                 }
 
-                // Update select all checkbox state
                 const totalCheckboxes = document.querySelectorAll('.order-checkbox').length;
                 document.getElementById('selectAllCheckbox').checked = selectedCount > 0 && selectedCount === totalCheckboxes;
                 document.getElementById('selectAllCheckbox').indeterminate = selectedCount > 0 && selectedCount < totalCheckboxes;
             }
 
             updateActiveFilters() {
-                // Update payment filter active state
                 document.querySelectorAll('.payment-filter, [data-payment=""]').forEach(btn => {
                     btn.classList.remove('bg-blue-100', 'text-blue-700', 'shadow-sm');
                     btn.classList.add('bg-gray-100', 'text-gray-700');
@@ -1092,7 +1128,7 @@
         </p>
         <div class="text-left mt-4">
             <a href="{% url 'laundry:createorder' %}"
-                class="btn-primary inline-flex items-center gap-2 px-4 py-2 text-white rounded-lg font-medium">
+                class="inline-flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-pink-500 to-rose-500 text-white rounded-lg font-medium shadow-md hover:shadow-lg transition-all duration-200">
                 <i class="fas fa-plus text-sm"></i>
                 <span>Create New Order</span>
             </a>
@@ -1104,7 +1140,7 @@
                 }
 
                 tbody.innerHTML = orders.map(order => this.renderOrderRow(order)).join('');
-                this.updateBulkActionsUI(); // Update UI after rendering
+                this.updateBulkActionsUI();
             }
 
             renderOrderRow(order) {
@@ -1113,7 +1149,7 @@
                 const isSelected = this.selectedOrders.has(order.id.toString());
                 return `
     <tr class="hover:bg-gray-50 transition-colors duration-150 border-b border-gray-100" data-order-id="${order.id}">
-        <td class="checkbox-cell text-left">
+        <td class="w-10 text-center py-3 px-4">
             <input type="checkbox" class="order-checkbox h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500" 
                    data-order-id="${order.id}" ${isSelected ? 'checked' : ''}>
         </td>
@@ -1201,16 +1237,26 @@
         </td>
         <td class="py-3 px-4 text-left">
             <div class="flex items-center justify-start space-x-2">
-                <button type="button" class="edit-order-btn action-btn edit-btn text-amber-600 hover:bg-amber-100 p-2 rounded-lg transition-colors duration-200"
+                <button type="button" class="edit-order-btn p-2 text-amber-600 hover:bg-amber-100 rounded-lg transition-colors duration-200"
                     data-order-id="${order.id}" title="Edit Order">
                     <i class="fas fa-edit text-sm"></i>
                 </button>
-                <div class="dropdown relative">
-                    <button class="action-btn text-gray-600 hover:bg-gray-100 p-2 rounded-lg transition-colors duration-200"
+                <button type="button" class="print-receipt-btn p-2 text-blue-600 hover:bg-blue-100 rounded-lg transition-colors duration-200"
+                    data-order-id="${order.id}" title="Print Receipt">
+                    <i class="fas fa-print text-sm"></i>
+                </button>
+                ${order.payment_status !== 'completed' ? `
+                    <button type="button" class="mark-payment-complete-btn p-2 text-green-600 hover:bg-green-100 rounded-lg transition-colors duration-200"
+                        data-order-id="${order.id}" title="Mark Payment Complete">
+                        <i class="fas fa-check-circle text-sm"></i>
+                    </button>
+                ` : ''}
+                <div class="relative">
+                    <button class="p-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors duration-200"
                         title="More Actions">
                         <i class="fas fa-ellipsis-v text-sm"></i>
                     </button>
-                    <div class="dropdown-menu absolute right-0 mt-1 w-48 bg-white rounded-md shadow-lg py-1 z-50 border border-gray-200">
+                    <div class="absolute right-0 mt-1 hidden bg-white rounded-md shadow-lg py-1 z-50 border border-gray-200 w-48">
                         ${order.order_status !== 'Completed' ? `
                             <button type="button" class="w-full text-left px-4 py-2 text-sm text-green-700 hover:bg-green-50 flex items-center update-status-btn"
                                 data-status="Completed">
@@ -1234,9 +1280,10 @@
             </div>
         </td>
     </tr>
-`;}        
+`;
+            }
 
-async bulkUpdateStatus(status) {
+            async bulkUpdateStatus(status) {
                 if (this.selectedOrders.size === 0) {
                     this.showMessage('Please select at least one order', 'warning');
                     return;
@@ -1272,7 +1319,6 @@ async bulkUpdateStatus(status) {
                         this.showMessage(`Failed to update ${errorCount} order${errorCount !== 1 ? 's' : ''}`, 'error');
                     }
 
-                    // Refresh the table and clear selection
                     this.clearSelection();
                     this.loadOrders();
 
@@ -1357,7 +1403,6 @@ async bulkUpdateStatus(status) {
                 `;
                 }
 
-                // Show limited page numbers
                 const startPage = Math.max(1, pagination.number - 2);
                 const endPage = Math.min(pagination.num_pages, pagination.number + 2);
 
@@ -1404,7 +1449,7 @@ async bulkUpdateStatus(status) {
                     const response = await this.updateOrderStatus(orderId, status);
                     if (response.success) {
                         this.showMessage(response.message, 'success');
-                        this.loadOrders(); // Refresh the table
+                        this.loadOrders();
                     } else {
                         throw new Error(response.message);
                     }
@@ -1415,7 +1460,6 @@ async bulkUpdateStatus(status) {
             }
 
             async handleBulkAction(action) {
-                // For bulk actions using the filter buttons
                 this.showMessage('Please select orders using checkboxes for bulk actions', 'info');
             }
 
@@ -1448,12 +1492,12 @@ async bulkUpdateStatus(status) {
             }
 
             showLoading() {
-                document.getElementById('loadingSpinner').style.display = 'block';
+                document.getElementById('loadingSpinner').classList.remove('hidden');
                 document.getElementById('ordersTableBody').innerHTML = '';
             }
 
             hideLoading() {
-                document.getElementById('loadingSpinner').style.display = 'none';
+                document.getElementById('loadingSpinner').classList.add('hidden');
             }
 
             showError(message) {
@@ -1461,7 +1505,6 @@ async bulkUpdateStatus(status) {
             }
 
             showMessage(message, type) {
-                // Create toast notification
                 const toast = document.createElement('div');
                 toast.className = `fixed top-4 right-4 p-4 rounded-lg shadow-lg z-50 ${type === 'success' ? 'bg-green-500' :
                     type === 'error' ? 'bg-red-500' :
@@ -1482,13 +1525,6 @@ async bulkUpdateStatus(status) {
 
             getCSRFToken() {
                 return document.querySelector('[name=csrfmiddlewaretoken]').value;
-            }
-
-            startAutoRefresh() {
-                // Refresh every 30 seconds
-                setInterval(() => {
-                    this.loadOrders();
-                }, 30000);
             }
         }
 

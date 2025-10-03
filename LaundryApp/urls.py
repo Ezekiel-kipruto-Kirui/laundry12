@@ -50,10 +50,6 @@ urlpatterns = [
     path('order/<str:order_code>/update-payment/', views.update_payment_status, name='update_payment_status'),
     path('update-order-status/<int:order_id>/<str:status>/', views.update_order_status_ajax, name='update_order_status_ajax'),
     
-    # M-Pesa Payment URLs
-    path('mpesa/initiate-payment/<int:order_id>/', views.initiatepayment, name='Mpesa_payment_initiation'),
-    path('daraja/stk_push/', views.stk_push_callback, name='stk_push_callback'),
-    
     # User Management
     path('user-management/', usermanage.user_management, name='user_management'),
     path('user/add/', usermanage.user_add, name='user_add'),
@@ -81,11 +77,5 @@ urlpatterns = [
     path("expense-fields/edit/<int:field_id>/", Expenses.edit_expense_field, name="edit_expense_field"),
     path("expense-fields/delete/<int:field_id>/", Expenses.delete_expense_field, name="delete_expense_field"),
     
-    # Debug URLs
-     # Add debug URL
-    path('debug-dashboard-data/', views.debug_dashboard_data, name='debug_dashboard_data'),
-    #path('debug-urls/', views.debug_urls, name='debug_urls'),
-    path('debug/financial-summary/', views.DebugFinancialDataView.as_view(), name='debug_financial_summary'),
-    path('debug/quick-financial/', views.quick_financial_debug, name='quick_financial_debug'),
-    path('debug/order-calculations/', views.debug_order_calculations, name='debug_order_calculations'),
+
 ]

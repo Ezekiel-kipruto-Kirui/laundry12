@@ -23,14 +23,12 @@ from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
 from django.contrib.auth import login as auth_login, logout as auth_logout
 from django.contrib.auth.forms import AuthenticationForm
 
-from django.db import IntegrityError
+from django.db import IntegrityError, transaction
 from django.contrib.auth.forms import PasswordChangeForm
 from django.contrib.auth import update_session_auth_hash
 from django.contrib.auth import get_user_model
 from django.db.models.functions import Coalesce
 from django.utils.timezone import now
-
-from django.db import transaction
 
 # Local imports
 from .models import (
@@ -60,8 +58,31 @@ from .analytics import DashboardAnalytics
 logger = logging.getLogger(__name__)
 User = get_user_model()
 
-# Cached functions and reusable queries
+# Constants
+DEFAULT_PAGE_SIZE = 15
+MAX_PAGE_SIZE = 100
+EXPORT_FILENAME_PREFIX = "orders_export"
+ALLOWED_EXPORT_FORMATS = ['csv', 'xlsx']
+VALID_ORDER_STATUSES = ['pending', 'processing', 'Completed', 'Delivered_picked']
+VALID_PAYMENT_STATUSES = ['pending', 'partial', 'completed']
 
+class OrderManagerError(Exception):
+    """Custom exception for order management operations"""
+    pass
+
+class PermissionDeniedError(OrderManagerError):
+    """Raised when user doesn't have permission for an operation"""
+    pass
+
+class OrderNotFoundError(OrderManagerError):
+    """Raised when order is not found"""
+    pass
+
+class InvalidDataError(OrderManagerError):
+    """Raised when invalid data is provided"""
+    pass
+
+# Cached functions and reusable queries
 def get_user_shops(request):
     """Get the shops associated with the current user based on profile"""
     if request.user.is_superuser:
@@ -72,12 +93,10 @@ def get_user_shops(request):
         if hasattr(request.user, 'laundry_profile') and request.user.laundry_profile.shop:
             # Return the shop as a list to maintain compatibility
             return [request.user.laundry_profile.shop.title()]
-        else:
-            # If no shop is assigned, return empty list
-            return []
-    except Exception:
-        # If any error occurs, return empty list
-        return []
+        return []  # If no shop is assigned, return empty list
+    except Exception as e:
+        logger.error(f"Error getting user shops for user {request.user.id}: {str(e)}")
+        return []  # If any error occurs, return empty list
 
 def apply_order_permissions(queryset, request):
     """Apply permission-based filtering to order queryset"""
@@ -108,15 +127,13 @@ def apply_customer_permissions(queryset, request):
     
     return queryset
 
-
-
 def is_admin(user):
-    return (user.is_superuser or 
-            getattr(user, 'user_type', None) == 'admin')
+    """Check if user has admin privileges"""
+    return user.is_superuser or getattr(user, 'user_type', None) == 'admin'
 
 def is_staff(user):
-    return (user.is_staff or 
-            getattr(user, 'user_type', None) in ['admin', 'staff'])
+    """Check if user has staff privileges"""
+    return user.is_staff or getattr(user, 'user_type', None) in ['admin', 'staff']
 
 # Decorators for permission checking
 def shop_required(view_func):
@@ -155,12 +172,13 @@ def get_base_order_queryset():
     return Order.objects.select_related('customer').prefetch_related(
         Prefetch('items', queryset=OrderItem.objects.only(
             'servicetype', 'itemname', 'quantity', 'itemtype', 
-            'itemcondition', 'total_item_price',
+            'itemcondition', 'total_item_price', 'unit_price'
         ))
     ).only(
-        'uniquecode', 'order_status', 'payment_status','payment_type',
-        'shop', 'delivery_date', 'amount_paid', 'balance', 'total_price', 'created_at', 
-        'customer__name', 'customer__phone', 'customer__address', 'addressdetails'
+        'id', 'uniquecode', 'order_status', 'payment_status', 'payment_type',
+        'shop', 'delivery_date', 'amount_paid', 'balance', 'total_price', 
+        'created_at', 'customer__name', 'customer__phone', 'customer__address', 
+        'addressdetails'
     )
 
 def check_order_permission(request, order):
@@ -188,100 +206,214 @@ def check_customer_permission(request, customer):
     
     return True
 
+def validate_order_status(status):
+    """Validate order status"""
+    if status not in VALID_ORDER_STATUSES:
+        raise InvalidDataError(f"Invalid order status: {status}")
+
+def validate_payment_status(status):
+    """Validate payment status"""
+    if status not in VALID_PAYMENT_STATUSES:
+        raise InvalidDataError(f"Invalid payment status: {status}")
+
+def safe_decimal_conversion(value, field_name="amount"):
+    """Safely convert value to Decimal with proper error handling"""
+    if value is None:
+        return Decimal('0.00')
+    
+    try:
+        return Decimal(str(value))
+    except (InvalidOperation, TypeError, ValueError) as e:
+        logger.error(f"Invalid decimal value for {field_name}: {value}")
+        raise InvalidDataError(f"Invalid {field_name} format: {value}")
+
+def get_page_obj(paginator, page_number):
+    """Handle pagination safely"""
+    try:
+        return paginator.page(page_number)
+    except PageNotAnInteger:
+        return paginator.page(1)
+    except EmptyPage:
+        return paginator.page(paginator.num_pages)
+
+def get_order_stats(orders):
+    """Get order statistics in optimized way"""
+    try:
+        status_counts = orders.aggregate(
+            total=Count('id'),
+            pending=Count('id', filter=Q(order_status='pending')),
+            completed=Count('id', filter=Q(order_status='Completed')),
+            delivered=Count('id', filter=Q(order_status='Delivered_picked')),
+            in_progress=Count('id', filter=Q(order_status='in_progress'))
+        )
+        
+        return {
+            'total_orders': status_counts['total'] or 0,
+            'pending_orders': status_counts['pending'] or 0,
+            'completed_orders': status_counts['completed'] or 0,
+            'delivered_orders': status_counts['delivered'] or 0,
+            'in_progress_orders': status_counts['in_progress'] or 0,
+        }
+    except Exception as e:
+        logger.error(f"Error calculating order stats: {str(e)}")
+        return {
+            'total_orders': 0,
+            'pending_orders': 0,
+            'completed_orders': 0,
+            'delivered_orders': 0,
+            'in_progress_orders': 0,
+        }
+
+def handle_export(orders, export_format):
+    """Handle export functionality with validation"""
+    if export_format not in ALLOWED_EXPORT_FORMATS:
+        raise InvalidDataError(f"Invalid export format: {export_format}")
+    
+    try:
+        dataset = OrderResource().export(queryset=orders)
+        timestamp = timezone.now().strftime('%Y-%m-%d_%H-%M-%S')
+        
+        if export_format == 'csv':
+            response = HttpResponse(dataset.csv, content_type='text/csv')
+            response['Content-Disposition'] = f'attachment; filename="{EXPORT_FILENAME_PREFIX}_{timestamp}.csv"'
+            return response
+            
+        elif export_format == 'xlsx':
+            xlsx_data = dataset.export('xlsx')
+            response = HttpResponse(
+                xlsx_data, 
+                content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+            )
+            response['Content-Disposition'] = f'attachment; filename="{EXPORT_FILENAME_PREFIX}_{timestamp}.xlsx"'
+            return response
+    except Exception as e:
+        logger.error(f"Error during export: {str(e)}")
+        raise OrderManagerError(f"Export failed: {str(e)}")
+
+def serialize_order_for_json(order):
+    """Serialize order data for JSON response"""
+    try:
+        customer_phone = str(order.customer.phone) if order.customer.phone else ''
+        
+        order_data = {
+            'id': order.id,
+            'uniquecode': order.uniquecode,
+            'customer': {
+                'name': order.customer.name,
+                'phone': customer_phone,
+                'address': order.customer.address or '',
+            },
+            'items': [],
+            'amount_paid': float(order.amount_paid or 0),
+            'balance': float(order.balance or 0),
+            'total_price': float(order.total_price or 0),
+            'order_status': order.order_status,
+            'payment_status': order.payment_status,
+            'created_at': order.created_at.strftime('%Y-%m-%d %H:%M') if order.created_at else '',
+        }
+
+        # Serialize items
+        for item in order.items.all():
+            order_data['items'].append({
+                'servicetype': item.servicetype or '',
+                'itemtype': item.itemtype or '',
+                'itemname': item.itemname or '',
+                'itemcondition': item.itemcondition or '',
+                'unit_price': float(item.unit_price or 0),
+                'quantity': item.quantity or 1,
+                'total_item_price': float(item.total_item_price or 0),
+            })
+
+        return order_data
+    except Exception as e:
+        logger.error(f"Error serializing order {order.id}: {str(e)}")
+        raise OrderManagerError(f"Failed to serialize order data: {str(e)}")
+
+def validate_date_range(from_date_str, to_date_str):
+    """Validate and parse date range parameters"""
+    from_date = None
+    to_date = None
+    
+    try:
+        if from_date_str:
+            from_date = datetime.strptime(from_date_str, "%Y-%m-%d").date()
+        if to_date_str:
+            to_date = datetime.strptime(to_date_str, "%Y-%m-%d").date()
+            
+        # Validate date range logic
+        if from_date and to_date and from_date > to_date:
+            raise InvalidDataError("From date cannot be after to date")
+            
+    except ValueError as e:
+        raise InvalidDataError(f"Invalid date format: {str(e)}")
+    
+    return from_date, to_date
+
 # Views
 @login_required
 @admin_required
 def dashboard_view(request):
-    current_year = timezone.now().year
+    """Dashboard view with analytics and reporting"""
     try:
-        selected_year = int(request.GET.get('year', current_year))
-        if selected_year < 2020 or selected_year > current_year + 1:
-            selected_year = current_year
-    except (ValueError, TypeError):
-        selected_year = current_year
-
-    selected_month = None
-    selected_month_str = request.GET.get('month')
-    if selected_month_str and len(selected_month_str) == 7 and selected_month_str[4] == '-':
+        current_year = timezone.now().year
+        
+        # Validate and parse parameters
         try:
-            selected_month = int(selected_month_str.split('-')[1])
-            if selected_month < 1 or selected_month > 12:
+            selected_year = int(request.GET.get('year', current_year))
+            if selected_year < 2020 or selected_year > current_year + 1:
+                selected_year = current_year
+        except (ValueError, TypeError):
+            selected_year = current_year
+
+        selected_month = None
+        selected_month_str = request.GET.get('month')
+        if selected_month_str and len(selected_month_str) == 7 and selected_month_str[4] == '-':
+            try:
+                selected_month = int(selected_month_str.split('-')[1])
+                if selected_month < 1 or selected_month > 12:
+                    selected_month = None
+            except (ValueError, IndexError):
                 selected_month = None
-        except (ValueError, IndexError):
-            selected_month = None
 
-    # Handle date range
-    from_date = request.GET.get('from_date')
-    to_date = request.GET.get('to_date')
+        # Handle date range
+        from_date_str = request.GET.get('from_date')
+        to_date_str = request.GET.get('to_date')
+        from_date, to_date = validate_date_range(from_date_str, to_date_str)
 
-    try:
-        if from_date:
-            from_date = datetime.strptime(from_date, "%Y-%m-%d").date()
-        if to_date:
-            to_date = datetime.strptime(to_date, "%Y-%m-%d").date()
-    except ValueError:
-        from_date = None
-        to_date = None
-
-    class MockAdmin:
-        def get_user_shops(self, request):
-            return get_user_shops(request)
-    
-    mock_admin = MockAdmin()
-    analytics = DashboardAnalytics(mock_admin)
-    
-    data = analytics.get_dashboard_data(request, selected_year, selected_month, from_date, to_date)
-    context = analytics.prepare_dashboard_context(request, data, selected_year, selected_month, from_date, to_date)
-    
-    # ADD DEBUG OUTPUT TO CONSOLE
-    import json
-    print("=== DASHBOARD DEBUG ===")
-    print(f"Selected Year: {selected_year}")
-    print(f"Total Orders: {data['order_stats']['total_orders']}")
-    print(f"Top Services Raw: {data['top_services']}")
-    print(f"Services Labels for Template: {context.get('services_labels')}")
-    print(f"Services Counts for Template: {context.get('services_counts')}")
-    print("=======================")
-    
-    context.update({
-        'selected_year': selected_year,
-        'selected_month': selected_month,
-        'from_date': from_date,
-        'to_date': to_date,
-    })
-    
-    return render(request, 'Admin/reports.html', context)
-@login_required
-@admin_required
-def debug_dashboard_data(request):
-    """Debug view to see exactly what data is being generated"""
-    current_year = timezone.now().year
-    selected_year = int(request.GET.get('year', current_year))
-    
-    class MockAdmin:
-        def get_user_shops(self, request):
-            return get_user_shops(request)
-    
-    mock_admin = MockAdmin()
-    analytics = DashboardAnalytics(mock_admin)
-    
-    data = analytics.get_dashboard_data(request, selected_year)
-    
-    # Debug output
-    debug_info = {
-        'selected_year': selected_year,
-        'total_orders': data['order_stats']['total_orders'],
-        'top_services_raw': data['top_services'],
-        'common_items_raw': data['common_items'],
-        'service_types_raw': data['service_types'],
-        'revenue_by_shop': data['revenue_by_shop'],
-    }
-    
-    return JsonResponse(debug_info)
+        # Get analytics data
+        class MockAdmin:
+            def get_user_shops(self, request):
+                return get_user_shops(request)
+        
+        mock_admin = MockAdmin()
+        analytics = DashboardAnalytics(mock_admin)
+        
+        data = analytics.get_dashboard_data(request, selected_year, selected_month, from_date, to_date)
+        context = analytics.prepare_dashboard_context(request, data, selected_year, selected_month, from_date, to_date)
+        
+        context.update({
+            'selected_year': selected_year,
+            'selected_month': selected_month,
+            'from_date': from_date,
+            'to_date': to_date,
+        })
+        
+        return render(request, 'Admin/reports.html', context)
+        
+    except Exception as e:
+        logger.error(f"Error in dashboard view: {str(e)}")
+        messages.error(request, "An error occurred while loading the dashboard.")
+        return render(request, 'Admin/reports.html', {
+            'selected_year': timezone.now().year,
+            'selected_month': None,
+            'from_date': None,
+            'to_date': None,
+        })
 
 @login_required
 @shop_required
 def customordertable(request):
+    """Order table view with AJAX support"""
     # Check if it's an AJAX request
     if request.headers.get('x-requested-with') == 'XMLHttpRequest':
         return handle_ajax_request(request)
@@ -318,6 +450,7 @@ def handle_ajax_request(request):
         
         payment_filter = request.GET.get('payment_status', '')
         if payment_filter:
+            validate_payment_status(payment_filter)
             filters &= Q(payment_status=payment_filter)
 
         search_query = request.GET.get('search', '')
@@ -345,20 +478,20 @@ def handle_ajax_request(request):
         stats = get_order_stats(orders)
 
         # Pagination
-        paginator = Paginator(orders, 15)
+        paginator = Paginator(orders, DEFAULT_PAGE_SIZE)
         page_number = request.GET.get('page')
         page_obj = get_page_obj(paginator, page_number)
 
         # Prepare data for AJAX response
         data = {
             'success': True,
-            'orders': [],
+            'orders': [serialize_order_for_json(order) for order in page_obj],
             'stats': stats,
             'pagination': {
                 'has_other_pages': page_obj.has_other_pages(),
                 'has_previous': page_obj.has_previous(),
                 'has_next': page_obj.has_next(),
-                'number': page_obj.number,
+                'number': page_number,
                 'num_pages': page_obj.paginator.num_pages,
                 'start_index': page_obj.start_index(),
                 'end_index': page_obj.end_index(),
@@ -366,46 +499,28 @@ def handle_ajax_request(request):
             }
         }
 
-        # Serialize orders with proper handling of PhoneNumber fields
-        for order in page_obj:
-            order_data = {
-                'id': order.id,
-                'uniquecode': order.uniquecode,
-                'customer': {
-                    'name': order.customer.name,
-                    'phone': str(order.customer.phone),  # Convert PhoneNumber to string
-                    'address': order.customer.address,
-                },
-                'items': [],
-                'amount_paid': float(order.amount_paid),
-                'balance': float(order.balance),
-                'total_price': float(order.total_price),
-                'order_status': order.order_status,
-                'payment_status': order.payment_status,
-                'created_at': order.created_at.strftime('%Y-%m-%d %H:%M'),
-            }
-
-            # Serialize items
-            for item in order.items.all():
-                order_data['items'].append({
-                    'servicetype': item.servicetype,
-                    'itemtype': item.itemtype,
-                    'itemname': item.itemname,
-                    'itemcondition': item.itemcondition,
-                })
-
-            data['orders'].append(order_data)
-
         return JsonResponse(data)
     
-    except Exception as e:
-        import traceback
-        print(f"Error in handle_ajax_request: {str(e)}")
-        print(traceback.format_exc())
+    except InvalidDataError as e:
+        logger.warning(f"Invalid data in AJAX request: {str(e)}")
         return JsonResponse({
             'success': False,
             'error': str(e),
-            'message': 'An error occurred while loading orders'
+            'message': 'Invalid request parameters'
+        }, status=400)
+    except OrderManagerError as e:
+        logger.error(f"Order manager error in AJAX request: {str(e)}")
+        return JsonResponse({
+            'success': False,
+            'error': str(e),
+            'message': 'An error occurred while processing your request'
+        }, status=500)
+    except Exception as e:
+        logger.error(f"Unexpected error in AJAX request: {str(e)}")
+        return JsonResponse({
+            'success': False,
+            'error': 'Internal server error',
+            'message': 'An unexpected error occurred'
         }, status=500)
 
 @login_required
@@ -413,72 +528,42 @@ def handle_ajax_request(request):
 def update_order_status_ajax(request, order_id, status):
     """Update order status via AJAX"""
     try:
+        validate_order_status(status)
+        
         order = Order.objects.get(id=order_id)
+        
+        # Check if user has permission to update this order
+        if not check_order_permission(request, order):
+            raise PermissionDeniedError("You don't have permission to update this order.")
+        
         order.order_status = status
         order.save()
+        
+        logger.info(f"Order {order.uniquecode} status updated to {status} by user {request.user.id}")
         
         return JsonResponse({
             'success': True,
             'message': f'Order status updated to {status}'
         })
+        
     except Order.DoesNotExist:
+        logger.warning(f"Order not found: {order_id}")
         return JsonResponse({
             'success': False,
             'message': 'Order not found'
         }, status=404)
-    except Exception as e:
+    except (PermissionDeniedError, InvalidDataError) as e:
+        logger.warning(f"Permission or validation error: {str(e)}")
         return JsonResponse({
             'success': False,
             'message': str(e)
+        }, status=403)
+    except Exception as e:
+        logger.error(f"Error updating order status: {str(e)}")
+        return JsonResponse({
+            'success': False,
+            'message': 'An error occurred while updating the order'
         }, status=500)
-
-def handle_export(orders, export_format):
-    """Handle export functionality"""
-    dataset = OrderResource().export(queryset=orders)
-    timestamp = timezone.now().strftime('%Y-%m-%d_%H-%M-%S')
-    
-    if export_format == 'csv':
-        response = HttpResponse(dataset.csv, content_type='text/csv')
-        response['Content-Disposition'] = f'attachment; filename="orders_export_{timestamp}.csv"'
-        return response
-        
-    elif export_format == 'xlsx':
-        xlsx_data = dataset.export('xlsx')
-        response = HttpResponse(
-            xlsx_data, 
-            content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
-        )
-        response['Content-Disposition'] = f'attachment; filename="orders_export_{timestamp}.xlsx"'
-        return response
-
-
-def get_order_stats(orders):
-    """Get order statistics in optimized way - FIXED KEY ERROR"""
-    status_counts = orders.aggregate(
-        total=Count('id'),
-        pending=Count('id', filter=Q(order_status='pending')),
-        completed=Count('id', filter=Q(order_status='Completed')),
-        delivered=Count('id', filter=Q(order_status='Delivered_picked')),  # Fixed: using correct filter
-        in_progress=Count('id', filter=Q(order_status='in_progress'))
-    )
-    
-    return {
-        'total_orders': status_counts['total'] or 0,
-        'pending_orders': status_counts['pending'] or 0,
-        'completed_orders': status_counts['completed'] or 0,
-        'delivered_orders': status_counts['delivered'] or 0,  # Fixed: using correct key
-        'in_progress_orders': status_counts['in_progress'] or 0,
-    }
-
-
-def get_page_obj(paginator, page_number):
-    """Handle pagination safely"""
-    try:
-        return paginator.page(page_number)
-    except PageNotAnInteger:
-        return paginator.page(1)
-    except EmptyPage:
-        return paginator.page(paginator.num_pages)
 
 @login_required
 @shop_required
@@ -489,46 +574,9 @@ def order_detail(request, order_id):
         
         # Check if user has permission to view this order
         if not check_order_permission(request, order):
-            return JsonResponse({
-                'success': False,
-                'message': "You don't have permission to view this order."
-            }, status=403)
+            raise PermissionDeniedError("You don't have permission to view this order.")
         
-        # Convert PhoneNumber to string for JSON serialization
-        customer_phone = str(order.customer.phone) if order.customer.phone else ''
-        
-        # Prepare order data for JSON response
-        order_data = {
-            'id': order.id,
-            'uniquecode': order.uniquecode,
-            'order_status': order.order_status,
-            'payment_status': order.payment_status,
-            'amount_paid': float(order.amount_paid) if order.amount_paid else 0,
-            'total_price': float(order.total_price) if order.total_price else 0,
-            'balance': float(order.balance) if order.balance else 0,
-            'created_at': order.created_at.strftime('%Y-%m-%d %H:%M') if order.created_at else '',
-            'customer': {
-                'id': order.customer.id,
-                'name': order.customer.name,
-                'phone': customer_phone,  # Use the converted string
-                'address': order.customer.address or '',
-            },
-            'items': []
-        }
-        
-        # Add order items
-        for item in order.items.all():
-            item_data = {
-                'id': item.id,
-                'itemname': item.itemname or '',
-                'servicetype': item.servicetype or '',
-                'itemtype': item.itemtype or '',
-                'itemcondition': item.itemcondition or '',
-                'unit_price': float(item.unit_price) if item.unit_price else 0,
-                'quantity': item.quantity or 1,
-                'total_item_price': float(item.total_item_price) if item.total_item_price else 0,
-            }
-            order_data['items'].append(item_data)
+        order_data = serialize_order_for_json(order)
         
         return JsonResponse({
             'success': True,
@@ -536,209 +584,162 @@ def order_detail(request, order_id):
         })
         
     except Order.DoesNotExist:
+        logger.warning(f"Order not found: {order_id}")
         return JsonResponse({
             'success': False,
             'message': "Order not found."
         }, status=404)
+    except PermissionDeniedError as e:
+        logger.warning(f"Permission denied for order {order_id}: {str(e)}")
+        return JsonResponse({
+            'success': False,
+            'message': str(e)
+        }, status=403)
     except Exception as e:
         logger.error(f"Error fetching order details for order {order_id}: {str(e)}")
         return JsonResponse({
             'success': False,
-            'message': f"Error fetching order details: {str(e)}"  # Include error in response for debugging
+            'message': "An error occurred while fetching order details."
         }, status=500)
 
 @login_required
 @shop_required
+@transaction.atomic
 def order_edit(request):
-    """Update order via AJAX"""
-    print(f"DEBUG: order_edit view called with method: {request.method}")
-    print(f"DEBUG: Headers: {dict(request.headers)}")
-    print(f"DEBUG: POST data: {dict(request.POST)}")
-    
+    """Update order via AJAX with transaction safety"""
     # Check if it's an AJAX request
     is_ajax = request.headers.get('x-requested-with') == 'XMLHttpRequest'
-    print(f"DEBUG: Is AJAX request: {is_ajax}")
     
-    if request.method == 'POST' and is_ajax:
-        try:
-            order_id = request.POST.get('order_id')
-            print(f"DEBUG: Processing order ID: {order_id}")
+    if request.method != 'POST' or not is_ajax:
+        return JsonResponse({
+            'success': False,
+            'message': "Invalid request method or not an AJAX request."
+        }, status=400)
+
+    try:
+        order_id = request.POST.get('order_id')
+        if not order_id:
+            raise InvalidDataError("Order ID is required.")
+
+        order = Order.objects.get(id=order_id)
+        
+        # Check if user has permission to update this order
+        if not check_order_permission(request, order):
+            raise PermissionDeniedError("You don't have permission to update this order.")
+        
+        # Update customer information
+        customer = order.customer
+        customer.name = request.POST.get('name', customer.name)
+        
+        # Handle phone number
+        phone = request.POST.get('phone')
+        if phone:
+            customer.phone = phone
+        
+        customer.save()
+        
+        # Update order information
+        order_status = request.POST.get('order_status')
+        if order_status:
+            validate_order_status(order_status)
+            order.order_status = order_status
             
-            if not order_id:
-                return JsonResponse({
-                    'success': False,
-                    'message': "Order ID is required."
-                }, status=400)
+        payment_status = request.POST.get('payment_status')
+        if payment_status:
+            validate_payment_status(payment_status)
+            order.payment_status = payment_status
+        
+        # Update amount paid and recalculate balance
+        amount_paid = request.POST.get('amount_paid')
+        if amount_paid is not None:
+            order.amount_paid = safe_decimal_conversion(amount_paid, "amount_paid")
+            if order.amount_paid < 0:
+                raise InvalidDataError("Amount paid cannot be negative.")
+            if order.amount_paid > order.total_price:
+                order.amount_paid = order.total_price
+            order.balance = order.total_price - order.amount_paid
+        
+        # Handle order items
+        items_to_keep = []
+        item_count = 0
+        
+        # Process existing items
+        for item in order.items.all():
+            item_name = request.POST.get(f'items-{item_count}-itemname')
+            service_type = request.POST.get(f'items-{item_count}-servicetype')
+            unit_price = request.POST.get(f'items-{item_count}-unit_price')
+            
+            if item_name and service_type and unit_price:
+                # Update existing item
+                item.itemname = item_name
+                item.servicetype = service_type
+                item.unit_price = safe_decimal_conversion(unit_price, "unit_price")
                 
-            order = Order.objects.get(id=order_id)
-            print(f"DEBUG: Found order: {order.uniquecode}")
-            
-            # Check if user has permission to update this order
-            if not check_order_permission(request, order):
-                return JsonResponse({
-                    'success': False,
-                    'message': "You don't have permission to update this order."
-                }, status=403)
-            
-            # Update customer information
-            customer = order.customer
-            customer.name = request.POST.get('name', customer.name)
-            
-            # Handle phone number
-            phone = request.POST.get('phone')
-            if phone:
-                customer.phone = phone
-            
-            customer.save()
-            print(f"DEBUG: Updated customer: {customer.name}")
-            
-            # Update order information
-            order.order_status = request.POST.get('order_status', order.order_status)
-            order.payment_status = request.POST.get('payment_status', order.payment_status)
-            
-            # Update amount paid and recalculate balance
-            amount_paid = request.POST.get('amount_paid')
-            if amount_paid is not None:
-                try:
-                    order.amount_paid = Decimal(amount_paid)
-                    order.balance = order.total_price - order.amount_paid
-                    print(f"DEBUG: Updated amount paid: {order.amount_paid}")
-                except (InvalidOperation, ValueError):
-                    return JsonResponse({
-                        'success': False,
-                        'message': "Invalid amount format."
-                    }, status=400)
-            
-            # Handle order items
-            items_to_keep = []
-            item_count = 0
-            
-            print(f"DEBUG: Processing order items...")
-            
-            # Process existing items
-            for item in order.items.all():
-                item_name = request.POST.get(f'items-{item_count}-itemname')
-                service_type = request.POST.get(f'items-{item_count}-servicetype')
-                unit_price = request.POST.get(f'items-{item_count}-unit_price')
-                
-                if item_name and service_type and unit_price:
-                    # Update existing item
-                    item.itemname = item_name
-                    item.servicetype = service_type
-                    try:
-                        item.unit_price = Decimal(unit_price)
-                    except (InvalidOperation, ValueError):
-                        item.unit_price = Decimal('0.00')
-                    
-                    # Calculate total item price
-                    item.total_item_price = item.unit_price * (item.quantity or 1)
-                    item.save()
-                    items_to_keep.append(item.id)
-                    item_count += 1
-                    print(f"DEBUG: Updated item {item_count}: {item_name}")
-                else:
-                    # Delete item if fields are empty
-                    item.delete()
-                    print(f"DEBUG: Deleted item {item.id}")
-            
-            # Add new items
-            while f'items-{item_count}-itemname' in request.POST:
-                item_name = request.POST.get(f'items-{item_count}-itemname')
-                service_type = request.POST.get(f'items-{item_count}-servicetype')
-                unit_price = request.POST.get(f'items-{item_count}-unit_price')
-                
-                if item_name and service_type and unit_price:
-                    try:
-                        unit_price_decimal = Decimal(unit_price)
-                    except (InvalidOperation, ValueError):
-                        unit_price_decimal = Decimal('0.00')
-                    
-                    new_item = OrderItem.objects.create(
-                        order=order,
-                        itemname=item_name,
-                        servicetype=service_type,
-                        unit_price=unit_price_decimal,
-                        quantity=1,  # Default quantity
-                        total_item_price=unit_price_decimal
-                    )
-                    items_to_keep.append(new_item.id)
-                    print(f"DEBUG: Created new item: {item_name}")
-                
+                # Calculate total item price
+                item.total_item_price = item.unit_price * (item.quantity or 1)
+                item.save()
+                items_to_keep.append(item.id)
                 item_count += 1
-            
-            # Recalculate total price
-            total_price = sum(
-                (item.total_item_price or Decimal('0.00'))
-                for item in order.items.all()
-            )
-            order.total_price = total_price
-            order.balance = total_price - (order.amount_paid or Decimal('0.00'))
-            order.save()
-            
-            print(f"DEBUG: Order update successful!")
-            
-            return JsonResponse({
-                'success': True,
-                'message': f'Order {order.uniquecode} updated successfully!',
-                'order_code': order.uniquecode
-            })
-            
-        except Order.DoesNotExist:
-            print(f"DEBUG: Order not found: {order_id}")
-            return JsonResponse({
-                'success': False,
-                'message': "Order not found."
-            }, status=404)
-        except Exception as e:
-            print(f"DEBUG: Error updating order: {str(e)}")
-            import traceback
-            print(f"DEBUG: Traceback: {traceback.format_exc()}")
-            logger.error(f"Error updating order {order_id}: {str(e)}")
-            return JsonResponse({
-                'success': False,
-                'message': f"Error updating order: {str(e)}"
-            }, status=500)
-    
-    print(f"DEBUG: Invalid request - method: {request.method}, is_ajax: {is_ajax}")
-    return JsonResponse({
-        'success': False,
-        'message': "Invalid request method or not an AJAX request."
-    }, status=400)
-# Add this to your views.py temporarily
-
-
-
-@login_required
-def debug_urls(request):
-    """Debug view to see all registered URLs"""
-    from django.urls import get_resolver
-    from django.http import JsonResponse
-    
-    def extract_urls(urlpatterns, base=''):
-        urls = []
-        for pattern in urlpatterns:
-            if hasattr(pattern, 'url_patterns'):
-                # This is an include
-                urls.extend(extract_urls(pattern.url_patterns, base + str(pattern.pattern)))
             else:
-                urls.append({
-                    'pattern': base + str(pattern.pattern),
-                    'name': getattr(pattern, 'name', 'No name'),
-                    'lookup_str': getattr(pattern, 'lookup_str', 'No lookup'),
-                })
-        return urls
-    
-    resolver = get_resolver()
-    all_urls = extract_urls(resolver.url_patterns)
-    
-    # Filter to show only laundry app URLs
-    laundry_urls = [url for url in all_urls if 'laundry' in url['lookup_str'].lower() or 'Laundry' in url['pattern']]
-    
-    return JsonResponse({
-        'all_urls': all_urls,
-        'laundry_urls': laundry_urls,
-        'current_path': request.path
-    })
+                # Delete item if fields are empty
+                item.delete()
+        
+        # Add new items
+        while f'items-{item_count}-itemname' in request.POST:
+            item_name = request.POST.get(f'items-{item_count}-itemname')
+            service_type = request.POST.get(f'items-{item_count}-servicetype')
+            unit_price = request.POST.get(f'items-{item_count}-unit_price')
+            
+            if item_name and service_type and unit_price:
+                unit_price_decimal = safe_decimal_conversion(unit_price, "unit_price")
+                
+                new_item = OrderItem.objects.create(
+                    order=order,
+                    itemname=item_name,
+                    servicetype=service_type,
+                    unit_price=unit_price_decimal,
+                    quantity=1,  # Default quantity
+                    total_item_price=unit_price_decimal
+                )
+                items_to_keep.append(new_item.id)
+            
+            item_count += 1
+        
+        # Recalculate total price
+        total_price = sum(
+            (item.total_item_price or Decimal('0.00'))
+            for item in order.items.all()
+        )
+        order.total_price = total_price
+        order.balance = total_price - (order.amount_paid or Decimal('0.00'))
+        order.save()
+        
+        logger.info(f"Order {order.uniquecode} updated successfully by user {request.user.id}")
+        
+        return JsonResponse({
+            'success': True,
+            'message': f'Order {order.uniquecode} updated successfully!',
+            'order_code': order.uniquecode
+        })
+        
+    except Order.DoesNotExist:
+        logger.warning(f"Order not found: {order_id}")
+        return JsonResponse({
+            'success': False,
+            'message': "Order not found."
+        }, status=404)
+    except (PermissionDeniedError, InvalidDataError) as e:
+        logger.warning(f"Permission or validation error: {str(e)}")
+        return JsonResponse({
+            'success': False,
+            'message': str(e)
+        }, status=400)
+    except Exception as e:
+        logger.error(f"Error updating order: {str(e)}")
+        return JsonResponse({
+            'success': False,
+            'message': "An error occurred while updating the order."
+        }, status=500)
 
 @login_required
 @shop_required
@@ -750,18 +751,13 @@ def order_delete(request, order_code):
         
         # Check if user has permission to delete this order
         if not check_order_permission(request, order):
-            if request.headers.get('x-requested-with') == 'XMLHttpRequest':
-                return JsonResponse({
-                    'success': False,
-                    'message': "You don't have permission to delete this order."
-                }, status=403)
-            else:
-                messages.error(request, "You don't have permission to delete this order.")
-                return redirect('laundry:customordertable')
+            raise PermissionDeniedError("You don't have permission to delete this order.")
         
         if request.method == 'POST':
             order_code = order.uniquecode
             order.delete()
+            
+            logger.info(f"Order {order_code} deleted by user {request.user.id}")
             
             if request.headers.get('x-requested-with') == 'XMLHttpRequest':
                 return JsonResponse({
@@ -784,12 +780,11 @@ def order_delete(request, order_code):
             })
         
         # Regular GET request - render confirmation page
-        context = {
-            'order': order,
-        }
+        context = {'order': order}
         return render(request, 'Admin/order_confirm_delete.html', context)
         
     except Order.DoesNotExist:
+        logger.warning(f"Order not found: {order_code}")
         if request.headers.get('x-requested-with') == 'XMLHttpRequest':
             return JsonResponse({
                 'success': False,
@@ -797,140 +792,152 @@ def order_delete(request, order_code):
             }, status=404)
         else:
             raise Http404("Order not found")
+    except PermissionDeniedError as e:
+        logger.warning(f"Permission denied for order deletion: {str(e)}")
+        if request.headers.get('x-requested-with') == 'XMLHttpRequest':
+            return JsonResponse({
+                'success': False,
+                'message': str(e)
+            }, status=403)
+        else:
+            messages.error(request, str(e))
+            return redirect('laundry:customordertable')
 
 @login_required
 @shop_required
 def update_payment_status(request, order_code):
     """Update payment status of an order"""
     try:
-        # Load full order (not limiting fields to ensure updates work)
+        # Load full order
         order = Order.objects.get(uniquecode=order_code)
 
         # Check if user has permission
         if not check_order_permission(request, order):
+            raise PermissionDeniedError("You don't have permission to update this order.")
+
+        if request.method != 'POST':
             return JsonResponse({
                 'success': False,
-                'message': "You don't have permission to update this order."
-            }, status=403)
+                'message': 'Invalid request method.'
+            }, status=405)
 
-        if request.method == 'POST':
-            payment_status = request.POST.get('payment_status')
-            amount_paid_raw = request.POST.get('amount_paid', "0")
+        payment_status = request.POST.get('payment_status')
+        amount_paid_raw = request.POST.get('amount_paid', "0")
 
-            if payment_status in dict(Order.PAYMENT_STATUS_CHOICES):
-                order.payment_status = payment_status
+        if payment_status not in dict(Order.PAYMENT_STATUS_CHOICES):
+            raise InvalidDataError('Invalid payment status.')
 
-                # Safely convert amount_paid
-                try:
-                    amount_paid = Decimal(amount_paid_raw)
-                except (InvalidOperation, TypeError, ValueError):
-                    return JsonResponse({
-                        'success': False,
-                        'message': 'Invalid amount entered.'
-                    }, status=400)
+        order.payment_status = payment_status
 
-                # Ensure amount_paid is not negative
-                if amount_paid < 0:
-                    return JsonResponse({
-                        'success': False,
-                        'message': 'Amount paid cannot be negative.'
-                    }, status=400)
+        # Safely convert amount_paid
+        amount_paid = safe_decimal_conversion(amount_paid_raw, "amount_paid")
 
-                # Ensure amount_paid does not exceed total
-                if amount_paid > order.total_price:
-                    amount_paid = order.total_price
+        # Ensure amount_paid is not negative
+        if amount_paid < 0:
+            raise InvalidDataError('Amount paid cannot be negative.')
 
-                order.amount_paid = amount_paid
-                order.save()
+        # Ensure amount_paid does not exceed total
+        if amount_paid > order.total_price:
+            amount_paid = order.total_price
 
-                return JsonResponse({
-                    'success': True,
-                    'message': f'Payment status updated to {payment_status}!',
-                    'order': {
-                        'uniquecode': order.uniquecode,
-                        'payment_status': order.payment_status,
-                        'amount_paid': str(order.amount_paid),
-                        'balance': str(order.balance),
-                        'total_price': str(order.total_price),
-                    }
-                })
-            else:
-                return JsonResponse({
-                    'success': False,
-                    'message': 'Invalid payment status.'
-                }, status=400)
+        order.amount_paid = amount_paid
+        order.balance = order.total_price - amount_paid
+        order.save()
+
+        logger.info(f"Payment status updated for order {order_code} to {payment_status} by user {request.user.id}")
 
         return JsonResponse({
-            'success': False,
-            'message': 'Invalid request method.'
-        }, status=405)
+            'success': True,
+            'message': f'Payment status updated to {payment_status}!',
+            'order': {
+                'uniquecode': order.uniquecode,
+                'payment_status': order.payment_status,
+                'amount_paid': str(order.amount_paid),
+                'balance': str(order.balance),
+                'total_price': str(order.total_price),
+            }
+        })
 
     except Order.DoesNotExist:
+        logger.warning(f"Order not found: {order_code}")
         return JsonResponse({
             'success': False,
             'message': 'Order not found.'
         }, status=404)
+    except (PermissionDeniedError, InvalidDataError) as e:
+        logger.warning(f"Permission or validation error: {str(e)}")
+        return JsonResponse({
+            'success': False,
+            'message': str(e)
+        }, status=400)
+    except Exception as e:
+        logger.error(f"Error updating payment status: {str(e)}")
+        return JsonResponse({
+            'success': False,
+            'message': 'An error occurred while updating payment status.'
+        }, status=500)
 
 @login_required
 @shop_required
+@transaction.atomic
 def createorder(request):
     """View to handle order creation with Django forms"""
     user_shops = get_user_shops(request)
     default_shop = user_shops[0] if user_shops else None
 
     if request.method == 'POST':
-        post_data = request.POST.copy()
+        try:
+            post_data = request.POST.copy()
 
-        # Force shop if user has only one
-        if user_shops and len(user_shops) == 1:
-            post_data['shop'] = user_shops[0]
+            # Force shop if user has only one
+            if user_shops and len(user_shops) == 1:
+                post_data['shop'] = user_shops[0]
 
-        # Default order_status
-        if not post_data.get('order_status'):
-            post_data['order_status'] = 'pending'
+            # Default order_status
+            if not post_data.get('order_status'):
+                post_data['order_status'] = 'pending'
 
-        # --- Customer handling ---
-        phone = post_data.get('phone', '').strip()
-        customer_id = post_data.get('customer_id', '').strip()
-        customer = None
-        customer_exists = False
+            # Customer handling
+            phone = post_data.get('phone', '').strip()
+            customer_id = post_data.get('customer_id', '').strip()
+            customer = None
+            customer_exists = False
 
-        if customer_id:
-            try:
-                customer = Customer.objects.get(id=customer_id)
-                customer_exists = True
-                if customer.name != post_data.get('name', ''):
-                    customer.name = post_data.get('name', '')
-                    customer.save()
-            except Customer.DoesNotExist:
-                customer_exists = False
-        elif phone:
-            try:
-                customer = Customer.objects.get(phone=phone)
-                customer_exists = True
-                if customer.name != post_data.get('name', ''):
-                    customer.name = post_data.get('name', '')
-                    customer.save()
-            except Customer.DoesNotExist:
-                customer_exists = False
+            if customer_id:
+                try:
+                    customer = Customer.objects.get(id=customer_id)
+                    customer_exists = True
+                    if customer.name != post_data.get('name', ''):
+                        customer.name = post_data.get('name', '')
+                        customer.save()
+                except Customer.DoesNotExist:
+                    customer_exists = False
+            elif phone:
+                try:
+                    customer = Customer.objects.get(phone=phone)
+                    customer_exists = True
+                    if customer.name != post_data.get('name', ''):
+                        customer.name = post_data.get('name', '')
+                        customer.save()
+                except Customer.DoesNotExist:
+                    customer_exists = False
 
-        if customer_exists:
-            customer_form_is_valid = True
-            customer_form = None
-        else:
-            customer_form = CustomerForm(post_data)
-            customer_form_is_valid = customer_form.is_valid()
+            if customer_exists:
+                customer_form_is_valid = True
+                customer_form = None
+            else:
+                customer_form = CustomerForm(post_data)
+                customer_form_is_valid = customer_form.is_valid()
 
-        # --- Order + Items ---
-        order_form = OrderForm(post_data)
-        OrderItemFormSet = forms.formset_factory(OrderItemForm, extra=0)
-        item_formset = OrderItemFormSet(post_data, prefix='items')
+            # Order + Items
+            order_form = OrderForm(post_data)
+            OrderItemFormSet = forms.formset_factory(OrderItemForm, extra=0)
+            item_formset = OrderItemFormSet(post_data, prefix='items')
 
-        order_form_is_valid = order_form.is_valid()
-        item_formset_is_valid = item_formset.is_valid()
+            order_form_is_valid = order_form.is_valid()
+            item_formset_is_valid = item_formset.is_valid()
 
-        if all([customer_form_is_valid, order_form_is_valid, item_formset_is_valid]):
-            try:
+            if all([customer_form_is_valid, order_form_is_valid, item_formset_is_valid]):
                 if not customer_exists:
                     customer = customer_form.save()
 
@@ -949,13 +956,10 @@ def createorder(request):
                         order_item = form.save(commit=False)
                         order_item.order = order
 
-                        # ✅ Ensure servicetype saves as a list/string depending on your model
                         if "servicetype" in form.cleaned_data:
                             services = form.cleaned_data["servicetype"]
                             if isinstance(services, list):
-                                order_item.servicetype = services  # ArrayField/JSONField
-                                # OR join into a string if using CharField
-                                # order_item.servicetype = ",".join(services)
+                                order_item.servicetype = services
 
                         if hasattr(order_item, 'quantity') and hasattr(order_item, 'unit_price'):
                             if hasattr(order_item, 'total_item_price'):
@@ -975,34 +979,34 @@ def createorder(request):
                 messages.success(request, f'Order created successfully! Code: {order.uniquecode}')
                 return redirect('laundry:customordertable')
 
-            except IntegrityError as e:
-                if 'uniquecode' in str(e):
-                    logger.error(f"Order creation error (unique code conflict): {str(e)}")
-                    messages.error(request, 'Could not create order due to system error. Please try again.')
-                else:
-                    logger.error(f"Order creation error: {str(e)}")
-                    messages.error(request, f'Error creating order: {str(e)}')
-            except Exception as e:
+            else:
+                error_messages = []
+                if customer_form and not customer_form_is_valid:
+                    for field, errors in customer_form.errors.items():
+                        for error in errors:
+                            error_messages.append(f"Customer {field}: {error}")
+                if not order_form_is_valid:
+                    for field, errors in order_form.errors.items():
+                        for error in errors:
+                            error_messages.append(f"Order {field}: {error}")
+                if not item_formset_is_valid:
+                    for i, form in enumerate(item_formset):
+                        for field, errors in form.errors.items():
+                            for error in errors:
+                                error_messages.append(f"Item {i+1} {field}: {error}")
+
+                messages.error(request, 'Please correct errors: ' + '; '.join(error_messages))
+
+        except IntegrityError as e:
+            if 'uniquecode' in str(e):
+                logger.error(f"Order creation error (unique code conflict): {str(e)}")
+                messages.error(request, 'Could not create order due to system error. Please try again.')
+            else:
                 logger.error(f"Order creation error: {str(e)}")
                 messages.error(request, f'Error creating order: {str(e)}')
-
-        else:
-            error_messages = []
-            if customer_form and not customer_form_is_valid:
-                for field, errors in customer_form.errors.items():
-                    for error in errors:
-                        error_messages.append(f"Customer {field}: {error}")
-            if not order_form_is_valid:
-                for field, errors in order_form.errors.items():
-                    for error in errors:
-                        error_messages.append(f"Order {field}: {error}")
-            if not item_formset_is_valid:
-                for i, form in enumerate(item_formset):
-                    for field, errors in form.errors.items():
-                        for error in errors:
-                            error_messages.append(f"Item {i+1} {field}: {error}")
-
-            messages.error(request, 'Please correct errors: ' + '; '.join(error_messages))
+        except Exception as e:
+            logger.error(f"Order creation error: {str(e)}")
+            messages.error(request, f'Error creating order: {str(e)}')
 
     else:  # GET
         customer_form = CustomerForm()
@@ -1024,87 +1028,78 @@ def createorder(request):
 
 @login_required
 def laundrydashboard(request):
+    """Laundry dashboard view"""
     if not request.user.is_authenticated:
         return redirect('login')
 
-    # Get user's shops
-    user_shops = get_user_shops(request)
+    try:
+        # Get user's shops
+        user_shops = get_user_shops(request)
 
-    # Base queryset - exclude delivered orders from counts
-    if request.user.is_superuser:
-        # Superuser sees all orders
-        orders = Order.objects.all()
-        # For counts, exclude delivered orders
-        count_orders = Order.objects.exclude(order_status='Delivered_picked')
-    elif user_shops:
-        # Staff sees only their shop's orders
-        orders = Order.objects.filter(shop__in=user_shops)
-        # For counts, exclude delivered orders
-        count_orders = Order.objects.filter(shop__in=user_shops).exclude(order_status='Delivered_picked')
-    else:
-        # Users with no shop assignments see nothing
-        orders = Order.objects.none()
-        count_orders = Order.objects.none()
+        # Base queryset - exclude delivered orders from counts
+        if request.user.is_superuser:
+            # Superuser sees all orders
+            orders = Order.objects.all()
+            # For counts, exclude delivered orders
+            count_orders = Order.objects.exclude(order_status='Delivered_picked')
+        elif user_shops:
+            # Staff sees only their shop's orders
+            orders = Order.objects.filter(shop__in=user_shops)
+            # For counts, exclude delivered orders
+            count_orders = Order.objects.filter(shop__in=user_shops).exclude(order_status='Delivered_picked')
+        else:
+            # Users with no shop assignments see nothing
+            orders = Order.objects.none()
+            count_orders = Order.objects.none()
 
-    # Calculate overall stats using count_orders (which excludes delivered orders)
-    total_orders = count_orders.count()
-    pending_orders = count_orders.filter(order_status='pending').count()
-    completed_orders = count_orders.filter(order_status='Completed').count()
+        # Calculate overall stats using count_orders (which excludes delivered orders)
+        total_orders = count_orders.count()
+        pending_orders = count_orders.filter(order_status='pending').count()
+        completed_orders = count_orders.filter(order_status='Completed').count()
 
-    # Get recent orders (including delivered)
-    recent_orders = orders.select_related('customer').order_by('-created_at')[:10]
+        # Get recent orders (including delivered)
+        recent_orders = orders.select_related('customer').order_by('-created_at')[:10]
 
-    # Shop-specific data for superuser
-    shop_a_data = None
-    shop_b_data = None
-    shop_performance = None
-    
-    if request.user.is_superuser:
-        # Get shop performance data for all shops
-        shop_performance = {}
-        shops = Order.objects.values_list('shop', flat=True).distinct()
-        for shop in shops:
-            if shop:  # Ensure shop is not empty
-                shop_orders = Order.objects.filter(shop=shop).exclude(order_status='Delivered_picked')
-                shop_performance[shop] = {
-                    'total_orders': shop_orders.count(),
-                    'completed_orders': shop_orders.filter(order_status='Completed').count(),
-                    'pending_orders': shop_orders.filter(order_status='pending').count(),
-                    'total_revenue': shop_orders.aggregate(
-                        total=Sum('total_price')
-                    )['total'] or 0
-                }
+        # Shop-specific data for superuser
+        shop_performance = None
         
-        # Specific data for Shop A and Shop B
-        shop_a_orders = Order.objects.filter(shop='Shop A').exclude(order_status='Delivered_picked')
-        shop_b_orders = Order.objects.filter(shop='Shop B').exclude(order_status='Delivered_picked')
-        
-        shop_a_data = {
-            'total_orders': shop_a_orders.count(),
-            'completed_orders': shop_a_orders.filter(order_status='Completed').count(),
-            'pending_orders': shop_a_orders.filter(order_status='pending').count(),
-            'total_revenue': shop_a_orders.aggregate(total=Sum('total_price'))['total'] or 0
+        if request.user.is_superuser:
+            # Get shop performance data for all shops
+            shop_performance = {}
+            shops = Order.objects.values_list('shop', flat=True).distinct()
+            for shop in shops:
+                if shop:  # Ensure shop is not empty
+                    shop_orders = Order.objects.filter(shop=shop).exclude(order_status='Delivered_picked')
+                    shop_performance[shop] = {
+                        'total_orders': shop_orders.count(),
+                        'completed_orders': shop_orders.filter(order_status='Completed').count(),
+                        'pending_orders': shop_orders.filter(order_status='pending').count(),
+                        'total_revenue': shop_orders.aggregate(
+                            total=Sum('total_price')
+                        )['total'] or 0
+                    }
+
+        context = {
+            'user_shops': user_shops,
+            'total_orders': total_orders,
+            'pending_orders': pending_orders,
+            'completed_orders': completed_orders,
+            'recent_orders': recent_orders,
+            'shop_performance': shop_performance,
         }
+        return render(request, 'Admin/dashboard.html', context)
         
-        shop_b_data = {
-            'total_orders': shop_b_orders.count(),
-            'completed_orders': shop_b_orders.filter(order_status='Completed').count(),
-            'pending_orders': shop_b_orders.filter(order_status='pending').count(),
-            'total_revenue': shop_b_orders.aggregate(total=Sum('total_price'))['total'] or 0
-        }
-
-    context = {
-        'user_shops': user_shops,
-        'total_orders': total_orders,
-        'pending_orders': pending_orders,
-        'completed_orders': completed_orders,
-        'recent_orders': recent_orders,
-        'shop_performance': shop_performance,
-        'shop_a_data': shop_a_data,
-        'shop_b_data': shop_b_data,
-    }
-    return render(request, 'Admin/dashboard.html', context)
-
+    except Exception as e:
+        logger.error(f"Error in laundry dashboard: {str(e)}")
+        messages.error(request, "An error occurred while loading the dashboard.")
+        return render(request, 'Admin/dashboard.html', {
+            'user_shops': [],
+            'total_orders': 0,
+            'pending_orders': 0,
+            'completed_orders': 0,
+            'recent_orders': [],
+            'shop_performance': None,
+        })
 
 def get_laundry_profit_and_hotel(request, selected_year=None):
     """
@@ -1127,7 +1122,6 @@ def get_laundry_profit_and_hotel(request, selected_year=None):
                 return ['Shop A', 'Shop B']
         
         # Initialize DashboardAnalytics with the simple admin
-        from .analytics import DashboardAnalytics
         analytics = DashboardAnalytics(SimpleAdmin())
         
         # Get comprehensive dashboard data for the selected year
@@ -1141,13 +1135,7 @@ def get_laundry_profit_and_hotel(request, selected_year=None):
             shop=None
         )
         
-        # Debug: Check what data we're getting
-        print(f"DEBUG: Dashboard data keys: {dashboard_data.keys()}")
-        print(f"DEBUG: Order stats: {dashboard_data.get('order_stats', {})}")
-        print(f"DEBUG: Hotel stats: {dashboard_data.get('hotel_stats', {})}")
-        print(f"DEBUG: Expense stats: {dashboard_data.get('expense_stats', {})}")
-        
-        # Extract laundry data from dashboard_data with fallbacks
+        # Extract data from dashboard_data with fallbacks
         order_stats = dashboard_data.get('order_stats', {})
         expense_stats = dashboard_data.get('expense_stats', {})
         hotel_stats = dashboard_data.get('hotel_stats', {})
@@ -1178,14 +1166,10 @@ def get_laundry_profit_and_hotel(request, selected_year=None):
             'available_years': list(range(2020, current_date.year + 1)),
         }
         
-        print(f"DEBUG: Final context - Laundry: {laundry_revenue}, Hotel: {hotel_revenue}, Total: {total_revenue}")
-        
         return render(request, 'Admin/Generaldashboard.html', context)
         
     except Exception as e:
         logger.error(f"Error in get_laundry_profit_and_hotel: {e}")
-        import traceback
-        print(f"ERROR: {traceback.format_exc()}")
         
         return render(request, 'Admin/Generaldashboard.html', {
             'total_revenue': 0.0, 'laundry_revenue': 0.0, 'laundry_expenses': 0.0,
@@ -1195,402 +1179,13 @@ def get_laundry_profit_and_hotel(request, selected_year=None):
             'available_years': list(range(2020, current_date.year + 1))
         })
 
-
-def Reportsdashboard(request):
-    # Initialize DashboardAnalytics with a mock admin instance
-    class MockAdmin:
-        def get_user_shops(self, request):
-            return get_user_shops(request)
-    
-    mock_admin = MockAdmin()
-    analytics = DashboardAnalytics(mock_admin)
-    
-    # Get current year and month
-    current_year = timezone.now().year
-    current_month = timezone.now().month
-    
-    # Get dashboard data
-    data = analytics.get_dashboard_data(request, current_year, current_month)
-    
-    # Prepare context
-    context = analytics.prepare_dashboard_context(request, data, current_year, current_month)
-    
-    return render(request, 'dashboard.html', context)
-
-def initiatepayment(request, order_id):
-    if request.method == 'POST':
-        order = get_object_or_404(Order, id=order_id)
-        
-        # Check if order is already fully paid
-        if order.balance <= 0:
-            return JsonResponse({
-                'success': False, 
-                'message': f"Order {order.uniquecode} is already fully paid."
-            })
-            
-        # Get the amount from the POST data
-        try:
-            amount = int(request.POST.get('amount', order.balance))
-        except (ValueError, TypeError):
-            amount = int(order.balance)
-            
-        # Validate amount
-        if amount <= 0:
-            return JsonResponse({
-                'success': False,
-                'message': 'Invalid payment amount'
-            })
-            
-        if amount > order.balance:
-            return JsonResponse({
-                'success': False,
-                'message': f'Amount cannot exceed balance of KSh {order.balance}'
-            })
-            
-        cl = MpesaClient()
-        phone_number = str(order.customer.phone)
-        
-        # Format phone number correctly (remove leading 0 if present and add country code)
-        if phone_number.startswith('0'):
-            phone_number = '254' + phone_number[1:]
-        elif phone_number.startswith('+254'):
-            phone_number = phone_number[1:]
-        elif phone_number.startswith('254'):
-            phone_number = phone_number
-        else:
-            phone_number = '254' + phone_number
-            
-        account_reference = f"ORDER{order.id}"
-        transaction_desc = f"Payment for order {order.uniquecode}"
-        
-        # For development/testing, you can use a mock callback URL
-        # For production, you need a real publicly accessible HTTPS URL
-        if settings.DEBUG:
-            # Use a service like ngrok or webhook.site for development
-            callback_url = "https://webhook.site/your-unique-url"  # Replace with your webhook URL
-            # OR use ngrok: callback_url = "https://your-ngrok-url.ngrok.io/daraja/stk_push/"
-        else:
-            # Production callback URL
-            callback_url = "https://yourdomain.com/daraja/stk_push/"
-        
-        logger.info(f"Attempting payment initiation: Phone: {phone_number}, Amount: {amount}, Callback: {callback_url}")
-        
-        try:
-            response = cl.stk_push(phone_number, amount, account_reference, transaction_desc, callback_url)
-            response_data = response.json()
-            
-            logger.info(f"M-Pesa API Response: {response_data}")
-            
-            if 'ResponseCode' in response_data and response_data['ResponseCode'] == '0':
-                checkout_request_id = response_data.get('CheckoutRequestID')
-                if checkout_request_id:
-                    order.checkout_request_id = checkout_request_id
-                    order.payment_status = 'processing'
-                    order.save()
-                    
-                    logger.info(f"Payment initiated successfully for order {order.uniquecode}. CheckoutRequestID: {checkout_request_id}")
-                    
-                    return JsonResponse({
-                        'success': True,
-                        'message': f"Payment initiated for order {order.uniquecode}. Check your phone to complete payment.",
-                        'checkout_request_id': checkout_request_id
-                    })
-                else:
-                    error_message = "No CheckoutRequestID received from M-Pesa"
-                    logger.error(f"Payment initiation failed: {error_message}")
-                    return JsonResponse({
-                        'success': False,
-                        'message': f"Payment initiation failed: {error_message}"
-                    })
-            else:
-                error_message = response_data.get('errorMessage', 'Unknown error occurred')
-                customer_message = response_data.get('CustomerMessage', '')
-                logger.error(f"M-Pesa API error: {error_message}, CustomerMessage: {customer_message}")
-                return JsonResponse({
-                    'success': False,
-                    'message': f"Payment initiation failed: {customer_message or error_message}"
-                })
-                
-        except Exception as e:
-            logger.error(f"Error initiating payment for order {order.uniquecode}: {str(e)}")
-            return JsonResponse({
-                'success': False,
-                'message': f"Error initiating payment: {str(e)}"
-            })
-    
-    return JsonResponse({'success': False, 'message': 'Invalid request method'})
-
-@csrf_exempt
-def stk_push_callback(request):
-    if request.method == 'POST':
-        try:
-            data = json.loads(request.body)
-            logger.info(f"STK Push callback received: {data}")
-
-            stk_callback = data.get("Body", {}).get("stkCallback", {})
-            result_code = stk_callback.get("ResultCode")
-            checkout_request_id = stk_callback.get("CheckoutRequestID")
-            result_desc = stk_callback.get("ResultDesc", "")
-            callback_metadata = stk_callback.get("CallbackMetadata", {}).get("Item", [])
-
-            if result_code == 0:
-                # Payment was successful
-                try:
-                    order = Order.objects.get(checkout_request_id=checkout_request_id)
-                    
-                    # Extract payment details from metadata
-                    balance_paid = 0
-                    mpesa_receipt_number = ""
-                    
-                    for item in callback_metadata:
-                        if item.get("Name") == "Amount":
-                            balance_paid = item.get("Value", 0)
-                        elif item.get("Name") == "MpesaReceiptNumber":
-                            mpesa_receipt_number = item.get("Value", "")
-                    
-                    # Update order with payment details - set balance to zero
-                    order.balance = 0
-                    order.total_price =  order.amount_paid+balance_paid  # Assuming full payment
-                    order.payment_date = timezone.now()
-                    order.save()
-                    
-                    logger.info(f"✅ Order {order.id} marked as paid. Receipt: {mpesa_receipt_number}, Amount: {balance_paid}")
-                    
-                except Order.DoesNotExist:
-                    logger.error(f"❌ No order found for CheckoutRequestID {checkout_request_id}")
-                    return JsonResponse({'ResultCode': 1, 'ResultDesc': 'Order not found'})
-                    
-            else:
-                # Payment failed
-                try:
-                    order = Order.objects.get(checkout_request_id=checkout_request_id)
-                    order.payment_status = 'failed'
-                    order.save()
-                    logger.error(f"❌ Payment failed for order {order.id}: {result_desc}")
-                except Order.DoesNotExist:
-                    logger.error(f"❌ Payment failed for unknown order with CheckoutRequestID {checkout_request_id}: {result_desc}")
-        
-            return JsonResponse({'ResultCode': 0, 'ResultDesc': 'Success'})
-            
-        except json.JSONDecodeError:
-            logger.error("Invalid JSON in callback")
-            return JsonResponse({'ResultCode': 1, 'ResultDesc': 'Invalid JSON'})
-        except Exception as e:
-            logger.error(f"Unexpected error in callback: {e}")
-            return JsonResponse({'ResultCode': 1, 'ResultDesc': 'Server error'})
-            
-    return JsonResponse({'ResultCode': 1, 'ResultDesc': 'Invalid request method'})
-
 def logout_view(request):
     """Log out the current user and redirect to login page"""
-    auth_logout(request)
-    messages.info(request, "You have been successfully logged out.")
+    try:
+        auth_logout(request)
+        messages.info(request, "You have been successfully logged out.")
+    except Exception as e:
+        logger.error(f"Error during logout: {str(e)}")
+        messages.error(request, "An error occurred during logout.")
+    
     return redirect('login')
-
-# Financial debugging views
-from django.http import JsonResponse
-from django.db.models import Sum
-from django.views import View
-from .models import Order, ExpenseRecord, OrderItem
-import json
-
-class DebugFinancialDataView(View):
-    def get(self, request):
-        """
-        Debug view to sum up all expenses and order totals in the database
-        """
-        try:
-            # Sum up all orders' total_price
-            orders_summary = Order.objects.aggregate(
-                total_orders_revenue=Sum('total_price'),
-                total_orders_count=Sum('id', distinct=True),  # Count distinct orders
-                total_amount_paid=Sum('amount_paid'),
-                total_balance=Sum('balance')
-            )
-            
-            # Sum up all expenses
-            expenses_summary = ExpenseRecord.objects.aggregate(
-                total_expenses=Sum('amount'),
-                expenses_count=Sum('id', distinct=True)  # Count distinct expenses
-            )
-            
-            # Get expenses by shop
-            expenses_by_shop = list(ExpenseRecord.objects.values('shop').annotate(
-                shop_expenses=Sum('amount'),
-                expense_count=Sum('id', distinct=True)
-            ).order_by('-shop_expenses'))
-            
-            # Get revenue by shop
-            revenue_by_shop = list(Order.objects.values('shop').annotate(
-                shop_revenue=Sum('total_price'),
-                orders_count=Sum('id', distinct=True),
-                amount_paid=Sum('amount_paid'),
-                balance=Sum('balance')
-            ).order_by('-shop_revenue'))
-            
-            # Get order items summary
-            order_items_summary = OrderItem.objects.aggregate(
-                total_items_value=Sum('total_item_price'),
-                total_items_count=Sum('quantity'),
-                distinct_items=Sum('id', distinct=True)
-            )
-            
-            # Calculate net profit/loss
-            total_revenue = orders_summary['total_orders_revenue'] or 0
-            total_expenses = expenses_summary['total_expenses'] or 0
-            net_profit = total_revenue - total_expenses
-            
-            # Get some sample data for verification
-            sample_orders = list(Order.objects.values('uniquecode', 'total_price', 'amount_paid', 'balance')[:5])
-            sample_expenses = list(ExpenseRecord.objects.values('field__label', 'shop', 'amount', 'date')[:5])
-            
-            response_data = {
-                'status': 'success',
-                'summary': {
-                    'financial_overview': {
-                        'total_revenue': float(total_revenue),
-                        'total_expenses': float(total_expenses),
-                        'net_profit_loss': float(net_profit),
-                        'total_amount_collected': float(orders_summary['total_amount_paid'] or 0),
-                        'total_balance_outstanding': float(orders_summary['total_balance'] or 0)
-                    },
-                    'orders_breakdown': {
-                        'total_orders': orders_summary['total_orders_count'] or 0,
-                        'total_orders_revenue': float(orders_summary['total_orders_revenue'] or 0),
-                        'total_amount_paid': float(orders_summary['total_amount_paid'] or 0),
-                        'total_balance': float(orders_summary['total_balance'] or 0)
-                    },
-                    'expenses_breakdown': {
-                        'total_expenses': float(expenses_summary['total_expenses'] or 0),
-                        'total_expense_records': expenses_summary['expenses_count'] or 0
-                    },
-                    'order_items_breakdown': {
-                        'total_items_value': float(order_items_summary['total_items_value'] or 0),
-                        'total_items_quantity': order_items_summary['total_items_count'] or 0,
-                        'distinct_item_entries': order_items_summary['distinct_items'] or 0
-                    }
-                },
-                'detailed_breakdown': {
-                    'revenue_by_shop': revenue_by_shop,
-                    'expenses_by_shop': expenses_by_shop
-                },
-                'sample_data': {
-                    'recent_orders': sample_orders,
-                    'recent_expenses': sample_expenses
-                },
-                'calculations_verification': {
-                    'revenue_minus_expenses': float(total_revenue - total_expenses),
-                    'should_equal_net_profit': net_profit == (total_revenue - total_expenses),
-                    'amount_paid_plus_balance_equals_total': (
-                        float((orders_summary['total_amount_paid'] or 0) + (orders_summary['total_balance'] or 0)) == 
-                        float(total_revenue)
-                    )
-                },
-                'database_counts': {
-                    'total_order_records': Order.objects.count(),
-                    'total_expense_records': ExpenseRecord.objects.count(),
-                    'total_order_item_records': OrderItem.objects.count(),
-                    'total_customers': Customer.objects.count()
-                }
-            }
-            
-            return JsonResponse(response_data, json_dumps_params={'indent': 2})
-            
-        except Exception as e:
-            error_response = {
-                'status': 'error',
-                'message': str(e),
-                'error_type': type(e).__name__
-            }
-            return JsonResponse(error_response, status=500, json_dumps_params={'indent': 2})
-
-
-# Alternative simpler version for quick debugging
-def quick_financial_debug(request):
-    """
-    Quick debug endpoint that returns basic financial totals
-    """
-    try:
-        # Basic aggregates
-        total_revenue = Order.objects.aggregate(total=Sum('total_price'))['total'] or 0
-        total_expenses = ExpenseRecord.objects.aggregate(total=Sum('amount'))['total'] or 0
-        total_paid = Order.objects.aggregate(total=Sum('amount_paid'))['total'] or 0
-        total_balance = Order.objects.aggregate(total=Sum('balance'))['total'] or 0
-        
-        # Counts
-        order_count = Order.objects.count()
-        expense_count = ExpenseRecord.objects.count()
-        
-        response_data = {
-            'total_revenue': float(total_revenue),
-            'total_expenses': float(total_expenses),
-            'net_profit': float(total_revenue - total_expenses),
-            'total_amount_paid': float(total_paid),
-            'total_balance': float(total_balance),
-            'order_count': order_count,
-            'expense_count': expense_count,
-            'verification': {
-                'revenue_equals_paid_plus_balance': float(total_revenue) == float(total_paid + total_balance),
-                'difference': float(total_revenue) - float(total_paid + total_balance)
-            }
-        }
-        
-        return JsonResponse(response_data, json_dumps_params={'indent': 2})
-        
-    except Exception as e:
-        return JsonResponse({'error': str(e)}, status=500)
-
-
-# View to check individual order calculations
-def debug_order_calculations(request):
-    """
-    Debug view to check if order calculations are correct
-    """
-    try:
-        orders_with_issues = []
-        correct_orders = 0
-        
-        # Check each order's calculations
-        for order in Order.objects.all().prefetch_related('items'):
-            # Calculate what the total should be based on items
-            calculated_total = sum(float(item.total_item_price) for item in order.items.all())
-            stored_total = float(order.total_price)
-            
-            # Calculate what balance should be
-            calculated_balance = stored_total - float(order.amount_paid)
-            stored_balance = float(order.balance)
-            
-            # Check for discrepancies
-            total_matches = abs(calculated_total - stored_total) < 0.01  # Allow for floating point errors
-            balance_matches = abs(calculated_balance - stored_balance) < 0.01
-            
-            if not total_matches or not balance_matches:
-                orders_with_issues.append({
-                    'order_code': order.uniquecode,
-                    'calculated_total': calculated_total,
-                    'stored_total': stored_total,
-                    'total_difference': calculated_total - stored_total,
-                    'amount_paid': float(order.amount_paid),
-                    'calculated_balance': calculated_balance,
-                    'stored_balance': stored_balance,
-                    'balance_difference': calculated_balance - stored_balance,
-                    'item_count': order.items.count()
-                })
-            else:
-                correct_orders += 1
-        
-        response_data = {
-            'total_orders_checked': Order.objects.count(),
-            'correct_orders': correct_orders,
-            'orders_with_calculation_issues': len(orders_with_issues),
-            'issues_found': orders_with_issues,
-            'issue_summary': {
-                'total_mismatch_count': len([o for o in orders_with_issues if abs(o['total_difference']) >= 0.01]),
-                'balance_mismatch_count': len([o for o in orders_with_issues if abs(o['balance_difference']) >= 0.01])
-            }
-        }
-        
-        return JsonResponse(response_data, json_dumps_params={'indent': 2})
-        
-    except Exception as e:
-        return JsonResponse({'error': str(e)}, status=500)

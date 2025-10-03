@@ -139,7 +139,7 @@ class Order(models.Model):
 
     PAYMENT_STATUS_CHOICES = (
         ('pending', 'pending'),
-        ('completed', 'cpompleted'),
+        ('completed', 'complete'),
         ('partial', 'partial'),
     )
     payment_status = models.CharField(max_length=50, choices=PAYMENT_STATUS_CHOICES,
