@@ -26,24 +26,10 @@ class FoodItem(models.Model):
         on_delete=models.CASCADE)
     # stock management
     quantity = models.PositiveIntegerField(default=0)  # how many portions are available
-    is_available = models.BooleanField(default=False, db_index=True)  # marked available by seller
-
-    def mark_available(self, qty: int):
-        """Seller marks item available with given stock"""
-        self.quantity = qty
-        self.is_available = True
-        self.save()
-
-    def sell(self, qty: int = 1):
-        """Reduce stock when a customer orders"""
-        if self.quantity >= qty:
-            self.quantity -= qty
-            if self.quantity == 0:
-                self.is_available = False
-            self.save()
+   
 
     def __str__(self):
-        return f"{self.name} - ({'Available' if self.is_available else 'Unavailable'})"
+        return f"{self.name}"
 
 class HotelOrder(models.Model):
     created_by = models.ForeignKey(
@@ -65,20 +51,14 @@ class HotelOrder(models.Model):
 
 # Add this to your HotelOrderItem model
 class HotelOrderItem(models.Model):
-    order = models.ForeignKey(HotelOrder, on_delete=models.CASCADE, related_name="order_items")
+    order = models.ForeignKey(HotelOrder, on_delete=models.CASCADE, related_name='order_items')
     food_item = models.ForeignKey(FoodItem, on_delete=models.CASCADE)
     quantity = models.PositiveIntegerField(default=1)
-    price = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)  # Add this field
-
-   
+    price = models.DecimalField(max_digits=10, decimal_places=2)
+    
     def save(self, *args, **kwargs):
-        """When order item is saved, reduce stock from FoodItem"""
-        # Only reduce stock for new items
-        if not self.pk and self.food_item and self.quantity > 0:
-            if self.food_item.quantity >= self.quantity:
-                self.food_item.sell(self.quantity)
-            else:
-                raise ValueError(f"Not enough stock for {self.food_item.name}")
+        # Ensure no availability checks in save method
+        super().save(*args, **kwargs)
                 
         super().save(*args, **kwargs)
 

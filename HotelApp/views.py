@@ -15,7 +15,7 @@ from django.utils.dateparse import parse_date
 
 from .models import FoodCategory, FoodItem, HotelOrder as Order, HotelOrderItem
 from .forms import (
-    FoodCategoryForm, FoodItemForm, FoodItemAvailabilityForm,
+    FoodCategoryForm, FoodItemForm,
     OrderForm, HotelOrderItemForm, BulkOrderForm
 )
 from .Vews.resource import HotelOrderResource
@@ -101,18 +101,34 @@ def category_delete(request, pk):
 
 
 # Food Item Views
+# For pagination (if you have many items)
+from django.core.paginator import Paginator
+from django.db import DatabaseError
+
 @login_required
 def food_item_list(request):
     """Display all food items"""
     try:
-        items = FoodItem.objects.all().select_related('category', 'created_by')
-        return render(request, 'food/food_item_list.html', {'items': items})
+        # Ensure we're getting all food items with related category
+        items = FoodItem.objects.all().select_related('category').order_by('name')
+        
+        # Debug logging
+        logger.info(f"Successfully loaded {items.count()} food items")
+        
+        context = {
+            'items': items,
+        }
+        return render(request, 'food/food_item_list.html', context)
+        
+    except DatabaseError as e:
+        logger.error(f"Database error loading food items: {str(e)}")
+        messages.error(request, 'Database error. Please try again later.')
+        return render(request, 'food/food_item_list.html', {'items': []})
+        
     except Exception as e:
-        logger.error(f"Error loading food items: {str(e)}")
+        logger.error(f"Unexpected error loading food items: {str(e)}", exc_info=True)
         messages.error(request, 'Error loading food items. Please try again.')
         return render(request, 'food/food_item_list.html', {'items': []})
-
-
 @login_required
 def load_default_food_items(request):
     """Load default food items based on categories"""
@@ -175,7 +191,7 @@ def food_item_create(request):
     """Create a new food item"""
     try:
         if request.method == 'POST':
-            form = FoodItemForm(request.POST, request.FILES)
+            form = FoodItemForm(request.POST)
             if form.is_valid():
                 with transaction.atomic():
                     food_item = form.save(commit=False)
@@ -233,35 +249,6 @@ def food_item_edit(request, pk):
         return redirect('hotel:food_item_list')
 
 
-@login_required
-def food_item_availability(request, pk):
-    """Update food item availability"""
-    try:
-        food_item = get_object_or_404(FoodItem, pk=pk)
-        
-        # Check if user has permission to update availability
-        if food_item.created_by != request.user and not request.user.is_staff and not request.user.is_superuser:
-            messages.error(request, 'You do not have permission to update availability for this food item.')
-            return redirect('hotel:food_item_list')
-        
-        if request.method == 'POST':
-            form = FoodItemAvailabilityForm(request.POST, instance=food_item)
-            if form.is_valid():
-                form.save()
-                messages.success(request, 'Availability updated successfully!')
-                return redirect('hotel:food_item_list')
-        else:
-            form = FoodItemAvailabilityForm(instance=food_item)
-        
-        return render(request, 'food/food_item_availability.html', {
-            'form': form, 
-            'food_item': food_item
-        })
-    
-    except Exception as e:
-        logger.error(f"Error updating availability for food item {pk}: {str(e)}")
-        messages.error(request, 'Error updating availability. Please try again.')
-        return redirect('hotel:food_item_list')
 
 
 @login_required
@@ -290,9 +277,10 @@ def food_item_delete(request, pk):
 
 
 # Order Views
+
 @login_required
 def create_order(request):
-    """Create a new order - only shows available food items"""
+    """Create a new order - shows ALL food items without any availability checks"""
     try:
         # Create a custom formset that includes price field
         class HotelOrderItemFormWithPrice(HotelOrderItemForm):
@@ -309,11 +297,11 @@ def create_order(request):
             
             def __init__(self, *args, **kwargs):
                 super().__init__(*args, **kwargs)
-                # Only show available food items in the dropdown
-                self.fields['food_item'].queryset = FoodItem.objects.filter(
-                    is_available=True,
-                    quantity__gt=0  # Only items with stock available
-                ).select_related('category').order_by('category__name', 'name')
+                # Show ALL food items in the dropdown without any filters
+                self.fields['food_item'].queryset = FoodItem.objects.all().select_related('category').order_by('category__name', 'name')
+                
+                # Remove any availability-related validation
+                self.fields['food_item'].empty_label = "Select a food item"
                 
                 # Add CSS classes for better styling
                 self.fields['food_item'].widget.attrs.update({
@@ -347,74 +335,43 @@ def create_order(request):
 
             if order_form.is_valid() and item_formset.is_valid():
                 with transaction.atomic():
+                    # Create the order
                     order = order_form.save(commit=False)
                     order.created_by = request.user
                     order.save()
 
+                    # Save order items without any availability checks
                     instances = item_formset.save(commit=False)
-
-                    # Stock check (double validation for safety)
-                    stock_errors = []
                     for instance in instances:
                         if instance.food_item:
-                            available_qty = instance.food_item.quantity
-                            if instance.quantity > available_qty:
-                                stock_errors.append(
-                                    f"Only {available_qty} portions of {instance.food_item.name} are available. You requested {instance.quantity}."
-                                )
-                            # Also check if item is still available
-                            elif not instance.food_item.is_available:
-                                stock_errors.append(
-                                    f"{instance.food_item.name} is no longer available."
-                                )
-
-                    if stock_errors:
-                        for error in stock_errors:
-                            messages.error(request, error)
-                        return render(request, 'food/create_order.html', {
-                            'order_form': order_form,
-                            'item_formset': item_formset,
-                            'available_food_items': FoodItem.objects.filter(is_available=True, quantity__gt=0)
-                        })
-                    
-                    # Save valid items and update stock
-                    for instance in instances:
-                        if instance.food_item:  # Additional safety check
                             instance.order = order
                             instance.save()
-                            
-                            # Update stock
-                            instance.food_item.quantity -= instance.quantity
-                            if instance.food_item.quantity <= 0:
-                                instance.food_item.is_available = False
-                            instance.food_item.save()
+                            # No stock updates, no availability checks
 
                     messages.success(request, 'Order placed successfully!')
                     return redirect('hotel:order_list')
             else:
+                # Log form errors for debugging
+                logger.warning(f"Order form errors: {order_form.errors}")
+                logger.warning(f"Formset errors: {item_formset.errors}")
                 messages.error(request, 'Please correct the errors below.')
         else:
             order_form = OrderForm()
             item_formset = HotelOrderItemFormSet(queryset=HotelOrderItem.objects.none(), prefix="items")
 
-        # Get available food items for the template (for JavaScript or display)
-        available_food_items = FoodItem.objects.filter(
-            is_available=True, 
-            quantity__gt=0
-        ).select_related('category').order_by('category__name', 'name')
+        # Get ALL food items for the template
+        all_food_items = FoodItem.objects.all().select_related('category').order_by('category__name', 'name')
 
         return render(request, 'food/create_order.html', {
             'order_form': order_form,
             'item_formset': item_formset,
-            'available_food_items': available_food_items,
+            'available_food_items': all_food_items,
         })
     
     except Exception as e:
-        logger.error(f"Error creating order: {str(e)}")
+        logger.error(f"Error creating order: {str(e)}", exc_info=True)
         messages.error(request, 'Error creating order. Please try again.')
         return redirect('hotel:order_list')
-
-
 logger = logging.getLogger(__name__)
 
 
@@ -465,14 +422,6 @@ def order_list(request):
         export = request.GET.get('export')
         export_format = request.GET.get('format', 'csv')
         
-        # Build filter description for messages
-        date_filter_description = ""
-        if start_date and end_date:
-            if start_date == end_date:
-                date_filter_description = f"for {start_date.strftime('%B %d, %Y')}"
-            else:
-                date_filter_description = f"from {start_date.strftime('%B %d, %Y')} to {end_date.strftime('%B %d, %Y')}"
-        
         # Filter orders by date range
         orders = Order.objects.filter(
             created_at__date__gte=start_date,
@@ -498,7 +447,7 @@ def order_list(request):
                     filename = f"orders_{start_date}_{end_date}.csv"
                 
                 response['Content-Disposition'] = f'attachment; filename="{filename}"'
-                messages.success(request, f'Orders exported successfully {date_filter_description}!')
+
                 return response
             
             except Exception as e:
@@ -526,9 +475,7 @@ def order_list(request):
         # Prepare summary data
         summary = {
             'total_orders': total_orders,
-            'total_revenue': total_revenue,
-            'average_order_value': average_order_value,
-            'date_range_description': date_filter_description,
+            'total_revenue': total_revenue,            
         }
         
         # Pagination with error handling
@@ -546,16 +493,11 @@ def order_list(request):
         page_obj.start_index = (page_obj.number - 1) * paginator.per_page + 1
         page_obj.end_index = min(page_obj.number * paginator.per_page, paginator.count)
         
-        # Add success message for filtered results
-        if total_orders > 0 and date_filter_description:
-            messages.info(request, f'Showing {total_orders} orders {date_filter_description}.')
-        
         return render(request, 'food/order_list.html', {
             'orders': page_obj,
             'summary': summary,
             'start_date': start_date,
             'end_date': end_date,
-            'date_filter_description': date_filter_description,
         })
     
     except Exception as e:
@@ -566,13 +508,10 @@ def order_list(request):
             'summary': {
                 'total_orders': 0, 
                 'total_revenue': 0, 
-                'average_order_value': 0,
-                'date_range_description': ''
             },
             'start_date': timezone.now().replace(day=1).date(),
             'end_date': timezone.now().date(),
         })
-
 
 @login_required
 def export_orders(request):
@@ -644,7 +583,7 @@ def order_detail(request, pk):
 
 @login_required
 def order_edit(request, pk):
-    """Edit an existing order"""
+    """Edit an existing order without inventory management"""
     try:
         order = get_object_or_404(Order, pk=pk)
         
@@ -662,64 +601,8 @@ def order_edit(request, pk):
             
             if formset.is_valid():
                 with transaction.atomic():
-                    instances = formset.save(commit=False)
-                    
-                    # Handle deleted items - restore stock
-                    for obj in formset.deleted_objects:
-                        if obj.food_item:
-                            obj.food_item.quantity += obj.quantity
-                            obj.food_item.is_available = True
-                            obj.food_item.save()
-                        obj.delete()
-                    
-                    # Handle stock management for changed items
-                    for form in formset:
-                        if form.has_changed() and form.instance.pk:  # Existing item changed
-                            order_item = form.instance
-                            original_item = HotelOrderItem.objects.get(pk=order_item.pk)
-                            
-                            # Handle quantity changes
-                            if 'quantity' in form.changed_data and order_item.food_item:
-                                original_qty = original_item.quantity
-                                quantity_diff = order_item.quantity - original_qty
-                                
-                                if quantity_diff != 0:
-                                    if quantity_diff > 0:
-                                        if order_item.food_item.quantity >= quantity_diff:
-                                            order_item.food_item.sell(quantity_diff)
-                                        else:
-                                            messages.error(request, f"Not enough stock for {order_item.food_item.name}")
-                                            return redirect('hotel:order_edit', pk=order.pk)
-                                    else:
-                                        order_item.food_item.quantity += abs(quantity_diff)
-                                        order_item.food_item.is_available = True
-                                        order_item.food_item.save()
-                            
-                            # Handle food item changes
-                            if 'food_item' in form.changed_data:
-                                if original_item.food_item:
-                                    original_item.food_item.quantity += original_item.quantity
-                                    original_item.food_item.is_available = True
-                                    original_item.food_item.save()
-                                
-                                if order_item.food_item and order_item.food_item.quantity >= order_item.quantity:
-                                    order_item.food_item.sell(order_item.quantity)
-                                else:
-                                    messages.error(request, f"Not enough stock for {order_item.food_item.name}")
-                                    return redirect('hotel:order_edit', pk=order.pk)
-                        
-                        elif not form.instance.pk and form.cleaned_data.get('food_item'):  # New item
-                            order_item = form.instance
-                            if order_item.quantity > 0:
-                                if order_item.food_item.quantity >= order_item.quantity:
-                                    order_item.food_item.sell(order_item.quantity)
-                                else:
-                                    messages.error(request, f"Not enough stock for {order_item.food_item.name}")
-                                    return redirect('hotel:order_edit', pk=order.pk)
-                    
-                    # Save all valid instances
-                    for instance in instances:
-                        instance.save()
+                    # Save the formset - this handles deletions and updates automatically
+                    formset.save()
                     
                     messages.success(request, f'Order #{order.id} updated successfully!')
                     return redirect('hotel:order_detail', pk=order.pk)
@@ -730,12 +613,13 @@ def order_edit(request, pk):
         else:
             formset = OrderItemFormSet(instance=order, prefix="order_items")
         
-        available_food_items = FoodItem.objects.filter(is_available=True).select_related('category')
+        # Get ALL food items (no availability filter)
+        all_food_items = FoodItem.objects.all().select_related('category')
         
         return render(request, 'food/order_edit.html', {
             'formset': formset,
             'order': order,
-            'available_food_items': available_food_items,
+            'available_food_items': all_food_items,  # Now contains all items
             'title': f'Edit Order #{order.id}'
         })
     
@@ -743,7 +627,6 @@ def order_edit(request, pk):
         logger.error(f"Error editing order {pk}: {str(e)}")
         messages.error(request, 'Error updating order. Please try again.')
         return redirect('hotel:order_list')
-
 
 @login_required
 def order_delete(request, pk):

@@ -61,6 +61,7 @@ class DashboardAnalytics:
                 'overdue_payments': 0,
                 'total_pending_amount': 0,
                 'total_partial_amount': 0,
+                'total_complete_amount': 0,
                 'total_collected_amount': 0,
                 'total_balance_amount': 0
             },
@@ -489,13 +490,17 @@ class DashboardAnalytics:
     
     def _calculate_payment_stats(self, base_queryset):
         """
-        Calculate comprehensive payment statistics.
+        Calculate comprehensive payment statistics including total amounts for each payment status.
         """
         payment_stats = base_queryset.aggregate(
             total_orders=Count('id'),
+            
+            # Count of orders in each payment status
             pending_payments=Count('id', filter=Q(amount_paid=0) | Q(amount_paid__isnull=True)),
             partial_payments=Count('id', filter=Q(amount_paid__gt=0, amount_paid__lt=models.F('total_price')) | Q(balance__gt=0)),
             complete_payments=Count('id', filter=Q(amount_paid__gte=models.F('total_price')) | Q(balance=0)),
+            
+            # Total amounts for each payment status
             total_pending_amount=Coalesce(
                 Sum(
                     Case(
@@ -509,13 +514,24 @@ class DashboardAnalytics:
                 Sum(
                     Case(
                         When(Q(amount_paid__gt=0) & Q(amount_paid__lt=models.F('total_price')), 
-                             then=models.F('total_price') - models.F('amount_paid')),
-                        When(Q(balance__gt=0), then=models.F('balance')),
+                             then=models.F('amount_paid')),
                         default=0,
                         output_field=DecimalField()
                     )
                 ), 0, output_field=DecimalField()
             ),
+            total_complete_amount=Coalesce(
+                Sum(
+                    Case(
+                        When(Q(amount_paid__gte=models.F('total_price')) | Q(balance=0), 
+                             then=models.F('total_price')),
+                        default=0,
+                        output_field=DecimalField()
+                    )
+                ), 0, output_field=DecimalField()
+            ),
+            
+            # Overall payment statistics
             total_collected_amount=Coalesce(Sum('amount_paid'), 0, output_field=DecimalField()),
             total_balance_amount=Coalesce(Sum('balance'), 0, output_field=DecimalField())
         )
@@ -580,17 +596,56 @@ class DashboardAnalytics:
         """
         shop_orders = base_queryset.filter(shop=shop_name)
         
+        # Calculate payment statistics for the specific shop
+        shop_payment_stats = shop_orders.aggregate(
+            # Counts
+            pending_payments=Count('id', filter=Q(amount_paid=0) | Q(amount_paid__isnull=True)),
+            partial_payments=Count('id', filter=Q(amount_paid__gt=0, amount_paid__lt=models.F('total_price')) | Q(balance__gt=0)),
+            complete_payments=Count('id', filter=Q(amount_paid__gte=models.F('total_price')) | Q(balance=0)),
+            
+            # Amounts
+            total_pending_amount=Coalesce(
+                Sum(
+                    Case(
+                        When(Q(amount_paid=0) | Q(amount_paid__isnull=True), then=models.F('total_price')),
+                        default=0,
+                        output_field=DecimalField()
+                    )
+                ), 0, output_field=DecimalField()
+            ),
+            total_partial_amount=Coalesce(
+                Sum(
+                    Case(
+                        When(Q(amount_paid__gt=0) & Q(amount_paid__lt=models.F('total_price')), 
+                             then=models.F('amount_paid')),
+                        default=0,
+                        output_field=DecimalField()
+                    )
+                ), 0, output_field=DecimalField()
+            ),
+            total_complete_amount=Coalesce(
+                Sum(
+                    Case(
+                        When(Q(amount_paid__gte=models.F('total_price')) | Q(balance=0), 
+                             then=models.F('total_price')),
+                        default=0,
+                        output_field=DecimalField()
+                    )
+                ), 0, output_field=DecimalField()
+            )
+        )
+        
         shop_stats = shop_orders.aggregate(
             revenue=Coalesce(Sum('total_price'), 0, output_field=DecimalField()),
             total_amount_paid=Coalesce(Sum('amount_paid'), 0, output_field=DecimalField()),
             total_balance=Coalesce(Sum('balance'), 0, output_field=DecimalField()),
             total_orders=Count('id'),
             pending_orders=Count('id', filter=Q(order_status='pending')),
-            completed_orders=Count('id', filter=Q(order_status='Completed')),
-            pending_payments=Count('id', filter=Q(amount_paid=0) | Q(amount_paid__isnull=True)),
-            partial_payments=Count('id', filter=Q(amount_paid__gt=0, amount_paid__lt=models.F('total_price')) | Q(balance__gt=0)),
-            complete_payments=Count('id', filter=Q(amount_paid__gte=models.F('total_price')) | Q(balance=0))
+            completed_orders=Count('id', filter=Q(order_status='Completed'))
         )
+        
+        # Add payment statistics to shop stats
+        shop_stats.update(shop_payment_stats)
         
         # Add expense information
         if shop_name == 'Shop A':
@@ -955,10 +1010,13 @@ class DashboardAnalytics:
             'total_amount_paid': data['order_stats']['total_amount_paid'],
             'total_balance': data['order_stats']['total_balance'],
             
-            # Payment statistics
+            # Payment statistics - now includes total amounts for each status
             'pending_payments': data['payment_stats']['pending_payments'],
             'partial_payments': data['payment_stats']['partial_payments'],
             'complete_payments': data['payment_stats']['complete_payments'],
+            'total_pending_amount': data['payment_stats']['total_pending_amount'],
+            'total_partial_amount': data['payment_stats']['total_partial_amount'],
+            'total_complete_amount': data['payment_stats']['total_complete_amount'],
             'total_collected_amount': data['payment_stats']['total_collected_amount'],
             'total_balance_amount': data['payment_stats']['total_balance_amount'],
 
@@ -1003,14 +1061,20 @@ class DashboardAnalytics:
             'laundry_profit': laundry_profit,
             'hotel_profit': hotel_profit,
 
-            # Shop statistics
+            # Shop statistics - now includes payment amounts
             'shop_a_revenue': data['shop_a_stats']['revenue'],
             'shop_a_total_orders': data['shop_a_stats']['total_orders'],
             'shop_a_net_profit': data['shop_a_stats']['net_profit'],
+            'shop_a_pending_amount': data['shop_a_stats']['total_pending_amount'],
+            'shop_a_partial_amount': data['shop_a_stats']['total_partial_amount'],
+            'shop_a_complete_amount': data['shop_a_stats']['total_complete_amount'],
 
             'shop_b_revenue': data['shop_b_stats']['revenue'],
             'shop_b_total_orders': data['shop_b_stats']['total_orders'],
             'shop_b_net_profit': data['shop_b_stats']['net_profit'],
+            'shop_b_pending_amount': data['shop_b_stats']['total_pending_amount'],
+            'shop_b_partial_amount': data['shop_b_stats']['total_partial_amount'],
+            'shop_b_complete_amount': data['shop_b_stats']['total_complete_amount'],
 
             # Chart data - properly serialized
             'pie_chart_labels': json.dumps([item['shop'] for item in sanitized_revenue_by_shop]),

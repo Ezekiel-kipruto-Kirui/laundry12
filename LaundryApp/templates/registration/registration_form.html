@@ -6,44 +6,83 @@
 <div class="auth-container">
     <h2 class="text-center mb-4">Create Account</h2>
 
+    <!-- Flash Messages -->
+    {% if messages %}
+    <div class="messages mb-4">
+        {% for message in messages %}
+        <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+            {{ message }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+
     <form method="post">
         {% csrf_token %}
 
-        {% if form.errors %}
-        <div class="alert alert-danger">
-            Please correct the errors below.
+        <!-- General Form Errors -->
+        {% if form.non_field_errors %}
+        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+            {% for error in form.non_field_errors %}
+            {{ error }}<br>
+            {% endfor %}
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
         </div>
         {% endif %}
 
         <div class="mb-3">
             <label for="id_username" class="form-label">Username</label>
-            <input type="text" name="username" class="form-control" id="id_username" required>
+            <input type="text" name="username" class="form-control {% if form.username.errors %}is-invalid{% endif %}"
+                id="id_username" value="{{ form.username.value|default:'' }}" required>
             {% if form.username.errors %}
-            <div class="text-danger">{{ form.username.errors }}</div>
+            <div class="invalid-feedback">
+                {% for error in form.username.errors %}
+                {{ error }}
+                {% endfor %}
+            </div>
             {% endif %}
         </div>
 
         <div class="mb-3">
             <label for="id_email" class="form-label">Email</label>
-            <input type="email" name="email" class="form-control" id="id_email" required>
+            <input type="email" name="email" class="form-control {% if form.email.errors %}is-invalid{% endif %}"
+                id="id_email" value="{{ form.email.value|default:'' }}" required>
             {% if form.email.errors %}
-            <div class="text-danger">{{ form.email.errors }}</div>
+            <div class="invalid-feedback">
+                {% for error in form.email.errors %}
+                {{ error }}
+                {% endfor %}
+            </div>
             {% endif %}
         </div>
 
         <div class="mb-3">
             <label for="id_password1" class="form-label">Password</label>
-            <input type="password" name="password1" class="form-control" id="id_password1" required>
+            <input type="password" name="password1"
+                class="form-control {% if form.password1.errors %}is-invalid{% endif %}" id="id_password1" required>
             {% if form.password1.errors %}
-            <div class="text-danger">{{ form.password1.errors }}</div>
+            <div class="invalid-feedback">
+                {% for error in form.password1.errors %}
+                {{ error }}
+                {% endfor %}
+            </div>
+            {% endif %}
+            {% if form.password1.help_text %}
+            <div class="form-text">{{ form.password1.help_text }}</div>
             {% endif %}
         </div>
 
         <div class="mb-3">
             <label for="id_password2" class="form-label">Password Confirmation</label>
-            <input type="password" name="password2" class="form-control" id="id_password2" required>
+            <input type="password" name="password2"
+                class="form-control {% if form.password2.errors %}is-invalid{% endif %}" id="id_password2" required>
             {% if form.password2.errors %}
-            <div class="text-danger">{{ form.password2.errors }}</div>
+            <div class="invalid-feedback">
+                {% for error in form.password2.errors %}
+                {{ error }}
+                {% endfor %}
+            </div>
             {% endif %}
         </div>
 
@@ -54,4 +93,70 @@
         <p>Already have an account? <a href="{% url 'login' %}">Login here</a></p>
     </div>
 </div>
+
+<!-- Auto-dismiss alerts after 5 seconds -->
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        // Auto-dismiss alerts after 5 seconds
+        const alerts = document.querySelectorAll('.alert');
+        alerts.forEach(function (alert) {
+            setTimeout(function () {
+                const bsAlert = new bootstrap.Alert(alert);
+                bsAlert.close();
+            }, 5000);
+        });
+
+        // Clear form errors when user starts typing
+        const inputs = document.querySelectorAll('input');
+        inputs.forEach(function (input) {
+            input.addEventListener('input', function () {
+                const formGroup = this.closest('.mb-3');
+                if (formGroup) {
+                    const invalidFeedback = formGroup.querySelector('.invalid-feedback');
+                    if (invalidFeedback) {
+                        this.classList.remove('is-invalid');
+                    }
+                }
+            });
+        });
+
+        // Clear all errors when form is submitted (to prevent stale errors)
+        const form = document.querySelector('form');
+        form.addEventListener('submit', function () {
+            const errorElements = document.querySelectorAll('.is-invalid, .invalid-feedback, .alert');
+            errorElements.forEach(function (element) {
+                if (element.classList.contains('is-invalid')) {
+                    element.classList.remove('is-invalid');
+                }
+            });
+        });
+    });
+</script>
+
+<style>
+    .auth-container {
+        max-width: 400px;
+        margin: 2rem auto;
+        padding: 2rem;
+        background: white;
+        border-radius: 10px;
+        box-shadow: 0 0 20px rgba(0, 0, 0, 0.1);
+    }
+
+    .alert {
+        transition: opacity 0.15s linear;
+    }
+
+    .invalid-feedback {
+        display: block;
+    }
+
+    .fade:not(.show) {
+        opacity: 0;
+    }
+
+    .alert-dismissible .btn-close {
+        padding: 0.75rem 0.25rem;
+    }
+</style>
 {% endblock %}

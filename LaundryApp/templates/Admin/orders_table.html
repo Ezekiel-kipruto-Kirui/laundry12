@@ -77,7 +77,7 @@
         </div>
 
         <!-- Stats Overview -->
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-5 mb-6" id="statsContainer">
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-5 mb-6" id="statsContainer">
             <div class="bg-white p-5 rounded-xl shadow-sm border border-gray-100 border-l-4 border-l-blue-500">
                 <div class="flex flex-col items-center text-center w-full">
                     <div class="p-3 bg-blue-100 rounded-xl mb-3">
@@ -110,6 +110,20 @@
                     <p class="text-xs text-gray-500 mt-2">Ready for delivery</p>
                 </div>
             </div>
+<div class="bg-white p-5 rounded-xl shadow-sm border border-gray-100 border-l-4 border-l-purple-500">
+    <div class="flex flex-col items-center text-center w-full">
+        <div class="p-3 bg-purple-100 rounded-xl mb-3">
+            <i class="fas fa-store text-purple-600 text-xl"></i>
+        </div>
+        <p class="text-sm text-gray-500 font-medium">Shop Filter</p>
+        <select id="shopFilter"
+            class="w-full mt-2 px-3 py-2 border border-gray-300 rounded-md text-sm focus:ring-2 focus:ring-purple-500 focus:border-purple-500">
+            <option value="">All Shops</option>
+            <option value="A">Shop A</option>
+            <option value="B">Shop B</option>
+        </select>
+    </div>
+</div>
         </div>
 
         <!-- Filters -->
@@ -158,29 +172,42 @@
         <!-- Orders Table -->
         <div class="bg-white rounded-xl overflow-hidden shadow-lg">
             <div class="overflow-x-auto">
-                <table class="w-full">
+                <table class="w-full min-w-max">
                     <thead>
-                        <tr class="bg-gray-50">
-                            <th class="w-10 text-center py-3 px-4 font-semibold text-gray-700 text-xs">
+                        <tr class="bg-gray-50 border-b border-gray-200">
+                            <th
+                                class="w-12 py-4 px-4 text-center font-semibold text-gray-700 text-xs uppercase tracking-wider whitespace-nowrap">
                                 <input type="checkbox" id="selectAllCheckbox"
                                     class="h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500">
                             </th>
-                            <th class="text-left py-3 px-4 font-semibold text-gray-700 text-xs">Order Code</th>
-                            <th class="text-left py-3 px-4 font-semibold text-gray-700 text-xs">Customer</th>
-                            <th class="text-left py-3 px-4 font-semibold text-gray-700 text-xs">Address</th>
-                            <th class="text-left py-3 px-4 font-semibold text-gray-700 text-xs">Service</th>
-                            <th class="text-left py-3 px-4 font-semibold text-gray-700 text-xs">Item Type</th>
-                            <th class="text-left py-3 px-4 font-semibold text-gray-700 text-xs">Items</th>
-                            <th class="text-left py-3 px-4 font-semibold text-gray-700 text-xs">Condition</th>
-                            <th class="text-left py-3 px-4 font-semibold text-gray-700 text-xs">Amount Paid</th>
-                            <th class="text-left py-3 px-4 font-semibold text-gray-700 text-xs">Balance</th>
-                            <th class="text-left py-3 px-4 font-semibold text-gray-700 text-xs">Total Billed</th>
-                            <th class="text-left py-3 px-4 font-semibold text-gray-700 text-xs">Order Status</th>
-                            <th class="text-left py-3 px-4 font-semibold text-gray-700 text-xs">Payment Status</th>
-                            <th class="text-left py-3 px-4 font-semibold text-gray-700 text-xs">Actions</th>
+                            <th class="py-4 px-4 text-left font-semibold text-gray-700 text-xs uppercase tracking-wider whitespace-nowrap">Order
+                                Code</th>
+                            <th class="py-4 px-4 text-left font-semibold text-gray-700 text-xs uppercase tracking-wider whitespace-nowrap">Customer
+                            </th>
+                            <th class="py-4 px-4 text-left font-semibold text-gray-700 text-xs uppercase tracking-wider whitespace-nowrap">Shop</th>
+                            <th class="py-4 px-4 text-left font-semibold text-gray-700 text-xs uppercase tracking-wider whitespace-nowrap">Service
+                            </th>
+                            <th class="py-4 px-4 text-left font-semibold text-gray-700 text-xs uppercase tracking-wider whitespace-nowrap">Item Type
+                            </th>
+                            <th class="py-4 px-4 text-left font-semibold text-gray-700 text-xs uppercase tracking-wider whitespace-nowrap">Items
+                            </th>
+                            <th class="py-4 px-4 text-left font-semibold text-gray-700 text-xs uppercase tracking-wider whitespace-nowrap">Condition
+                            </th>
+                            <th class="py-4 px-4 text-left font-semibold text-gray-700 text-xs uppercase tracking-wider whitespace-nowrap">Amount
+                                Paid</th>
+                            <th class="py-4 px-4 text-left font-semibold text-gray-700 text-xs uppercase tracking-wider whitespace-nowrap">Balance
+                            </th>
+                            <th class="py-4 px-4 text-left font-semibold text-gray-700 text-xs uppercase tracking-wider whitespace-nowrap">Total
+                                Billed</th>
+                            <th class="py-4 px-4 text-left font-semibold text-gray-700 text-xs uppercase tracking-wider whitespace-nowrap">Order
+                                Status</th>
+                            <th class="py-4 px-4 text-left font-semibold text-gray-700 text-xs uppercase tracking-wider whitespace-nowrap">Payment
+                                Status</th>
+                            <th class="py-4 px-4 text-left font-semibold text-gray-700 text-xs uppercase tracking-wider whitespace-nowrap">Actions
+                            </th>
                         </tr>
                     </thead>
-                    <tbody id="ordersTableBody">
+                    <tbody id="ordersTableBody" class="divide-y divide-gray-200">
                         <!-- Orders will be loaded here via AJAX -->
                     </tbody>
                 </table>
@@ -442,7 +469,8 @@
                 this.currentPage = 1;
                 this.currentFilters = {
                     payment_status: '',
-                    search: ''
+                    search: '',
+                    shop: ''
                 };
                 this.selectedOrders = new Set();
                 this.currentOrderForPayment = null;
@@ -464,6 +492,13 @@
                         this.currentPage = 1;
                         this.loadOrders();
                     }, 500);
+                });
+
+                // Shop filter
+                document.getElementById('shopFilter').addEventListener('change', (e) => {
+                    this.currentFilters.shop = e.target.value;
+                    this.currentPage = 1;
+                    this.loadOrders();
                 });
 
                 // Payment filters
@@ -1122,7 +1157,7 @@
         </div>
         <h3 class="text-lg font-medium text-gray-900 mb-1 text-left">No orders found</h3>
         <p class="text-gray-500 max-w-md text-left">
-            ${this.currentFilters.search || this.currentFilters.payment_status ?
+            ${this.currentFilters.search || this.currentFilters.payment_status || this.currentFilters.shop ?
                             'No orders match your current filters. Try adjusting your search criteria.' :
                             'There are no active orders in the system. When you have orders, they\'ll appear here.'}
         </p>
@@ -1149,20 +1184,23 @@
                 const isSelected = this.selectedOrders.has(order.id.toString());
                 return `
     <tr class="hover:bg-gray-50 transition-colors duration-150 border-b border-gray-100" data-order-id="${order.id}">
-        <td class="w-10 text-center py-3 px-4">
+        <td class="w-12 text-center py-4 px-4">
             <input type="checkbox" class="order-checkbox h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500" 
                    data-order-id="${order.id}" ${isSelected ? 'checked' : ''}>
         </td>
-        <td class="py-3 px-4 text-left">
+        <td class="py-4 px-4 text-left">
             <div class="font-medium text-gray-900 text-xs">${order.uniquecode}</div>
         </td>
-        <td class="py-3 px-4 text-left">
+        <td class="py-4 px-4 text-left">
             <div class="text-xs text-gray-800">${order.customer.name}</div>
         </td>
-        <td class="py-3 px-4 text-left">
-            <div class="text-xs text-gray-800">${order.customer.address || 'N/A'}</div>
+        <td class="py-4 px-4 text-left">
+            <span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium
+                ${order.shop === 'A' ? 'bg-pink-100 text-pink-800' : 'bg-blue-100 text-blue-800'}">
+                Shop ${order.shop}
+            </span>
         </td>
-        <td class="py-3 px-4 text-left">
+        <td class="py-4 px-4 text-left">
             <div class="relative group inline-block">
                 <span class="text-xs text-gray-800">${firstItem.servicetype || 'N/A'}</span>
                 ${hasMultipleItems ? `
@@ -1176,7 +1214,7 @@
                 ` : ''}
             </div>
         </td>
-        <td class="py-3 px-4 text-left">
+        <td class="py-4 px-4 text-left">
             <div class="relative group inline-block">
                 <span class="text-xs text-gray-800">${firstItem.itemtype || 'N/A'}</span>
                 ${hasMultipleItems ? `
@@ -1190,7 +1228,7 @@
                 ` : ''}
             </div>
         </td>
-        <td class="py-3 px-4 text-left">
+        <td class="py-4 px-4 text-left">
             <div class="relative group inline-block">
                 <span class="text-xs text-gray-800">${firstItem.itemname || 'N/A'}</span>
                 ${hasMultipleItems ? `
@@ -1204,7 +1242,7 @@
                 ` : ''}
             </div>
         </td>
-        <td class="py-3 px-4 text-left">
+        <td class="py-4 px-4 text-left">
             <span class="text-xs ${this.getConditionColor(firstItem.itemcondition)}">
                 ${firstItem.itemcondition || 'N/A'}
             </span>
@@ -1220,22 +1258,22 @@
                 </div>
             ` : ''}
         </td>
-        <td class="py-3 px-4 text-left">
+        <td class="py-4 px-4 text-left">
             <div class="font-semibold text-blue-900 text-xs">KSh ${order.amount_paid.toLocaleString()}</div>
         </td>
-        <td class="py-3 px-4 text-left">
+        <td class="py-4 px-4 text-left">
             <div class="font-semibold text-blue-900 text-xs">KSh ${order.balance.toLocaleString()}</div>
         </td>
-        <td class="py-3 px-4 text-left">
+        <td class="py-4 px-4 text-left">
             <div class="font-semibold text-blue-900 text-xs">KSh ${order.total_price.toLocaleString()}</div>
         </td>
-        <td class="py-3 px-4 text-left">
+        <td class="py-4 px-4 text-left">
             ${this.renderOrderStatus(order.order_status)}
         </td>
-        <td class="py-3 px-4 text-left">
+        <td class="py-4 px-4 text-left">
             ${this.renderPaymentStatus(order.payment_status)}
         </td>
-        <td class="py-3 px-4 text-left">
+        <td class="py-4 px-4 text-left">
             <div class="flex items-center justify-start space-x-2">
                 <button type="button" class="edit-order-btn p-2 text-amber-600 hover:bg-amber-100 rounded-lg transition-colors duration-200"
                     data-order-id="${order.id}" title="Edit Order">

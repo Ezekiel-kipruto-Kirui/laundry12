@@ -298,16 +298,32 @@
                 </div>
                 <div class="space-y-3 mt-4">
                     <div class="flex justify-between items-center">
-                        <span class="text-sm text-gray-700">Pending Payment</span>
-                        <span class="bg-yellow-100 text-yellow-800 px-2 py-1 rounded-full text-xs font-medium">{{ pending_payments}}</span>
+                        <div>
+                            <span class="bg-yellow-100 text-yellow-800 px-2 py-1 rounded-full text-xs font-medium">{{ pending_payments}}</span>
+                            <span class="text-sm text-gray-700">Pending Payment</span>
+                            </div>
+                            
+                            
+                            
+                            <span class="bg-yellow-100 text-yellow-800 px-2 py-1 rounded-full text-xs font-medium">{{ total_pending_amount}}</span>
                     </div>
                     <div class="flex justify-between items-center">
-                        <span class="text-sm text-gray-700">Partial Payment</span>
-                        <span class="bg-blue-100 text-blue-800 px-2 py-1 rounded-full text-xs font-medium">{{ partial_payments }}</span>
+                        <div>
+                            <span class="bg-blue-100 text-blue-800 px-2 py-1 rounded-full text-xs font-medium">{{ partial_payments }}</span>
+                            <span class="text-sm text-gray-700">Partial Payment</span>
+                            </div>
+                            
+                            
+                            <span class="bg-blue-100 text-blue-800 px-2 py-1 rounded-full text-xs font-medium">{{ total_partial_amount }}</span>
                     </div>
                     <div class="flex justify-between items-center">
-                        <span class="text-sm text-gray-700">Complete Payment</span>
-                        <span class="bg-green-100 text-green-800 px-2 py-1 rounded-full text-xs font-medium">{{ complete_payments }}</span>
+                        <div>
+                            <span class="bg-green-100 text-green-800 px-2 py-1 rounded-full text-xs font-medium">{{ complete_payments }}</span>
+                            <span class="text-sm text-gray-700">Complete Payment</span>
+                            </div>
+                            
+                            
+                            <span class="bg-green-100 text-green-800 px-2 py-1 rounded-full text-xs font-medium">{{ total_complete_amount }}</span>
                     </div>
                 </div>
             </div>
@@ -367,10 +383,10 @@
                             <span class="text-sm font-semibold text-gray-700">Orders</span>
                         </div>
                         <div class="text-lg font-bold text-gray-900 mb-1">{{ shop_a_total_orders }}</div>
-                        <div class="flex flex-col gap-1 text-xs">
+                        <!-- <div class="flex flex-col gap-1 text-xs">
                             <span class="text-yellow-600">{{ shop_a_pending_orders }} pending</span>
                             <span class="text-green-600">{{ shop_a_completed_orders }} completed</span>
-                        </div>
+                        </div> -->
                     </div>
 
                     <!-- Shop A Payments -->
@@ -383,9 +399,18 @@
                         </div>
                         <div class="text-lg font-bold text-gray-900 mb-1">{{ shop_a_total_orders }}</div>
                         <div class="flex flex-col gap-1 text-xs">
+                            <div class="flex flex-row justify-between">
                             <span class="text-yellow-600">{{ shop_a_pending_payments }} pending</span>
+                            <span class="text-yellow-600">Ksh {{ shop_a_pending_amount }}</span>
+                            </div>
+                            <div class="flex flex-row justify-between">
                             <span class="text-blue-600">{{ shop_a_partial_payments }} partial</span>
+                            <span class="text-blue-600">Ksh {{ shop_a_partial_amount }}</span>
+                            </div>
+                            <div class="flex flex-row justify-between">
                             <span class="text-green-600">{{ shop_a_complete_payments }} complete</span>
+                            <span class="text-green-600">Ksh {{ shop_a_complete_amount }}</span>
+                            </div>
                         </div>
                     </div>
 
@@ -404,6 +429,7 @@
                                 <div class="text-xs text-gray-500">Profit</div>
                             </div>
                             <div>
+                            
                                 <div class="text-md font-bold text-blue-600">Ksh {{ shop_a_total_expenses|floatformat:2 }}</div>
                                 <div class="text-xs text-gray-500">Expenses</div>
                             </div>
@@ -446,10 +472,10 @@
                             <span class="text-sm font-semibold text-gray-700">Orders</span>
                         </div>
                         <div class="text-lg font-bold text-gray-900 mb-1">{{ shop_b_total_orders }}</div>
-                        <div class="flex flex-col gap-1 text-xs">
+                        <!-- <div class="flex flex-col gap-1 text-xs">
                             <span class="text-yellow-600">{{ shop_b_pending_orders }} pending</span>
                             <span class="text-green-600">{{ shop_b_completed_orders }} completed</span>
-                        </div>
+                        </div> -->
                     </div>
 
                     <!-- Shop B Payments -->
@@ -462,9 +488,18 @@
                         </div>
                         <div class="text-lg font-bold text-gray-900 mb-1">{{ shop_b_total_orders }}</div>
                         <div class="flex flex-col gap-1 text-xs">
+                            <div class="flex flex-row justify-between">
                             <span class="text-yellow-600">{{ shop_b_pending_payments }} pending</span>
+                            <span class="text-yellow-600">Ksh{{ shop_b_pending_amount }}</span>
+                            </div>
+                            <div class="flex flex-row justify-between">
                             <span class="text-blue-600">{{ shop_b_partial_payments }} partial</span>
+                            <span class="text-blue-600">Ksh{{ shop_b_partial_amount }} </span>
+                            </div>
+                            <div class="flex flex-row justify-between">
                             <span class="text-green-600">{{ shop_b_complete_payments }} complete</span>
+                            <span class="text-green-600">Ksh{{ shop_b_complete_amount }} </span>
+                            </div>
                         </div>
                     </div>
 

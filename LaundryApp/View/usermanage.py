@@ -51,7 +51,7 @@ def user_add(request):
                     # ✅ Assign role permissions
                     if user_type == "admin":
                         user.is_staff = True
-                        user.is_superuser = True   # <-- allow superuser even for laundry
+                        user.is_superuser = True
                     elif user_type == "staff":
                         user.is_staff = True
                         user.is_superuser = False
@@ -70,7 +70,10 @@ def user_add(request):
                             laundry_profile.user = user
                             laundry_profile.save()
                         else:
-                            messages.error(request, f"Laundry form errors: {laundry_form.errors}")
+                            # Show specific laundry form errors
+                            for field, errors in laundry_form.errors.items():
+                                for error in errors:
+                                    messages.error(request, f"Shop selection: {error}")
                             raise Exception("Please select a valid shop for laundry users.")
 
                     elif app_type == 'hotel':
@@ -81,9 +84,30 @@ def user_add(request):
                 return redirect('laundry:user_management')
 
             except IntegrityError:
-                form.add_error("email", "This email is already registered.")
+                error_msg = f"The email '{form.cleaned_data.get('email', '')}' is already registered. Please use a different email address."
+                messages.error(request, error_msg)
+                # Keep the form data so user doesn't have to re-enter everything
+                return render(request, "Admin/user_form.html", {
+                    "form": form,
+                    "profile_form": profile_form,
+                    "laundry_form": laundry_form,
+                    "title": "Add New User"
+                })
             except Exception as e:
                 messages.error(request, f"Error creating user: {str(e)}")
+        else:
+            # Collect all form errors
+            all_errors = []
+            if form.errors:
+                all_errors.extend([f"{field}: {error}" for field, errors in form.errors.items() for error in errors])
+            if profile_form.errors:
+                all_errors.extend([f"Profile {field}: {error}" for field, errors in profile_form.errors.items() for error in errors])
+            if laundry_form.errors:
+                all_errors.extend([f"Laundry {field}: {error}" for field, errors in laundry_form.errors.items() for error in errors])
+            
+            # Show all errors
+            for error in all_errors:
+                messages.error(request, error)
 
     else:
         form = UserCreateForm()
@@ -96,6 +120,7 @@ def user_add(request):
         "laundry_form": laundry_form,
         "title": "Add New User"
     })
+
 
 @login_required
 @admin_required

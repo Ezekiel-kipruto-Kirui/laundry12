@@ -17,7 +17,7 @@ class FoodCategoryForm(forms.ModelForm):
 class FoodItemForm(forms.ModelForm):
     class Meta:
         model = FoodItem
-        fields = ['category', 'name', 'quantity', 'is_available']
+        fields = ['category', 'name', 'quantity']
         widgets = {
             'category': forms.Select(attrs={
                 'class': 'w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-white transition duration-200'
@@ -32,42 +32,7 @@ class FoodItemForm(forms.ModelForm):
                 'placeholder': 'Enter quantity',
                 'min': '0'
             }),
-            'is_available': forms.CheckboxInput(attrs={
-                'class': 'h-5 w-5 text-blue-600 border-gray-300 rounded focus:ring-blue-500'
-            }),
-        }
-
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        # Set the current user as the created_by field (handled in view)
-        self.fields['is_available'].label = "Mark as available"
-
-    def clean_price(self):
-        price = self.cleaned_data.get('price')
-        if price and price <= 0:
-            raise ValidationError("Price must be greater than zero.")
-        return price
-
-    def clean_quantity(self):
-        quantity = self.cleaned_data.get('quantity')
-        if quantity is not None and quantity < 0:
-            raise ValidationError("Quantity cannot be negative.")
-        return quantity
-
-
-class FoodItemAvailabilityForm(forms.ModelForm):
-    """Form specifically for updating availability and quantity"""
-    class Meta:
-        model = FoodItem
-        fields = ['quantity', 'is_available']
-        widgets = {
-            'quantity': forms.NumberInput(attrs={
-                'class': 'w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition duration-200',
-                'min': '0'
-            }),
-            'is_available': forms.CheckboxInput(attrs={
-                'class': 'h-5 w-5 text-blue-600 border-gray-300 rounded focus:ring-blue-500'
-            }),
+            
         }
 
     def clean_quantity(self):
@@ -75,6 +40,7 @@ class FoodItemAvailabilityForm(forms.ModelForm):
         if quantity is not None and quantity < 0:
             raise ValidationError("Quantity cannot be negative.")
         return quantity
+
 
 
 class OrderForm(forms.ModelForm):
@@ -103,17 +69,18 @@ class HotelOrderItemForm(forms.ModelForm):
         }
     
     def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        # Make sure the price field is required and has initial value
-        if self.instance and self.instance.pk and self.instance.price:
-            self.initial['price'] = self.instance.price
-        elif not self.initial.get('price'):
-            self.initial['price'] = 0.00
-
+            super().__init__(*args, **kwargs)
+            # Ensure no availability filtering here
+            self.fields['food_item'].queryset = FoodItem.objects.all()
+        
+    def clean(self):
+        cleaned_data = super().clean()
+        # Remove any availability/quantity validation
+        return cleaned_data
 class BulkOrderForm(forms.Form):
     """Form for creating multiple order items at once"""
     items = forms.ModelMultipleChoiceField(
-        queryset=FoodItem.objects.filter(is_available=True, quantity__gt=0),  # Add quantity filter
+        queryset=FoodItem.objects.filter( quantity__gt=0),  # Add quantity filter
         widget=forms.CheckboxSelectMultiple,
         label="Select food items"
     )
@@ -154,4 +121,3 @@ class ExpenseFieldForm(forms.ModelForm):
             }),
            
         }
-

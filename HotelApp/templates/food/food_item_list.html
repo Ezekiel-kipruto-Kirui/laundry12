@@ -19,47 +19,23 @@
                 <th class="px-6 py-3 text-left text-sm font-semibold">Name</th>
                 <th class="px-6 py-3 text-left text-sm font-semibold">Category</th>
                 
-                <th class="px-6 py-3 text-left text-sm font-semibold">Status</th>
+                <th class="px-6 py-3 text-left text-sm font-semibold">Quantity</th>
                 <th class="px-6 py-3 text-center text-sm font-semibold">Actions</th>
             </tr>
         </thead>
         <tbody class="divide-y divide-gray-200">
             {% for item in items %}
             <tr class="hover:bg-gray-50 transition">
-                <!-- <td class="px-6 py-4">
-                    {% if item.image and item.image.url %}
-                    <img src="{{ item.image.url }}" alt="{{ item.name }}" class="h-16 w-16 object-cover rounded-md"
-                        onerror="this.onerror=null; this.src='data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjQiIGhlaWdodD0iNjQiIHZpZXdCb3g9IjAgMCA2NCA2NCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHJlY3Qgd2lkdGg9IjY0IiBoZWlnaHQ9IjY0IiBmaWxsPSIjRjNGNEY2Ii8+CjxwYXRoIGQ9Ik0zMiAzNk0yNCA0NEw0MCA0NE0yNCAyOEw0MCAyOE0yNCAzNkw0MCAzNk0yNCAyMEw0MCAyMCIgc3Ryb2tlPSIjOEU5MEEwIiBzdHJva2Utd2lkdGg9IjIiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIvPgo8L3N2Zz4K';">
-                    {% else %}
-                    <div class="h-16 w-16 bg-gray-100 rounded-md flex items-center justify-center">
-                        <span class="text-gray-400 text-xs">No Image</span>
-                    </div>
-                    {% endif %}
-                </td> -->
+        
                 <td class="px-6 py-4 font-semibold text-gray-900">{{ item.name }}</td>
                 <td class="px-6 py-4 text-gray-600">{{ item.category.name }}</td>
-                
-               
-                <td class="px-6 py-4">
-                    {% if item.is_available %}
-                    <span class="px-3 py-1 text-xs font-medium bg-green-100 text-green-800 rounded-full">
-                        Available ({{ item.quantity }})
-                    </span>
-                    {% else %}
-                    <span class="px-3 py-1 text-xs font-medium bg-red-100 text-red-800 rounded-full">
-                        Unavailable
-                    </span>
-                    {% endif %}
-                </td>
+                <td class="px-6 py-4 text-gray-600">{{ item.quantity }}</td>
                 <td class="px-6 py-4 flex justify-center space-x-2">
                     <a href="{% url 'hotel:food_item_edit' item.pk %}"
                         class="px-3 py-2 text-xs font-medium text-indigo-600 border border-indigo-600 rounded-lg hover:bg-indigo-600 hover:text-white transition">
                         Edit
                     </a>
-                    <a href="{% url 'hotel:food_item_availability' item.pk %}"
-                        class="px-3 py-2 text-xs font-medium text-yellow-600 border border-yellow-600 rounded-lg hover:bg-yellow-600 hover:text-white transition">
-                        Stock
-                    </a>
+                
                     <a href="{% url 'hotel:food_item_delete' item.pk %}"
                         class="px-3 py-2 text-xs font-medium text-red-600 border border-red-600 rounded-lg hover:bg-red-600 hover:text-white transition">
                         Delete

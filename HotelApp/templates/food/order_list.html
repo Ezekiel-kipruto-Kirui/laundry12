@@ -13,12 +13,7 @@
                 Order Management
             </h1>
             <p class="text-gray-600 mt-2">Manage and track all customer orders</p>
-            {% if date_filter_description %}
-            <p class="text-sm text-blue-600 font-medium mt-1">
-                <i class="fas fa-filter mr-1"></i>
-                {{ date_filter_description }}
-            </p>
-            {% endif %}
+           
         </div>
 
         <!-- Export and Filter Controls -->
@@ -100,9 +95,7 @@
                 <div>
                     <p class="text-sm font-medium text-gray-600">Total Orders</p>
                     <p class="text-2xl font-bold text-gray-900">{{ summary.total_orders }}</p>
-                    {% if summary.date_range_description %}
-                    <p class="text-xs text-gray-500 mt-1">{{ summary.date_range_description }}</p>
-                    {% endif %}
+                   
                 </div>
             </div>
         </div>
@@ -116,9 +109,7 @@
                 <div>
                     <p class="text-sm font-medium text-gray-600">Total Revenue</p>
                     <p class="text-2xl font-bold text-gray-900">Ksh {{ summary.total_revenue|floatformat:2 }}</p>
-                    {% if summary.date_range_description %}
-                    <p class="text-xs text-gray-500 mt-1">{{ summary.date_range_description }}</p>
-                    {% endif %}
+                    
                 </div>
             </div>
         </div>
@@ -132,9 +123,7 @@
                 <div>
                     <p class="text-sm font-medium text-gray-600">Average Order Value</p>
                     <p class="text-2xl font-bold text-gray-900">Ksh {{ summary.average_order_value|floatformat:2 }}</p>
-                    {% if summary.date_range_description %}
-                    <p class="text-xs text-gray-500 mt-1">{{ summary.date_range_description }}</p>
-                    {% endif %}
+                   
                 </div>
             </div>
         </div>
@@ -168,7 +157,6 @@
                         <!-- Order Details -->
                         <td class="pl-6 pr-4 py-4 whitespace-nowrap">
                             <div>
-                                <div class="text-sm font-bold text-gray-900">#{{ order.id }}</div>
                                 <div class="text-xs text-gray-500">{{ order.created_at|date:"M d, Y • H:i" }}</div>
                             </div>
                         </td>
