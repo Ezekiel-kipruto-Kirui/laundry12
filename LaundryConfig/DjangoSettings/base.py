@@ -46,7 +46,7 @@ INSTALLED_APPS = [
     # by collectstatic and for its static file storage engine to work.
     'whitenoise.runserver_nostatic', # For development
     'multiselectfield', 
-   
+    "unfold",
     'django_registration',
     'django.contrib.admin',
     'django.contrib.auth',
@@ -57,8 +57,6 @@ INSTALLED_APPS = [
     'django.contrib.humanize',
     'LaundryApp',
     'HotelApp',
-    
-
     
     'tailwind',
     'crispy_forms',

@@ -6,6 +6,7 @@ from LaundryApp.View import Expenses, customers, usermanage
 from django.views.decorators.cache import cache_page
 from django.contrib.auth import views as auth_views
 
+
 app_name = "laundry"
 
 urlpatterns = [

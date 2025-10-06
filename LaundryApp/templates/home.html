@@ -476,19 +476,10 @@
                                 class="absolute bottom-0 right-0 w-2 h-2 lg:w-3 lg:h-3 bg-green-500 shadow-xl border-gray-500 rounded-full">
                             </div>
                         </div>
-                        <div class="flex-1 min-w-0 hidden sm:block">
-                            <p class="text-grey-500 text-sm font-medium truncate">{{ user.get_username }}</p> -
-                            <p class="text-gray-600 text-xs">
-                                {% if user.is_superuser %}
-                                Administrator
-                                {% elif app_type == 'hotel' %}
-                                Hotel Staff
-                                {% elif app_type == 'laundry' %}
-                                Laundry Staff
-                                {% else %}
-                                Staff
-                                {% endif %}
-                            </p>
+                        <div class="flex flex-row min-w-0 sm:block">
+                            <p class="text-grey-500 text-sm font-medium truncate">{{ user.get_username }} </p>
+                            <p>{{ user.get_first_name }}</p>
+                           
                         </div>
                     </div>
                 </div>

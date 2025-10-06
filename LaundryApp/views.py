@@ -410,6 +410,7 @@ def dashboard_view(request):
             'to_date': None,
         })
 
+
 @login_required
 @shop_required
 def customordertable(request):
@@ -424,6 +425,11 @@ def customordertable(request):
         'payment_status_choices': Order.PAYMENT_STATUS_CHOICES,
         'today': timezone.now().date(),
     }
+    
+    # Add shop choices for superusers to enable filtering
+    if request.user.is_superuser:
+        context['shop_choices'] = Order.SHOP_CHOICE
+    
     return render(request, 'Admin/orders_table.html', context)
 
 def handle_ajax_request(request):
@@ -439,20 +445,16 @@ def handle_ajax_request(request):
         # Apply permission filtering
         orders = apply_order_permissions(orders, request)
 
-        # Apply shop filter for admin users
-        if request.user.is_superuser:
-            shop_filter = request.GET.get('shop', '')
-            if shop_filter:
-                orders = orders.filter(shop=shop_filter)
-
         # Apply filters in a single optimized block
         filters = Q()
         
+        # Payment status filter
         payment_filter = request.GET.get('payment_status', '')
         if payment_filter:
             validate_payment_status(payment_filter)
             filters &= Q(payment_status=payment_filter)
 
+        # Search filter
         search_query = request.GET.get('search', '')
         if search_query:
             filters &= (
@@ -462,6 +464,14 @@ def handle_ajax_request(request):
                 Q(items__servicetype__icontains=search_query) |
                 Q(items__itemname__icontains=search_query)
             )
+            
+        # Shop filter - available for superusers
+        shop_filter = request.GET.get('shop', '')
+        if shop_filter and request.user.is_superuser:
+            # Validate shop filter against available choices
+            valid_shops = [choice[0] for choice in Order.SHOP_CHOICE]
+            if shop_filter in valid_shops:
+                filters &= Q(shop=shop_filter)
 
         if filters:
             orders = orders.filter(filters).distinct()
@@ -498,6 +508,10 @@ def handle_ajax_request(request):
                 'count': page_obj.paginator.count,
             }
         }
+        
+        # Add shop choices for superusers in AJAX response
+        if request.user.is_superuser:
+            data['shop_choices'] = Order.SHOP_CHOICE
 
         return JsonResponse(data)
     
@@ -522,6 +536,8 @@ def handle_ajax_request(request):
             'error': 'Internal server error',
             'message': 'An unexpected error occurred'
         }, status=500)
+
+
 
 @login_required
 @shop_required
@@ -1101,16 +1117,25 @@ def laundrydashboard(request):
             'shop_performance': None,
         })
 
-def get_laundry_profit_and_hotel(request, selected_year=None):
+def get_laundry_profit_and_hotel(request):
     """
-    Optimized version that properly uses DashboardAnalytics without redundant queries
+    Display current month data by default without user selection
     """
     if not request.user.is_authenticated or not request.user.is_superuser:
         return redirect('login')
 
     try:
         current_date = now()
-        current_year = selected_year if selected_year else current_date.year
+        current_year = current_date.year
+        current_month = current_date.month
+        
+        # Convert month number to month name for display
+        month_names = {
+            1: 'January', 2: 'February', 3: 'March', 4: 'April',
+            5: 'May', 6: 'June', 7: 'July', 8: 'August',
+            9: 'September', 10: 'October', 11: 'November', 12: 'December'
+        }
+        current_month_name = month_names.get(current_month, 'Unknown')
         
         # Create a simple admin instance wrapper
         class SimpleAdmin:
@@ -1124,11 +1149,11 @@ def get_laundry_profit_and_hotel(request, selected_year=None):
         # Initialize DashboardAnalytics with the simple admin
         analytics = DashboardAnalytics(SimpleAdmin())
         
-        # Get comprehensive dashboard data for the selected year
+        # Get comprehensive dashboard data for the current month
         dashboard_data = analytics.get_dashboard_data(
             request=request,
             selected_year=current_year,
-            selected_month=None,  # Get full year data
+            selected_month=current_month,  # Get current month data
             from_date=None,
             to_date=None,
             payment_status=None,
@@ -1163,7 +1188,9 @@ def get_laundry_profit_and_hotel(request, selected_year=None):
             'hotel_profit': float(hotel_profit),
             'total_profit': float(total_profit),
             'current_year': current_year,
-            'available_years': list(range(2020, current_date.year + 1)),
+            'current_month': current_month,
+            'current_month_name': current_month_name,
+            'dashboard_title': f"{current_month_name} {current_year} Dashboard"
         }
         
         return render(request, 'Admin/Generaldashboard.html', context)
@@ -1171,14 +1198,23 @@ def get_laundry_profit_and_hotel(request, selected_year=None):
     except Exception as e:
         logger.error(f"Error in get_laundry_profit_and_hotel: {e}")
         
+        # Convert month number to month name for error case too
+        month_names = {
+            1: 'January', 2: 'February', 3: 'March', 4: 'April',
+            5: 'May', 6: 'June', 7: 'July', 8: 'August',
+            9: 'September', 10: 'October', 11: 'November', 12: 'December'
+        }
+        current_month_name = month_names.get(current_date.month, 'Unknown')
+        
         return render(request, 'Admin/Generaldashboard.html', {
             'total_revenue': 0.0, 'laundry_revenue': 0.0, 'laundry_expenses': 0.0,
             'laundry_profit': 0.0, 'hotel_revenue': 0.0, 'hotel_expenses': 0.0,
             'hotel_profit': 0.0, 'total_profit': 0.0, 
             'current_year': current_date.year,
-            'available_years': list(range(2020, current_date.year + 1))
+            'current_month': current_date.month,
+            'current_month_name': current_month_name,
+            'dashboard_title': f"{current_month_name} {current_date.year} Dashboard"
         })
-
 def logout_view(request):
     """Log out the current user and redirect to login page"""
     try:

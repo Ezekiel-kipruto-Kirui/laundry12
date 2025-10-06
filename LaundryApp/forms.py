@@ -25,6 +25,28 @@ User = get_user_model()
 # Authentication / User Forms
 # ---------------------------
 
+# yourapp/forms.py
+from django.contrib.auth.forms import PasswordResetForm, SetPasswordForm
+
+
+class MyPasswordResetForm(PasswordResetForm):
+    # override fields, widgets, help_text, etc.
+    email = forms.EmailField(
+       label="Your email",
+       widget=forms.EmailInput(attrs={'class': 'your-css-class', 'placeholder': 'Enter your email'}),
+    )
+
+class MySetPasswordForm(SetPasswordForm):
+    # similar for the confirm step
+    new_password1 = forms.CharField(
+        widget=forms.PasswordInput(attrs={'class': 'your-css-class'}),
+        label="New password",
+    )
+    new_password2 = forms.CharField(
+        widget=forms.PasswordInput(attrs={'class': 'your-css-class'}),
+        label="Confirm new password",
+    )
+
 class CustomAuthenticationForm(AuthenticationForm):
     """Custom authentication form with additional styling"""
     email = forms.CharField(

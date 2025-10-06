@@ -77,7 +77,7 @@
         </div>
 
         <!-- Stats Overview -->
-        <div class="grid grid-cols-1 md:grid-cols-4 gap-5 mb-6" id="statsContainer">
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-5 mb-6" id="statsContainer">
             <div class="bg-white p-5 rounded-xl shadow-sm border border-gray-100 border-l-4 border-l-blue-500">
                 <div class="flex flex-col items-center text-center w-full">
                     <div class="p-3 bg-blue-100 rounded-xl mb-3">
@@ -110,20 +110,7 @@
                     <p class="text-xs text-gray-500 mt-2">Ready for delivery</p>
                 </div>
             </div>
-<div class="bg-white p-5 rounded-xl shadow-sm border border-gray-100 border-l-4 border-l-purple-500">
-    <div class="flex flex-col items-center text-center w-full">
-        <div class="p-3 bg-purple-100 rounded-xl mb-3">
-            <i class="fas fa-store text-purple-600 text-xl"></i>
-        </div>
-        <p class="text-sm text-gray-500 font-medium">Shop Filter</p>
-        <select id="shopFilter"
-            class="w-full mt-2 px-3 py-2 border border-gray-300 rounded-md text-sm focus:ring-2 focus:ring-purple-500 focus:border-purple-500">
-            <option value="">All Shops</option>
-            <option value="A">Shop A</option>
-            <option value="B">Shop B</option>
-        </select>
-    </div>
-</div>
+<!-- Shop Filter Card - Only show for superusers -->
         </div>
 
         <!-- Filters -->
@@ -159,6 +146,20 @@
                             class="px-3 py-1.5 bg-purple-100 text-purple-700 rounded-full text-sm font-medium action-filter">
                             <i class="fas fa-truck mr-1"></i> Mark Delivered
                         </button>
+                        {% if request.user.is_superuser %}
+                        <div class="bg-white rounded-full shadow-sm  ">
+                        
+                        
+                        
+                            <select class="rounded-full p-1 bg-blue-100 text-blue-600 outline-none" id="shopFilter"
+                                class="w-full mt-2 px-3 py-2 border border-gray-300 rounded-md text-sm focus:ring-2 focus:ring-purple-500 focus:border-purple-500">
+                                <option value="">All Shops</option>
+                                <option value="Shop A">Shop A</option>
+                                <option value="Shop B">Shop B</option>
+                            </select>
+                        
+                        </div>
+                        {% endif %}
                     </div>
                 </div>
                 <div class="relative w-full md:w-auto">
@@ -180,30 +181,41 @@
                                 <input type="checkbox" id="selectAllCheckbox"
                                     class="h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500">
                             </th>
-                            <th class="py-4 px-4 text-left font-semibold text-gray-700 text-xs uppercase tracking-wider whitespace-nowrap">Order
+                            <th class="py-4 px-4 text-left font-semibold text-gray-700 text-xs uppercase tracking-wider whitespace-nowrap">
+                                Order
                                 Code</th>
-                            <th class="py-4 px-4 text-left font-semibold text-gray-700 text-xs uppercase tracking-wider whitespace-nowrap">Customer
+                            <th class="py-4 px-4 text-left font-semibold text-gray-700 text-xs uppercase tracking-wider whitespace-nowrap">
+                                Customer
                             </th>
-                            <th class="py-4 px-4 text-left font-semibold text-gray-700 text-xs uppercase tracking-wider whitespace-nowrap">Shop</th>
-                            <th class="py-4 px-4 text-left font-semibold text-gray-700 text-xs uppercase tracking-wider whitespace-nowrap">Service
+                        <th class="py-4 px-4 text-left font-semibold text-gray-700 text-xs uppercase tracking-wider whitespace-nowrap">
+                            Service
                             </th>
-                            <th class="py-4 px-4 text-left font-semibold text-gray-700 text-xs uppercase tracking-wider whitespace-nowrap">Item Type
+                            <th class="py-4 px-4 text-left font-semibold text-gray-700 text-xs uppercase tracking-wider whitespace-nowrap">
+                                Item Type
                             </th>
-                            <th class="py-4 px-4 text-left font-semibold text-gray-700 text-xs uppercase tracking-wider whitespace-nowrap">Items
+                            <th class="py-4 px-4 text-left font-semibold text-gray-700 text-xs uppercase tracking-wider whitespace-nowrap">
+                                Items
                             </th>
-                            <th class="py-4 px-4 text-left font-semibold text-gray-700 text-xs uppercase tracking-wider whitespace-nowrap">Condition
+                            <th class="py-4 px-4 text-left font-semibold text-gray-700 text-xs uppercase tracking-wider whitespace-nowrap">
+                                Condition
                             </th>
-                            <th class="py-4 px-4 text-left font-semibold text-gray-700 text-xs uppercase tracking-wider whitespace-nowrap">Amount
+                            <th class="py-4 px-4 text-left font-semibold text-gray-700 text-xs uppercase tracking-wider whitespace-nowrap">
+                                Amount
                                 Paid</th>
-                            <th class="py-4 px-4 text-left font-semibold text-gray-700 text-xs uppercase tracking-wider whitespace-nowrap">Balance
+                            <th class="py-4 px-4 text-left font-semibold text-gray-700 text-xs uppercase tracking-wider whitespace-nowrap">
+                                Balance
                             </th>
-                            <th class="py-4 px-4 text-left font-semibold text-gray-700 text-xs uppercase tracking-wider whitespace-nowrap">Total
+                            <th class="py-4 px-4 text-left font-semibold text-gray-700 text-xs uppercase tracking-wider whitespace-nowrap">
+                                Total
                                 Billed</th>
-                            <th class="py-4 px-4 text-left font-semibold text-gray-700 text-xs uppercase tracking-wider whitespace-nowrap">Order
+                            <th class="py-4 px-4 text-left font-semibold text-gray-700 text-xs uppercase tracking-wider whitespace-nowrap">
+                                Order
                                 Status</th>
-                            <th class="py-4 px-4 text-left font-semibold text-gray-700 text-xs uppercase tracking-wider whitespace-nowrap">Payment
+                            <th class="py-4 px-4 text-left font-semibold text-gray-700 text-xs uppercase tracking-wider whitespace-nowrap">
+                                Payment
                                 Status</th>
-                            <th class="py-4 px-4 text-left font-semibold text-gray-700 text-xs uppercase tracking-wider whitespace-nowrap">Actions
+                            <th class="py-4 px-4 text-left font-semibold text-gray-700 text-xs uppercase tracking-wider whitespace-nowrap">
+                                Actions
                             </th>
                         </tr>
                     </thead>
@@ -494,12 +506,15 @@
                     }, 500);
                 });
 
-                // Shop filter
-                document.getElementById('shopFilter').addEventListener('change', (e) => {
-                    this.currentFilters.shop = e.target.value;
-                    this.currentPage = 1;
-                    this.loadOrders();
-                });
+                // Shop filter - only bind if it exists (for superusers)
+                const shopFilter = document.getElementById('shopFilter');
+                if (shopFilter) {
+                    shopFilter.addEventListener('change', (e) => {
+                        this.currentFilters.shop = e.target.value;
+                        this.currentPage = 1;
+                        this.loadOrders();
+                    });
+                }
 
                 // Payment filters
                 document.querySelectorAll('.payment-filter').forEach(btn => {
@@ -1144,7 +1159,12 @@
                     this.hideLoading();
                 }
             }
-
+            // Add this method to your OrderManager class
+            truncateText(text, maxLength) {
+                if (!text) return 'N/A';
+                if (text.length <= maxLength) return text;
+                return text.substring(0, maxLength) + '...';
+            }
             renderOrders(orders) {
                 const tbody = document.getElementById('ordersTableBody');
 
@@ -1182,6 +1202,8 @@
                 const firstItem = order.items[0] || {};
                 const hasMultipleItems = order.items.length > 1;
                 const isSelected = this.selectedOrders.has(order.id.toString());
+                const isSuperuser = document.getElementById('shopFilter') !== null;
+
                 return `
     <tr class="hover:bg-gray-50 transition-colors duration-150 border-b border-gray-100" data-order-id="${order.id}">
         <td class="w-12 text-center py-4 px-4">
@@ -1194,54 +1216,54 @@
         <td class="py-4 px-4 text-left">
             <div class="text-xs text-gray-800">${order.customer.name}</div>
         </td>
+
+      
         <td class="py-4 px-4 text-left">
-            <span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium
-                ${order.shop === 'A' ? 'bg-pink-100 text-pink-800' : 'bg-blue-100 text-blue-800'}">
-                Shop ${order.shop}
-            </span>
-        </td>
-        <td class="py-4 px-4 text-left">
-            <div class="relative group inline-block">
-                <span class="text-xs text-gray-800">${firstItem.servicetype || 'N/A'}</span>
-                ${hasMultipleItems ? `
-                    <span class="text-xs text-gray-500 ml-1">+${order.items.length - 1}</span>
-                    <div class="absolute left-0 top-full mt-1 hidden group-hover:block z-50 w-48 rounded-md bg-gray-900 px-3 py-2 text-xs text-white shadow-lg transition-opacity duration-200">
-                        <div class="font-medium mb-1">All Services:</div>
-                        <ul class="space-y-1">
-                            ${order.items.map(item => `<li class="text-left truncate">${item.servicetype || 'N/A'}</li>`).join('')}
-                        </ul>
-                    </div>
-                ` : ''}
+    <div class="relative group inline-block">
+        <span class="text-xs text-gray-800">${firstItem.servicetype || 'N/A'}</span>
+        ${hasMultipleItems ? `
+            <span class="text-xs text-gray-500 ml-1">+${order.items.length - 1}</span>
+            <div class="absolute left-0 top-full mt-1 hidden group-hover:block z-50 w-48 rounded-md bg-gray-900 px-3 py-2 text-xs text-white shadow-lg transition-opacity duration-200">
+                <div class="font-medium mb-1">All Services:</div>
+                <ul class="space-y-1">
+                    ${order.items.map(item => `<li class="text-left truncate">${item.servicetype || 'N/A'}</li>`).join('')}
+                </ul>
             </div>
-        </td>
-        <td class="py-4 px-4 text-left">
-            <div class="relative group inline-block">
-                <span class="text-xs text-gray-800">${firstItem.itemtype || 'N/A'}</span>
-                ${hasMultipleItems ? `
-                    <span class="text-xs text-gray-500 ml-1">+${order.items.length - 1}</span>
-                    <div class="absolute left-0 top-full mt-1 hidden group-hover:block z-50 w-48 rounded-md bg-gray-900 px-3 py-2 text-xs text-white shadow-lg transition-opacity duration-200">
-                        <div class="font-medium mb-1">All Item Types:</div>
-                        <ul class="space-y-1">
-                            ${order.items.map(item => `<li class="text-left truncate">${item.itemtype || 'N/A'}</li>`).join('')}
-                        </ul>
-                    </div>
-                ` : ''}
+        ` : ''}
+    </div>
+</td>
+<td class="py-4 px-4 text-left">
+    <div class="relative group inline-block">
+        <span class="text-xs text-gray-800">${firstItem.itemtype || 'N/A'}</span>
+        ${hasMultipleItems ? `
+            <span class="text-xs text-gray-500 ml-1">+${order.items.length - 1}</span>
+            <div class="absolute left-0 top-full mt-1 hidden group-hover:block z-50 w-48 rounded-md bg-gray-900 px-3 py-2 text-xs text-white shadow-lg transition-opacity duration-200">
+                <div class="font-medium mb-1">All Item Types:</div>
+                <ul class="space-y-1">
+                    ${order.items.map(item => `<li class="text-left truncate">${item.itemtype || 'N/A'}</li>`).join('')}
+                </ul>
             </div>
-        </td>
-        <td class="py-4 px-4 text-left">
-            <div class="relative group inline-block">
-                <span class="text-xs text-gray-800">${firstItem.itemname || 'N/A'}</span>
-                ${hasMultipleItems ? `
-                    <span class="text-xs text-gray-500 ml-1">+${order.items.length - 1}</span>
-                    <div class="absolute left-0 top-full mt-1 hidden group-hover:block z-50 w-48 rounded-md bg-gray-900 px-3 py-2 text-xs text-white shadow-lg transition-opacity duration-200">
-                        <div class="font-medium mb-1">All Items:</div>
-                        <ul class="space-y-1">
-                            ${order.items.map(item => `<li class="text-left truncate">${item.itemname || 'N/A'}</li>`).join('')}
-                        </ul>
-                    </div>
-                ` : ''}
+        ` : ''}
+    </div>
+</td>
+<td class="py-4 px-4 text-left">
+    <div class="relative group inline-block">
+        ${hasMultipleItems ? `
+            <span class="text-xs text-gray-800">${this.truncateText(firstItem.itemname || 'N/A', 30)}</span>
+            <span class="text-xs text-gray-500 ml-1">+${order.items.length - 1}</span>
+            <div class="absolute left-0 top-full mt-1 hidden group-hover:block z-50 w-64 rounded-md bg-gray-900 px-3 py-2 text-xs text-white shadow-lg transition-opacity duration-200">
+                <div class="font-medium mb-1">Additional Items (${order.items.length - 1}):</div>
+                <ul class="space-y-1 max-h-32 overflow-y-auto">
+                    ${order.items.slice(1).map(item => `
+                        <li class="text-left truncate">${item.itemname || 'N/A'}</li>
+                    `).join('')}
+                </ul>
             </div>
-        </td>
+        ` : `
+            <span class="text-xs text-gray-800">${this.truncateText(firstItem.itemname || 'N/A', 30)}</span>
+        `}
+    </div>
+</td>
         <td class="py-4 px-4 text-left">
             <span class="text-xs ${this.getConditionColor(firstItem.itemcondition)}">
                 ${firstItem.itemcondition || 'N/A'}
