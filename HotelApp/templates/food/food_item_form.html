@@ -18,9 +18,11 @@
             {% csrf_token %}
 
             <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <a href="{% url 'hotel:load_default_food_items' %}" class="btn btn-primary ">
-                    Load Default Food Items
-                </a>
+                <div class="mt-4">
+                    <a href="{% url 'hotel:load_default_food_items' %}" class=" rounded-lg p-3 btn-primary text-white bg-blue-500 ">
+                        Load Default Food Items
+                    </a>
+                </div>
                 {% for field in form %}
                 <div class="{% if field.name == 'description' or field.name == 'image' %}md:col-span-2{% endif %}">
                     <label for="{{ field.id_for_label }}"
