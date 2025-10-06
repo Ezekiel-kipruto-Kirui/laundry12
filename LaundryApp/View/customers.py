@@ -108,7 +108,7 @@ def customer_management(request):
         'total_customers': customers.count(),
     }
     
-    return render(request, 'Admin/customer_management.html', context)
+    return render(request, 'Customer/customer_management.html', context)
 
 @login_required
 @shop_required
@@ -130,7 +130,7 @@ def customer_add(request):
         'title': 'Add New Customer'
     }
     
-    return render(request, 'Admin/customer_form.html', context)
+    return render(request, 'Customer/customer_form.html', context)
 
 @login_required
 @shop_required
@@ -158,7 +158,7 @@ def customer_edit(request, pk):
         'title': f'Edit Customer - {customer.name}'
     }
     
-    return render(request, 'Admin/customer_form.html', context)
+    return render(request, 'Customer/customer_form.html', context)
 
 @login_required
 @shop_required
@@ -186,7 +186,7 @@ def customer_delete(request, pk):
         'customer': customer,
     }
     
-    return render(request, 'Admin/customer_confirm_delete.html', context)
+    return render(request, 'Customer/customer_confirm_delete.html', context)
 
 @login_required
 @shop_required
@@ -228,8 +228,4 @@ def customer_orders(request, pk):
         'avg_order_value': avg_order_value,
     }
     
-    return render(request, 'Admin/customer_orders.html', context) 
-
-
-
-    
+    return render(request, 'Customer/customer_orders.html', context) 

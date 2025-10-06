@@ -87,7 +87,7 @@ def user_add(request):
                 error_msg = f"The email '{form.cleaned_data.get('email', '')}' is already registered. Please use a different email address."
                 messages.error(request, error_msg)
                 # Keep the form data so user doesn't have to re-enter everything
-                return render(request, "Admin/user_form.html", {
+                return render(request, "user/user_form.html", {
                     "form": form,
                     "profile_form": profile_form,
                     "laundry_form": laundry_form,
@@ -114,7 +114,7 @@ def user_add(request):
         profile_form = ProfileEditForm()
         laundry_form = LaundryProfileForm()
 
-    return render(request, "Admin/user_form.html", {
+    return render(request, "user/user_form.html", {
         "form": form,
         "profile_form": profile_form,
         "laundry_form": laundry_form,
@@ -203,7 +203,7 @@ def user_edit(request, pk):
         'title': f'Edit User - {user.username}'
     }
 
-    return render(request, 'Admin/user_edit_form.html', context)
+    return render(request, 'user/user_edit_form.html', context)
 
 @login_required
 @admin_required
@@ -230,7 +230,7 @@ def user_profile(request, pk):
         'customers_created': customers_created,
     }
     
-    return render(request, 'Admin/user_profile.html', context)
+    return render(request, 'user/user_profile.html', context)
 
 @login_required
 @admin_required
@@ -393,7 +393,7 @@ def user_management(request):
         },
     }
 
-    return render(request, "Admin/user_management.html", context)
+    return render(request, "user/user_management.html", context)
 
 
 @login_required
@@ -417,4 +417,4 @@ def user_delete(request, pk):
         'user': user,
     }
     
-    return render(request, 'Admin/user_confirm_delete.html', context)
+    return render(request, 'user/user_confirm_delete.html', context)

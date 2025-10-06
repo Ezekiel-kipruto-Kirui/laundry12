@@ -398,12 +398,12 @@ def dashboard_view(request):
             'to_date': to_date,
         })
         
-        return render(request, 'Admin/reports.html', context)
+        return render(request, 'reports.html', context)
         
     except Exception as e:
         logger.error(f"Error in dashboard view: {str(e)}")
         messages.error(request, "An error occurred while loading the dashboard.")
-        return render(request, 'Admin/reports.html', {
+        return render(request, 'reports.html', {
             'selected_year': timezone.now().year,
             'selected_month': None,
             'from_date': None,
@@ -430,7 +430,7 @@ def customordertable(request):
     if request.user.is_superuser:
         context['shop_choices'] = Order.SHOP_CHOICE
     
-    return render(request, 'Admin/orders_table.html', context)
+    return render(request, 'Order/orders_table.html', context)
 
 def handle_ajax_request(request):
     """Handle AJAX requests for order data"""
@@ -797,7 +797,7 @@ def order_delete(request, order_code):
         
         # Regular GET request - render confirmation page
         context = {'order': order}
-        return render(request, 'Admin/order_confirm_delete.html', context)
+        return render(request, 'Order/order_confirm_delete.html', context)
         
     except Order.DoesNotExist:
         logger.warning(f"Order not found: {order_code}")
@@ -1040,7 +1040,7 @@ def createorder(request):
         'user_has_single_shop': user_shops and len(user_shops) == 1,
         'user_shop': default_shop,
     }
-    return render(request, 'Admin/order_form.html', context)
+    return render(request, 'Order/order_form.html', context)
 
 @login_required
 def laundrydashboard(request):
@@ -1103,12 +1103,12 @@ def laundrydashboard(request):
             'recent_orders': recent_orders,
             'shop_performance': shop_performance,
         }
-        return render(request, 'Admin/dashboard.html', context)
+        return render(request, 'dashboard.html', context)
         
     except Exception as e:
         logger.error(f"Error in laundry dashboard: {str(e)}")
         messages.error(request, "An error occurred while loading the dashboard.")
-        return render(request, 'Admin/dashboard.html', {
+        return render(request, 'dashboard.html', {
             'user_shops': [],
             'total_orders': 0,
             'pending_orders': 0,
@@ -1193,7 +1193,7 @@ def get_laundry_profit_and_hotel(request):
             'dashboard_title': f"{current_month_name} {current_year} Dashboard"
         }
         
-        return render(request, 'Admin/Generaldashboard.html', context)
+        return render(request, 'Generaldashboard.html', context)
         
     except Exception as e:
         logger.error(f"Error in get_laundry_profit_and_hotel: {e}")
@@ -1206,7 +1206,7 @@ def get_laundry_profit_and_hotel(request):
         }
         current_month_name = month_names.get(current_date.month, 'Unknown')
         
-        return render(request, 'Admin/Generaldashboard.html', {
+        return render(request, 'Generaldashboard.html', {
             'total_revenue': 0.0, 'laundry_revenue': 0.0, 'laundry_expenses': 0.0,
             'laundry_profit': 0.0, 'hotel_revenue': 0.0, 'hotel_expenses': 0.0,
             'hotel_profit': 0.0, 'total_profit': 0.0, 

@@ -14,6 +14,8 @@ from django.urls import reverse_lazy
 from django.utils.translation import gettext_lazy as _
 import os
 from LaundryConfig.env import BASE_DIR, env
+# import dj_database_url
+# from decouple import config
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/5.2/howto/deployment/checklist/
@@ -152,6 +154,12 @@ DATABASES = {
         'NAME': BASE_DIR / 'db.sqlite3',
     }
 }
+# DATABASES = {
+#     'default': dj_database_url.config(
+#         default=config('DATABASE_URL'),
+#         conn_max_age=600,
+#     )
+# }
 
 
 # Password validation

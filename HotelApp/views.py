@@ -167,7 +167,7 @@ def load_default_food_items(request):
                     defaults={
                         'category': item_data["category"],
                         'created_by': request.user,
-                        'is_available': True
+                       
                     }
                 )
                 if created:

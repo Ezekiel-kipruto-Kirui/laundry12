@@ -40,14 +40,23 @@ User = get_user_model()
 
 @login_required
 def create_expense_field(request):
+    
+    # Check if defaults need to be created (one-time setup)
+    DEFAULT_FIELDS = ["Rent", "Electricity", "Water", "Staff Salaries"]
+    
+    if not HotelExpenseField.objects.exists():
+        # First time setup - create all default fields
+        for field in DEFAULT_FIELDS:
+            HotelExpenseField.objects.create(label=field)
+        messages.info(request, "Default expense fields created successfully!")
+    
     if request.method == "POST":
         raw_labels = request.POST.get("labels", "").strip()
 
-        if not raw_labels:  # Nothing entered at all
+        if not raw_labels:
             messages.error(request, "Please enter at least one expense field.")
             return redirect("hotel:createhotel_expense_field")
 
-        # Split by comma, clean up whitespace, remove empties
         labels = [lbl.strip() for lbl in raw_labels.split(",") if lbl.strip()]
 
         created_count = 0
@@ -58,14 +67,13 @@ def create_expense_field(request):
 
         if created_count > 0:
             messages.success(request, f"Successfully created {created_count} expense field(s)!")
+            
         else:
             messages.info(request, "All entered expense fields already exist.")
 
         return redirect("hotel:expense_field_list")
 
     return render(request, "Hotelexpenses/create_expense_field.html")
-
-
 @login_required
 def expense_field_list(request):
     fields = HotelExpenseField.objects.all()
