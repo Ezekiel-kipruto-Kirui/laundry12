@@ -58,16 +58,27 @@ def create_expense_field(request):
             if created_count > 0:
                 messages.success(request, f"Successfully created {created_count} default expense categories!")
             else:
-                messages.info(request, "All default expense categories already exist.")
+                messages.info(request, "All default expense categories already exist. You can still add custom expenses below.")
 
-            return redirect("laundry:expense_field_list")
+            # Instead of redirecting away, re-render the page so user can add custom ones
+            form = ExpenseFieldForm()
+            return render(request, "expenses/create_expense_field.html", {
+                "form": form,
+                "default_expenses": default_expenses
+            })
 
-        # Case 2: Manual form submission
+        # Case 2: Manual form submission for custom expense
         form = ExpenseFieldForm(request.POST)
         if form.is_valid():
-            form.save()
-            messages.success(request, "Expense field created successfully!")
-            return redirect("laundry:expense_field_list")
+            label = form.cleaned_data.get("label")
+
+            # Prevent duplicates of existing ones (default or not)
+            if ExpenseField.objects.filter(label__iexact=label).exists():
+                messages.warning(request, f"'{label}' already exists as an expense category.")
+            else:
+                form.save()
+                messages.success(request, f"Expense field '{label}' created successfully!")
+                return redirect("laundry:expense_field_list")
     else:
         form = ExpenseFieldForm()
 
@@ -75,6 +86,7 @@ def create_expense_field(request):
         "form": form,
         "default_expenses": default_expenses
     })
+
 
 
 @login_required
