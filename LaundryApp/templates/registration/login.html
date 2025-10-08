@@ -4,20 +4,24 @@
 
 {% block title %}Login - Clean Page Laundry{% endblock %}
 
-{% block content %}
-<div class="min-h-screen w-full min-h-screen flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8 bg-cover bg-center relative"
-    >
+{% block head %}
+<!-- Load Font Awesome for icons -->
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+{% endblock %}
 
-    <!-- Dark overlay for readability -->
+{% block content %}
+<div
+    class="min-h-screen w-full flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8 bg-cover bg-center relative">
+
+    <!-- Dark overlay -->
     <div class="absolute inset-0 bg-black/40"></div>
 
     <div class="max-w-md w-full relative z-10">
-        <!-- Card Container -->
         <div class="bg-white rounded-2xl shadow-xl overflow-hidden border border-gray-100">
 
-            <!-- Decorative Header -->
+            <!-- Header -->
             <div class="bg-gradient-to-r from-blue-600 to-indigo-700 py-8 px-8 relative overflow-hidden">
-                <!-- Subtle pattern overlay -->
                 <div class="absolute inset-0 opacity-10">
                     <div class="inset-0"
                         style="background-image: url('data:image/svg+xml,%3Csvg width=\'20\' height=\'20\' viewBox=\'0 0 20 20\' xmlns=\'http://www.w3.org/2000/svg\'%3E%3Cpath d=\'M0 0h20L0 20z\' fill=\'%23ffffff\' fill-opacity=\'0.2\'/%3E%3C/svg%3E');">
@@ -37,7 +41,7 @@
                 </p>
             </div>
 
-            <!-- Form Content -->
+            <!-- Form -->
             <div class="px-6 py-4">
                 {% if form.errors %}
                 <div class="bg-red-50 border-l-4 border-red-500 p-4 mb-6 rounded-lg flex items-start shadow-sm">
@@ -52,50 +56,62 @@
                 </div>
                 {% endif %}
 
-                <form class="space-y-6 p-4" method="post" action="{% url 'login' %}">
+                <form class="space-y-6 p-4" method="post" action="{% url 'login' %}" id="loginForm">
                     {% csrf_token %}
                     <input type="hidden" name="next" value="{{ next }}">
 
                     <div class="space-y-5">
+                        <!-- Email -->
                         <div>
                             <label for="id_username" class="block text-sm font-semibold text-gray-800 mb-2">
                                 Email
                             </label>
                             <div class="relative">
                                 <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                                    <i class="fas fa-user text-gray-500"></i>
+                                    <i class="fas fa-envelope text-gray-500 text-sm"></i>
                                 </div>
                                 <input id="id_username" name="username" type="text" required class="block w-full pl-10 pr-3 py-3 border border-gray-300 rounded-lg 
-                                              focus:ring-2 focus:ring-blue-600 focus:border-blue-600 
-                                              transition duration-200 ease-in-out bg-gray-50/50 hover:bg-gray-50"
-                                    placeholder="Enter your email">
+                                           focus:ring-2 focus:ring-blue-600 focus:border-blue-600 
+                                           transition duration-200 ease-in-out bg-gray-50/50 hover:bg-gray-50"
+                                    placeholder="Enter your email" autocomplete="username">
                             </div>
                         </div>
 
+                        <!-- Password -->
                         <div>
                             <label for="id_password" class="block text-sm font-semibold text-gray-800 mb-2">
                                 Password
                             </label>
                             <div class="relative">
                                 <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                                    <i class="fas fa-lock text-gray-500"></i>
+                                    <i class="fas fa-lock text-gray-500 text-sm"></i>
                                 </div>
-                                <input id="id_password" name="password" type="password" required class="block w-full pl-10 pr-3 py-3 border border-gray-300 rounded-lg 
-                                              focus:ring-2 focus:ring-blue-600 focus:border-blue-600 
-                                              transition duration-200 ease-in-out bg-gray-50/50 hover:bg-gray-50"
-                                    placeholder="Enter your password">
+                                <div class="flex flex-row">
+                                <input id="id_password" name="password" type="password" required class="block w-full pl-10 pr-12 py-3 border border-gray-300 rounded-lg 
+                                                                           focus:ring-2 focus:ring-blue-600 focus:border-blue-600 
+                                                                           transition duration-200 ease-in-out bg-gray-50/50 hover:bg-gray-50"
+                                    placeholder="Enter your password" autocomplete="current-password">
+
+                                <!-- Toggle Password Button -->
+                                <button type="button" id="togglePassword"
+                                    class="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-500 hover:text-blue-600 focus:outline-none focus:text-blue-600 transition-colors duration-200"
+                                    aria-label="Toggle password visibility" aria-pressed="false">
+                                    <i id="eyeIcon" class="fas fa-eye text-lg"></i>
+                                </button>
+                                </div>
                             </div>
+                          
                         </div>
                     </div>
 
-                    <!-- Button -->
+                    <!-- Submit Button -->
                     <button type="submit" class="mt-6 w-full py-3 flex justify-center items-center text-base font-semibold rounded-lg text-white
-                                   bg-gradient-to-r from-blue-600 to-indigo-700 
-                                   hover:from-blue-700 hover:to-indigo-800 
-                                   focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-600
-                                   transition-all duration-300 ease-in-out shadow-md hover:shadow-lg">
+                               bg-gradient-to-r from-blue-600 to-indigo-700 
+                               hover:from-blue-700 hover:to-indigo-800 
+                               focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-600
+                               transition-all duration-300 ease-in-out shadow-md hover:shadow-lg
+                               disabled:opacity-50 disabled:cursor-not-allowed" id="submitBtn">
                         <span id="btn-text">Sign in</span>
-                        <!-- Spinner -->
                         <svg id="btn-spinner" class="hidden animate-spin ml-2 h-5 w-5 text-white"
                             xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                             <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4">
@@ -105,6 +121,7 @@
                     </button>
                 </form>
 
+                <!-- Forgot Password -->
                 <p class="mt-4 text-sm text-gray-600 text-center">
                     Forgot your password?
                     <a href="{% url 'password_reset' %}" class="text-blue-600 hover:underline">
@@ -125,4 +142,85 @@
         </div>
     </div>
 </div>
+<!-- Enhanced Password Toggle Script -->
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        const togglePassword = document.getElementById("togglePassword");
+        const passwordField = document.getElementById("id_password");
+        const eyeIcon = document.getElementById("eyeIcon");
+        const loginForm = document.getElementById("loginForm");
+        const submitBtn = document.getElementById("submitBtn");
+        const btnText = document.getElementById("btn-text");
+        const btnSpinner = document.getElementById("btn-spinner");
+
+        // Check if elements exist
+        if (!togglePassword || !passwordField || !eyeIcon) {
+            console.error('Required elements for password toggle not found');
+            return;
+        }
+
+        // Password toggle functionality
+        togglePassword.addEventListener("click", function () {
+            const isPassword = passwordField.type === "password";
+            passwordField.type = isPassword ? "text" : "password";
+
+            // Update icon and aria-pressed state
+            if (isPassword) {
+                eyeIcon.classList.remove("fa-eye");
+                eyeIcon.classList.add("fa-eye-slash");
+                togglePassword.setAttribute("aria-pressed", "true");
+            } else {
+                eyeIcon.classList.remove("fa-eye-slash");
+                eyeIcon.classList.add("fa-eye");
+                togglePassword.setAttribute("aria-pressed", "false");
+            }
+
+            // Focus back on password field for better UX
+            passwordField.focus();
+        });
+
+        // Enhanced form submission with loading state
+        if (loginForm) {
+            loginForm.addEventListener("submit", function () {
+                // Show loading state
+                if (btnText) btnText.textContent = "Signing in...";
+                if (btnSpinner) btnSpinner.classList.remove("hidden");
+                if (submitBtn) submitBtn.disabled = true;
+            });
+        }
+
+        // Optional: Add keyboard shortcut (Alt+P) to toggle password visibility
+        document.addEventListener('keydown', function (e) {
+            if (e.altKey && e.key === 'p') {
+                e.preventDefault();
+                togglePassword.click();
+            }
+        });
+    });
+</script>
+
+<style>
+    /* Additional styles for better visibility */
+    #togglePassword {
+        background: none;
+        border: none;
+        cursor: pointer;
+        padding: 8px;
+        border-radius: 4px;
+    }
+
+    #togglePassword:hover {
+        background-color: rgba(0, 0, 0, 0.05);
+    }
+
+    #togglePassword:focus {
+        outline: 2px solid #3b82f6;
+        outline-offset: 2px;
+    }
+
+    #eyeIcon {
+        display: block !important;
+        font-size: 1.125rem !important;
+    }
+</style>
 {% endblock %}

@@ -124,7 +124,7 @@ class Order(models.Model):
     customer = models.ForeignKey(
         Customer, on_delete=models.CASCADE, related_name='orders', db_index=True
     )
-    uniquecode = models.CharField(max_length=20, unique=True, blank=True, editable=False)
+    uniquecode = models.CharField(max_length=6, unique=True, blank=True, editable=False)
 
     PAYMENT_TYPE_CHOICES = (
         ('cash', 'Cash'),
@@ -172,8 +172,8 @@ class Order(models.Model):
         with transaction.atomic():
             if not self.uniquecode:
                 prefix = "ORD"
-                for _ in range(10):
-                    unique_id = uuid.uuid4().hex[:10].upper()
+                for _ in range(5):
+                    unique_id = uuid.uuid4().hex[:5].upper()
                     new_code = f"{prefix}-{unique_id}"
                     if not Order.objects.filter(uniquecode=new_code).exists():
                         self.uniquecode = new_code

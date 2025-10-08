@@ -1,3 +1,4 @@
+import json
 import logging
 from datetime import datetime, timedelta
 
@@ -19,6 +20,7 @@ from .forms import (
     OrderForm, HotelOrderItemForm, BulkOrderForm
 )
 from .Vews.resource import HotelOrderResource
+
 
 logger = logging.getLogger(__name__)
 
@@ -372,10 +374,12 @@ def create_order(request):
         logger.error(f"Error creating order: {str(e)}", exc_info=True)
         messages.error(request, 'Error creating order. Please try again.')
         return redirect('hotel:order_list')
+
+
 logger = logging.getLogger(__name__)
 
 
-def get_date_filters(request):
+def get_date_filters(request): 
     """Helper function to extract and validate date filters from request"""
     start_date_str = request.GET.get('start_date') or request.POST.get('start_date')
     end_date_str = request.GET.get('end_date') or request.POST.get('end_date')
@@ -431,24 +435,84 @@ def order_list(request):
         # Handle export functionality
         if export:
             try:
-                dataset = HotelOrderResource().export(orders)
+                # Create custom export data with user information
+                custom_data = []
+                for order in orders:
+                    # Calculate order total
+                    order_total = 0
+                    for item in order.order_items.all():
+                        order_total += item.price
+                    
+                    # Get user who served the order
+                    served_by_first_name = ""
+                    served_by_full_name = ""
+                    served_by_email = ""
+                    
+                    if order.created_by:
+                        served_by_first_name = order.created_by.first_name or ""
+                        served_by_full_name = order.created_by.get_full_name() or ""
+                        served_by_email = order.created_by.email or ""
+                    
+                    order_data = {
+                        'order_id': order.id,
+                        'order_date': order.created_at.strftime('%Y-%m-%d %H:%M'),
+                        'served_by_first_name': served_by_first_name,
+                        'served_by_full_name': served_by_full_name,
+                        'served_by_email': served_by_email,
+                        'total_amount': order_total,
+                        'status': getattr(order, 'status', 'N/A'),
+                        'customer_name': getattr(order, 'customer_name', 'N/A'),
+                    }
+                    
+                    # Add any additional order fields you need
+                    if hasattr(order, 'table_number'):
+                        order_data['table_number'] = order.table_number
+                    if hasattr(order, 'payment_method'):
+                        order_data['payment_method'] = order.payment_method
+                    
+                    custom_data.append(order_data)
                 
                 if export_format == 'xlsx':
+                    # Create Excel export with pandas
+                    import pandas as pd
+                    df = pd.DataFrame(custom_data)
+                    
                     response = HttpResponse(
-                        dataset.xlsx, 
                         content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
                     )
                     filename = f"orders_{start_date}_{end_date}.xlsx"
+                    response['Content-Disposition'] = f'attachment; filename="{filename}"'
+                    
+                    # Write DataFrame to Excel
+                    with pd.ExcelWriter(response, engine='openpyxl') as writer:
+                        df.to_excel(writer, sheet_name='Orders', index=False)
+                    
+                    return response
+                    
                 elif export_format == 'json':
-                    response = HttpResponse(dataset.json, content_type='application/json')
+                    response = HttpResponse(
+                        json.dumps(custom_data, indent=2, default=str), 
+                        content_type='application/json'
+                    )
                     filename = f"orders_{start_date}_{end_date}.json"
+                    response['Content-Disposition'] = f'attachment; filename="{filename}"'
+                    return response
+                    
                 else:  # Default to CSV
-                    response = HttpResponse(dataset.csv, content_type='text/csv')
+                    import csv
+                    response = HttpResponse(content_type='text/csv')
                     filename = f"orders_{start_date}_{end_date}.csv"
-                
-                response['Content-Disposition'] = f'attachment; filename="{filename}"'
-
-                return response
+                    response['Content-Disposition'] = f'attachment; filename="{filename}"'
+                    
+                    writer = csv.writer(response)
+                    # Write header
+                    if custom_data:
+                        headers = custom_data[0].keys()
+                        writer.writerow(headers)
+                        # Write data
+                        for row in custom_data:
+                            writer.writerow(row.values())
+                    return response
             
             except Exception as e:
                 logger.error(f"Error exporting orders: {str(e)}")
@@ -460,13 +524,41 @@ def order_list(request):
         total_revenue = 0
         order_list_with_totals = []
         
+        # User statistics - track orders served by each user
+        user_serving_stats = {}
+        
         for order in orders:
             order_total = 0
             for item in order.order_items.all():
-                item_total = item.quantity * item.price
-                order_total += item_total
+                
+                order_total += item.price
             order.total_amount = order_total
             total_revenue += order_total
+            
+            # Add user information to order object for template display
+            if order.created_by:
+                order.served_by_first_name = order.created_by.first_name
+                order.served_by_full_name = order.created_by.get_full_name()
+                order.served_by_email = order.created_by.email
+                
+                # Track user serving statistics
+                user_key = f"{order.created_by.first_name} {order.created_by.last_name}".strip()
+                if not user_key:
+                    user_key = order.created_by.username
+                
+                if user_key not in user_serving_stats:
+                    user_serving_stats[user_key] = {
+                        'order_count': 0,
+                        'total_revenue': 0,
+                        'user': order.created_by
+                    }
+                user_serving_stats[user_key]['order_count'] += 1
+                user_serving_stats[user_key]['total_revenue'] += order_total
+            else:
+                order.served_by_first_name = "Unknown"
+                order.served_by_full_name = "Unknown Staff"
+                order.served_by_email = ""
+            
             order_list_with_totals.append(order)
         
         # Calculate average order value
@@ -475,7 +567,10 @@ def order_list(request):
         # Prepare summary data
         summary = {
             'total_orders': total_orders,
-            'total_revenue': total_revenue,            
+            'total_revenue': total_revenue,
+            'average_order_value': average_order_value,
+            'user_serving_stats': user_serving_stats,
+            'unique_servers': len(user_serving_stats),
         }
         
         # Pagination with error handling
@@ -498,6 +593,7 @@ def order_list(request):
             'summary': summary,
             'start_date': start_date,
             'end_date': end_date,
+            'current_user_first_name': request.user.first_name,
         })
     
     except Exception as e:
@@ -508,11 +604,14 @@ def order_list(request):
             'summary': {
                 'total_orders': 0, 
                 'total_revenue': 0, 
+                'average_order_value': 0,
+                'user_serving_stats': {},
+                'unique_servers': 0,
             },
             'start_date': timezone.now().replace(day=1).date(),
             'end_date': timezone.now().date(),
+            'current_user_first_name': request.user.first_name,
         })
-
 @login_required
 def export_orders(request):
     """Dedicated export view with date filtering"""

@@ -8,7 +8,7 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block title %}{{ title }} | {{ site_title|default:_('Clean Page') }}{% endblock %}</title>
-
+    <link rel="icon" type="image/png" href="{% static 'logos/Clean-page-logo.png' %}">
     {% tailwind_css %}
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="{% static 'css/dist/styles.css' %}">
@@ -466,22 +466,30 @@
                     <button id="mobile-sidebar-toggle" class="lg:hidden text-gray-600 hover:text-gray-900 p-2">
                         <i class="fas fa-bars text-xl"></i>
                     </button>
-                    <div class="flex items-center justify-around space-x-3">
+                    <div class="flex items-center space-x-3">
+                        <!-- Avatar -->
                         <div class="relative">
-                            <div
-                                class="w-8 h-8 lg:w-10 lg:h-10 bg-blue-500 rounded-full flex items-center justify-center">
-                                <span class="text-white font-semibold text-sm lg:text-base">{{ user.get_username|first|upper}}</span>
+                            <div class="w-8 h-8 lg:w-10 lg:h-10 bg-blue-500 rounded-full flex items-center justify-center">
+                                <span class="text-white font-semibold text-sm lg:text-base">
+                                    {{ user.first_name|first|upper|default:"U" }}
+                                </span>
                             </div>
                             <div
                                 class="absolute bottom-0 right-0 w-2 h-2 lg:w-3 lg:h-3 bg-green-500 shadow-xl border-gray-500 rounded-full">
                             </div>
                         </div>
-                        <div class="flex flex-row min-w-0 sm:block">
-                            <p class="text-grey-500 text-sm font-medium truncate">{{ user.get_username }} </p>
-                            <p>{{ user.get_first_name }}</p>
-                           
+                    
+                        <!-- User Info -->
+                        <div class="flex flex-col leading-tight">
+                            <p class="font-semibold text-gray-900">
+                                {{ user.first_name|default:"User" }}
+                            </p>
+                            <p class="text-gray-500 text-sm font-medium truncate">
+                                {{ user.email }}
+                            </p>
                         </div>
                     </div>
+
                 </div>
 
                 {% if user.is_authenticated %}

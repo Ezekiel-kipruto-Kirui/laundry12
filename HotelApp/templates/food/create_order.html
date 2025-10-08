@@ -43,7 +43,7 @@
             {% csrf_token %}
 
             <!-- Order Details -->
-           
+
 
             <!-- Order Items -->
             <div>
@@ -91,7 +91,7 @@
                             {% if form.price.errors %}
                             <p class="mt-1 text-sm text-red-600">{{ form.price.errors.0 }}</p>
                             {% endif %}
-                            <p class="text-xs text-gray-500 mt-1">Enter price per item</p>
+                            <p class="text-xs text-gray-500 mt-1">Enter total price for this item</p>
                         </div>
 
                         {% if forloop.counter0 > 0 %}
@@ -108,15 +108,15 @@
                 <div class="mt-6 p-4 bg-gray-50 rounded-lg border border-gray-200">
                     <h3 class="text-lg font-semibold text-gray-800 mb-3">Order Summary</h3>
                     <div class="grid grid-cols-2 gap-4 text-sm">
-                        
-                        
+
+
 
                         <div class="text-gray-600 font-semibold border-t pt-2">Total:</div>
                         <div class="flex flex-row">
                             <p class="text-right font-bold text-lg border-t pt-2">Ksh </p>
                             <div class="text-right font-bold text-lg border-t pt-2" id="total"> 0.00</div>
                         </div>
-                       
+
                     </div>
                 </div>
             </div>
@@ -180,22 +180,15 @@
     }
 
     function updateOrderSummary() {
-        let subtotal = 0;
+        let total = 0;
 
+        // Simply sum up all the price values without multiplying by quantity
         document.querySelectorAll('.item-row').forEach(row => {
-            const quantityInput = row.querySelector('input[name*="-quantity"]');
             const priceInput = row.querySelector('input[name*="-price"]');
-
-            const quantity = parseInt(quantityInput?.value) || 0;
             const price = parseFloat(priceInput?.value) || 0;
-
-            subtotal += quantity * price;
+            total += price;
         });
 
-        
-        const total = subtotal
-
-    
         document.getElementById('total').textContent = `${total.toFixed(2)}`;
     }
 
@@ -238,13 +231,8 @@
         container.appendChild(newRow);
         totalForms.value = formIdx + 1;
 
-        // Add event listeners to new inputs
-        const quantityInput = newRow.querySelector('input[name*="-quantity"]');
+        // Add event listeners to new inputs - only listen to price changes
         const priceInput = newRow.querySelector('input[name*="-price"]');
-
-        if (quantityInput) {
-            quantityInput.addEventListener('input', updateOrderSummary);
-        }
 
         if (priceInput) {
             priceInput.addEventListener('input', updateOrderSummary);
@@ -292,11 +280,7 @@
         // Add event listener to Add Item button
         document.getElementById('add-item-btn').addEventListener('click', addItem);
 
-        // Add event listeners to existing form elements
-        document.querySelectorAll('input[name*="-quantity"]').forEach(input => {
-            input.addEventListener('input', updateOrderSummary);
-        });
-
+        // Add event listeners to existing form elements - only listen to price changes
         document.querySelectorAll('input[name*="-price"]').forEach(input => {
             input.addEventListener('input', updateOrderSummary);
         });

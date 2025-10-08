@@ -64,10 +64,10 @@ class HotelOrderItem(models.Model):
 
     def get_total_price(self):
         """Calculate total price for this order item"""
-        return self.quantity * self.price
+        return self.price
 
     def __str__(self):
-        return f"{self.food_item.name} x {self.quantity} - Ksh{self.get_total_price()}"
+        return f"{self.food_item.name}"
 class HotelExpenseField(models.Model):
     label = models.CharField(max_length=100, db_index=True)
     created_at = models.DateTimeField(auto_now_add=True)

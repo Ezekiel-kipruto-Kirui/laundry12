@@ -356,7 +356,7 @@ def dashboard_view(request):
     """Dashboard view with analytics and reporting"""
     try:
         current_year = timezone.now().year
-        
+
         # Validate and parse parameters
         try:
             selected_year = int(request.GET.get('year', current_year))
@@ -384,25 +384,29 @@ def dashboard_view(request):
         class MockAdmin:
             def get_user_shops(self, request):
                 return get_user_shops(request)
-        
+
         mock_admin = MockAdmin()
         analytics = DashboardAnalytics(mock_admin)
-        
+
         data = analytics.get_dashboard_data(request, selected_year, selected_month, from_date, to_date)
-        context = analytics.prepare_dashboard_context(request, data, selected_year, selected_month, from_date, to_date)
+
+        # Check if data is empty (no analytics available)
+        if not data or all(not v for v in data.values()):
+            messages.warning(request, "No data available for the selected period.")
         
+        context = analytics.prepare_dashboard_context(request, data, selected_year, selected_month, from_date, to_date)
         context.update({
             'selected_year': selected_year,
             'selected_month': selected_month,
             'from_date': from_date,
             'to_date': to_date,
         })
-        
+
         return render(request, 'reports.html', context)
-        
+
     except Exception as e:
         logger.error(f"Error in dashboard view: {str(e)}")
-        messages.error(request, "An error occurred while loading the dashboard.")
+        messages.error(request, "An unexpected error occurred while loading the dashboard.")
         return render(request, 'reports.html', {
             'selected_year': timezone.now().year,
             'selected_month': None,
@@ -415,7 +419,68 @@ def dashboard_view(request):
 @shop_required
 def customordertable(request):
     """Order table view with AJAX support"""
-    # Check if it's an AJAX request
+    # Check for export request FIRST - this should work for both AJAX and regular requests
+    export_format = request.GET.get('export', '')
+    if export_format:
+        try:
+            # Start with base queryset - include ALL orders (excluding Delivered_picked)
+            orders = get_base_order_queryset().exclude(
+                order_status__in=['Delivered_picked']
+            ).exclude(
+                Q(uniquecode__isnull=True) | Q(uniquecode='')
+            )
+
+            # Apply permission filtering
+            orders = apply_order_permissions(orders, request)
+
+            # Apply filters in a single optimized block
+            filters = Q()
+            
+            # Payment status filter
+            payment_filter = request.GET.get('payment_status', '')
+            if payment_filter:
+                validate_payment_status(payment_filter)
+                filters &= Q(payment_status=payment_filter)
+
+            # Search filter
+            search_query = request.GET.get('search', '')
+            if search_query:
+                filters &= (
+                    Q(uniquecode__icontains=search_query) |
+                    Q(customer__name__icontains=search_query) |
+                    Q(customer__phone__icontains=search_query) |
+                    Q(items__servicetype__icontains=search_query) |
+                    Q(items__itemname__icontains=search_query)
+                )
+                
+            # Shop filter - available for superusers
+            shop_filter = request.GET.get('shop', '')
+            if shop_filter and request.user.is_superuser:
+                # Validate shop filter against available choices
+                valid_shops = [choice[0] for choice in Order.SHOP_CHOICE]
+                if shop_filter in valid_shops:
+                    filters &= Q(shop=shop_filter)
+
+            if filters:
+                orders = orders.filter(filters).distinct()
+
+            # Handle the export
+            return handle_export(orders, export_format)
+        
+        except InvalidDataError as e:
+            logger.warning(f"Invalid data in export request: {str(e)}")
+            messages.error(request, f"Export failed: {str(e)}")
+            return redirect('laundry:customordertable')
+        except OrderManagerError as e:
+            logger.error(f"Order manager error in export request: {str(e)}")
+            messages.error(request, f"Export failed: {str(e)}")
+            return redirect('laundry:customordertable')
+        except Exception as e:
+            logger.error(f"Unexpected error in export request: {str(e)}")
+            messages.error(request, "An unexpected error occurred during export.")
+            return redirect('laundry:customordertable')
+    
+    # Check if it's an AJAX request for data loading (but not export)
     if request.headers.get('x-requested-with') == 'XMLHttpRequest':
         return handle_ajax_request(request)
     
@@ -432,8 +497,9 @@ def customordertable(request):
     
     return render(request, 'Order/orders_table.html', context)
 
-def handle_ajax_request(request):
-    """Handle AJAX requests for order data"""
+
+def handle_export_request(request, export_format):
+    """Handle export requests separately from AJAX data requests"""
     try:
         # Start with base queryset - include ALL orders (excluding Delivered_picked)
         orders = get_base_order_queryset().exclude(
@@ -476,10 +542,65 @@ def handle_ajax_request(request):
         if filters:
             orders = orders.filter(filters).distinct()
 
-        # Handle export
-        export_format = request.GET.get('export', '')
-        if export_format:
-            return handle_export(orders, export_format)
+        # Handle the export
+        return handle_export(orders, export_format)
+    
+    except InvalidDataError as e:
+        logger.warning(f"Invalid data in export request: {str(e)}")
+        messages.error(request, f"Export failed: {str(e)}")
+        return redirect('laundry:customordertable')
+    except OrderManagerError as e:
+        logger.error(f"Order manager error in export request: {str(e)}")
+        messages.error(request, f"Export failed: {str(e)}")
+        return redirect('laundry:customordertable')
+    except Exception as e:
+        logger.error(f"Unexpected error in export request: {str(e)}")
+        messages.error(request, "An unexpected error occurred during export.")
+        return redirect('laundry:customordertable')
+
+def handle_ajax_request(request):
+    """Handle AJAX requests for order data (without export)"""
+    try:
+        # Start with base queryset - include ALL orders (excluding Delivered_picked)
+        orders = get_base_order_queryset().exclude(
+            order_status__in=['Delivered_picked']
+        ).exclude(
+            Q(uniquecode__isnull=True) | Q(uniquecode='')
+        )
+
+        # Apply permission filtering
+        orders = apply_order_permissions(orders, request)
+
+        # Apply filters in a single optimized block
+        filters = Q()
+        
+        # Payment status filter
+        payment_filter = request.GET.get('payment_status', '')
+        if payment_filter:
+            validate_payment_status(payment_filter)
+            filters &= Q(payment_status=payment_filter)
+
+        # Search filter
+        search_query = request.GET.get('search', '')
+        if search_query:
+            filters &= (
+                Q(uniquecode__icontains=search_query) |
+                Q(customer__name__icontains=search_query) |
+                Q(customer__phone__icontains=search_query) |
+                Q(items__servicetype__icontains=search_query) |
+                Q(items__itemname__icontains=search_query)
+            )
+            
+        # Shop filter - available for superusers
+        shop_filter = request.GET.get('shop', '')
+        if shop_filter and request.user.is_superuser:
+            # Validate shop filter against available choices
+            valid_shops = [choice[0] for choice in Order.SHOP_CHOICE]
+            if shop_filter in valid_shops:
+                filters &= Q(shop=shop_filter)
+
+        if filters:
+            orders = orders.filter(filters).distinct()
 
         # Order by creation date and paginate
         orders = orders.order_by('-created_at')
@@ -536,8 +657,6 @@ def handle_ajax_request(request):
             'error': 'Internal server error',
             'message': 'An unexpected error occurred'
         }, status=500)
-
-
 
 @login_required
 @shop_required
@@ -1078,6 +1197,8 @@ def laundrydashboard(request):
 
         # Shop-specific data for superuser
         shop_performance = None
+        shop_a_data = None
+        shop_b_data = None
         
         if request.user.is_superuser:
             # Get shop performance data for all shops
@@ -1094,6 +1215,24 @@ def laundrydashboard(request):
                             total=Sum('total_price')
                         )['total'] or 0
                     }
+            
+            # Get specific data for Shop A and Shop B
+            shop_a_orders = Order.objects.filter(shop='Shop A').exclude(order_status='Delivered_picked')
+            shop_b_orders = Order.objects.filter(shop='Shop B').exclude(order_status='Delivered_picked')
+            
+            shop_a_data = {
+                'total_orders': shop_a_orders.count(),
+                'completed_orders': shop_a_orders.filter(order_status='Completed').count(),
+                'pending_orders': shop_a_orders.filter(order_status='pending').count(),
+                'total_revenue': shop_a_orders.aggregate(total=Sum('total_price'))['total'] or 0
+            }
+            
+            shop_b_data = {
+                'total_orders': shop_b_orders.count(),
+                'completed_orders': shop_b_orders.filter(order_status='Completed').count(),
+                'pending_orders': shop_b_orders.filter(order_status='pending').count(),
+                'total_revenue': shop_b_orders.aggregate(total=Sum('total_price'))['total'] or 0
+            }
 
         context = {
             'user_shops': user_shops,
@@ -1102,6 +1241,8 @@ def laundrydashboard(request):
             'completed_orders': completed_orders,
             'recent_orders': recent_orders,
             'shop_performance': shop_performance,
+            'shop_a_data': shop_a_data,
+            'shop_b_data': shop_b_data,
         }
         return render(request, 'dashboard.html', context)
         
@@ -1115,8 +1256,10 @@ def laundrydashboard(request):
             'completed_orders': 0,
             'recent_orders': [],
             'shop_performance': None,
+            'shop_a_data': None,
+            'shop_b_data': None,
         })
-
+    
 def get_laundry_profit_and_hotel(request):
     """
     Display current month data by default without user selection
