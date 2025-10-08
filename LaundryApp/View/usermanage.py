@@ -21,7 +21,9 @@ from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
 from django.db import IntegrityError
 from django.contrib.auth.forms import PasswordChangeForm
 from django.contrib.auth import update_session_auth_hash
+from django.utils import timezone
 
+import pytz
 
 from django.db import transaction
 
@@ -232,10 +234,11 @@ def user_profile(request, pk):
     
     return render(request, 'user/user_profile.html', context)
 
+
 @login_required
 @admin_required
 def user_management(request):
-    """Optimized User management page for admins with laundry shop information"""
+    """Optimized User management page for admins with laundry shop information and local time support"""
 
     # Start with all users
     users = User.objects.all()
@@ -273,9 +276,14 @@ def user_management(request):
     if app_type_filter:
         users = users.filter(app_type=app_type_filter)
 
-    # --- Build options for filters ---
+    # --- Timezone Setup ---
+    local_tz = pytz.timezone("Africa/Nairobi")
+
+    # --- Prepare Filter Options ---
     all_shops = (
-        LaundryProfile.objects.values_list("shop", flat=True).distinct().order_by("shop")
+        LaundryProfile.objects.values_list("shop", flat=True)
+        .distinct()
+        .order_by("shop")
     )
     shop_options = [{"value": "", "label": "All Shops", "selected": shop_filter == ""}]
     shop_options += [
@@ -304,10 +312,10 @@ def user_management(request):
         {"value": "hotel", "label": "Hotel", "selected": app_type_filter == "hotel"},
     ]
 
-    # --- Prepare user details ---
+    # --- Prepare User Details ---
     users_with_status = []
     for user in users:
-        # Account status
+        # Determine account status
         if not user.is_active:
             status = ("inactive", "danger", "Inactive")
         elif user.is_superuser:
@@ -317,15 +325,16 @@ def user_management(request):
         else:
             status = ("active", "success", "Active")
 
-        # Login info
+        # Convert last login to local timezone
         if user.last_login:
-            last_login = user.last_login.strftime("%Y-%m-%d %H:%M")
+            local_login_time = user.last_login.astimezone(local_tz)
+            last_login_display = local_login_time.strftime("%Y-%m-%d %I:%M %p")
             days_since_login = (timezone.now() - user.last_login).days
         else:
-            last_login = "Never"
+            last_login_display = "Never"
             days_since_login = None
 
-        # Add full details
+        # Append to list
         users_with_status.append(
             {
                 "id": user.id,
@@ -338,7 +347,7 @@ def user_management(request):
                 "status": status[0],
                 "status_class": status[1],
                 "status_text": status[2],
-                "last_login": last_login,
+                "last_login": last_login_display,
                 "days_since_login": days_since_login,
                 "user_type": getattr(user, "user_type", ""),
                 "app_type": getattr(user, "app_type", ""),
@@ -347,7 +356,7 @@ def user_management(request):
                     user.last_login
                     and (timezone.now() - user.last_login).seconds < 300
                 ),
-                "date_joined": user.date_joined.strftime("%Y-%m-%d"),
+                "date_joined": user.date_joined.astimezone(local_tz).strftime("%Y-%m-%d %I:%M %p"),
             }
         )
 
@@ -368,7 +377,9 @@ def user_management(request):
     staff_users = users.filter(is_staff=True, is_superuser=False).count()
     superusers = users.filter(is_superuser=True).count()
     never_logged_in = users.filter(last_login__isnull=True).count()
-    recently_active = users.filter(last_login__gte=timezone.now() - timezone.timedelta(days=7)).count()
+    recently_active = users.filter(
+        last_login__gte=timezone.now() - timezone.timedelta(days=7)
+    ).count()
 
     # --- Context ---
     context = {
