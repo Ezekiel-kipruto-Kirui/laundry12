@@ -14,6 +14,9 @@ from django.urls import reverse_lazy
 from django.utils.translation import gettext_lazy as _
 import os
 from LaundryConfig.env import BASE_DIR, env
+import dj_database_url
+from decouple import config
+
 # import dj_database_url
 # from decouple import config
 
@@ -148,18 +151,18 @@ WSGI_APPLICATION = 'LaundryConfig.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/5.2/ref/settings/#databases
 
-DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
-    }
-}
 # DATABASES = {
-#     'default': dj_database_url.config(
-#         default=config('DATABASE_URL'),
-#         conn_max_age=600,
-#     )
+#     'default': {
+#         'ENGINE': 'django.db.backends.sqlite3',
+#         'NAME': BASE_DIR / 'db.sqlite3',
+#     }
 # }
+DATABASES = {
+    'default': dj_database_url.config(
+        default=config('DATABASE_URL'),
+        conn_max_age=600,
+    )
+}
 
 
 # Password validation

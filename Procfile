@@ -1,1 +1,1 @@
-web: gunicorn laundryApp.wsgi:application
+web: gunicorn LaundryCofig.wsgi:application
