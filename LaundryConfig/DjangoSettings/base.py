@@ -167,7 +167,7 @@ WSGI_APPLICATION = 'LaundryConfig.wsgi.application'
 # }
 DATABASES = {
     'default': dj_database_url.config(
-        default=config('DATABASE_URL'),
+        default=env('DATABASE_URL'),
         conn_max_age=600,
     )
 }
