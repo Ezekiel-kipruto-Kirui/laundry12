@@ -36,7 +36,7 @@ TWILIO_PHONE_NUMBER = env("TWILIO_PHONE_NUMBER")
 DEBUG = env.bool('DJANGO_DEBUG', default=False)  # Set to False for production
 
 # This allows your Render URL to be a valid host
-ALLOWED_HOSTS = ['laundry12-4.onrender.com', '*']
+ALLOWED_HOSTS = ['web-production-f66a3.up.railway.app', '*']
 
 SECURE_SSL_REDIRECT = False
 SESSION_COOKIE_SECURE = False
