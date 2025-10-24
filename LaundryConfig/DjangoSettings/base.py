@@ -25,9 +25,9 @@ from decouple import config
 
 # SECURITY WARNING: keep the secret key used in production secret!
 SECRET_KEY = env('SECRET_KEY')
-TWILIO_ACCOUNT_SID = env("TWILIO_ACCOUNT_SID")
-TWILIO_AUTH_TOKEN = env("TWILIO_AUTH_TOKEN")
-TWILIO_PHONE_NUMBER = env("TWILIO_PHONE_NUMBER")
+# TWILIO_ACCOUNT_SID = env("TWILIO_ACCOUNT_SID")
+# TWILIO_AUTH_TOKEN = env("TWILIO_AUTH_TOKEN")
+# TWILIO_PHONE_NUMBER = env("TWILIO_PHONE_NUMBER")
 
 
 
@@ -78,6 +78,7 @@ INSTALLED_APPS = [
     'theme',
     'compressor',
     "widget_tweaks",
+    'OpenSSL'
 ]
 
 MIDDLEWARE = [
@@ -106,15 +107,15 @@ CRISPY_TEMPLATE_PACK = "tailwind"
 EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
 DEFAULT_AUTO_FIELD = env('DEFAULT_AUTO_FIELD')
 
-MPESA_ENVIRONMENT = env('MPESA_ENVIRONMENT')
-MPESA_CONSUMER_KEY = env('MPESA_CONSUMER_KEY')
-MPESA_CONSUMER_SECRET = env('MPESA_CONSUMER_SECRET')
-MPESA_SHORTCODE = env('MPESA_SHORTCODE')
-MPESA_EXPRESS_SHORTCODE = env('MPESA_EXPRESS_SHORTCODE')
-MPESA_SHORTCODE_TYPE = env('MPESA_SHORTCODE_TYPE')
-MPESA_PASSKEY = env('MPESA_PASSKEY')
-MPESA_INITIATOR_USERNAME = env('MPESA_INITIATOR_USERNAME')
-MPESA_INITIATOR_SECURITY_CREDENTIAL = env('MPESA_INITIATOR_SECURITY_CREDENTIAL')
+# MPESA_ENVIRONMENT = env('MPESA_ENVIRONMENT')
+# MPESA_CONSUMER_KEY = env('MPESA_CONSUMER_KEY')
+# MPESA_CONSUMER_SECRET = env('MPESA_CONSUMER_SECRET')
+# MPESA_SHORTCODE = env('MPESA_SHORTCODE')
+# MPESA_EXPRESS_SHORTCODE = env('MPESA_EXPRESS_SHORTCODE')
+# MPESA_SHORTCODE_TYPE = env('MPESA_SHORTCODE_TYPE')
+# MPESA_PASSKEY = env('MPESA_PASSKEY')
+# MPESA_INITIATOR_USERNAME = env('MPESA_INITIATOR_USERNAME')
+# MPESA_INITIATOR_SECURITY_CREDENTIAL = env('MPESA_INITIATOR_SECURITY_CREDENTIAL')
 
 # For development: emails will be printed to the console
 
@@ -155,22 +156,29 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'LaundryConfig.wsgi.application'
 
-
+# NPM_BIN_PATH = "Users\Ezekiel Kirui\AppData\Roaming\npm\npm.cmd"
 # Database
 # https://docs.djangoproject.com/en/5.2/ref/settings/#databases
 
-DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
-    }
-}
 # DATABASES = {
-#     'default': dj_database_url.config(
-#         default=os.getenv('DATABASE_URL'),
-#         conn_max_age=600,
-#     )
+#     'default': {
+#         'ENGINE': 'django.db.backends.sqlite3',
+#         'NAME': BASE_DIR / 'db.sqlite3',
+#     }
 # }
+
+
+
+
+# AFRICAS_TALKING_USERNAME = env("AFRICAS_TALKING_USERNAME")
+# AFRICAS_TALK_API_KEY = env("AFRICAS_TALK_API_KEY")
+
+DATABASES = {
+    'default': dj_database_url.config(
+        default=os.getenv('DATABASE_URL'),
+        conn_max_age=600,
+    )
+}
 
 
 # Password validation
