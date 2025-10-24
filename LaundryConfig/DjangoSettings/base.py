@@ -36,11 +36,11 @@ SECRET_KEY = env('SECRET_KEY')
 DEBUG = env.bool('DJANGO_DEBUG', default=False)  # Set to False for production
 
 # This allows your Render URL to be a valid host
-ALLOWED_HOSTS = ['web-production-f66a3.up.railway.app', '*']
+ALLOWED_HOSTS = ['https://CeanpageLaundry.onrender.com','*']
 
 CSRF_TRUSTED_ORIGINS = [
-    'https://web-production-f66a3.up.railway.app',
-    'http://localhost:8000',
+    'https://CeanpageLaundry.onrender.com',
+    'https://CeanpageLaundry.onrender.com',
 ]
 
 
