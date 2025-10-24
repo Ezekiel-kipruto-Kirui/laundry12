@@ -224,7 +224,7 @@ class OrderItem(models.Model):
         ('Dry cleaning', 'Dry cleaning'),
     )
     servicetype = MultiSelectField(max_length=50, choices=SERVICE_TYPES,
-                                   default='Washing', db_index=True, null = true)
+                                   default='Washing', db_index=True, null = True)
 
     ITEMS_CATEGORY = (
         ('Clothing', 'Clothing'),
