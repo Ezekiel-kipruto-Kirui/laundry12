@@ -28,4 +28,4 @@ def home (request):
     customers = (Customer.objects.all()).count()
     current_year = datetime.now().year
     yearsinservice = current_year-startyear
-    return render(request,'Home.html',{'current_year':current_year,'customers':customers,'yearsinservice':yearsinservice,'total_garments':total_garments})
+    return render(request,'home.html',{'current_year':current_year,'customers':customers,'yearsinservice':yearsinservice,'total_garments':total_garments})
