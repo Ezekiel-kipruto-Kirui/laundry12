@@ -1,4 +1,4 @@
-{% extends 'home.html' %}
+{% extends 'base.html' %}
 
 {% block content %}
 <!DOCTYPE html>
@@ -151,7 +151,7 @@
                             class="px-3 py-1.5 bg-purple-100 text-purple-700 rounded-full text-sm font-medium action-filter">
                             <i class="fas fa-truck mr-1"></i> Mark Delivered
                         </button>
-                        {% if request.user.is_superuser %}
+                        
                         <div class="bg-white rounded-full shadow-sm">
                             <select id="shopFilter"
                                 class="rounded-full p-1 bg-blue-100 text-blue-600 outline-none w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:ring-2 focus:ring-purple-500 focus:border-purple-500">
@@ -160,7 +160,7 @@
                                 <option value="Shop B">Shop B</option>
                             </select>
                         </div>
-                        {% endif %}
+                       
                     </div>
                 </div>
                 
@@ -385,7 +385,7 @@
                 <div id="receiptContent" class="bg-white p-6 border border-gray-300">
                     <div class="text-center mb-4">
                         <h3 class="text-lg font-bold">CLEAN PAGE LAUNDRY</h3>
-                        <p class="text-sm text-gray-600">Thank you for your business!</p>
+                        <p class="text-sm text-gray-600">Clean clothes, happy hearts — thank you for coming!</p>
                     </div>
                     <div class="border-t border-b border-gray-300 py-3 mb-3">
                         <div class="flex justify-between mb-2">

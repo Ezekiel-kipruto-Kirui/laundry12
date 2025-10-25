@@ -14,7 +14,7 @@ from .models import (
     UserProfile,
     ExpenseField,
     ExpenseRecord,
-    LaundryProfile,
+   
  
 )
 
@@ -90,8 +90,8 @@ class UserCreateForm(UserCreationForm):
     email = forms.EmailField(required=True)
     first_name = forms.CharField(max_length=30, required=True)
     last_name = forms.CharField(max_length=30, required=True)
-    user_type = forms.ChoiceField(choices=User.USER_TYPE_CHOICES, required=True)
-    app_type = forms.ChoiceField(choices=User.APP_CHOICES, required=True)
+    user_type = forms.ChoiceField(choices=User.USER_TYPE_CHOICES, required=False)
+    
 
     class Meta:
         model = User
@@ -100,7 +100,6 @@ class UserCreateForm(UserCreationForm):
             'first_name',
             'last_name',
             'user_type',
-            'app_type',
             'password1',
             'password2',
             'is_staff',
@@ -119,7 +118,7 @@ class UserCreateForm(UserCreationForm):
         user.first_name = self.cleaned_data['first_name']
         user.last_name = self.cleaned_data['last_name']
         user.user_type = self.cleaned_data['user_type']
-        user.app_type = self.cleaned_data['app_type']
+        
         if commit:
             user.save()
         return user
@@ -129,28 +128,17 @@ class ProfileEditForm(forms.ModelForm):
     """Form for editing user profile (role + app assignment)"""
     class Meta:
         model = UserProfile
-        fields = ['user_type', 'app_type']
+        fields = ['user_type']
         labels = {
             'user_type': 'User Type',
-            'app_type': 'Application Type',
+            
         }
         widgets = {
             'user_type': forms.Select(attrs={'class': 'form-control', 'required': True}),
-            'app_type': forms.Select(attrs={'class': 'form-control', 'required': True}),
+           
         }
 
 
-class LaundryProfileForm(forms.ModelForm):
-    """Form for assigning shop to laundry profile"""
-    class Meta:
-        model = LaundryProfile
-        fields = ['shop']
-        labels = {
-            'shop': 'Shop Assignment',
-        }
-        widgets = {
-            'shop': forms.Select(attrs={'class': 'form-control', 'required': True}),
-        }
 
 
 class CustomPasswordChangeForm(PasswordChangeForm):
@@ -256,11 +244,17 @@ class OrderItemForm(forms.ModelForm):
         )
         widgets = {
             'servicetype': forms.CheckboxSelectMultiple(
+                choices=OrderItem.SERVICE_TYPES,
                 attrs={
-                      "class": "flex items-center space-x-2 w-5 h-3 rounded text-md text-gray-900 "
-             "focus:outline-none focus:ring-0" # stack checkboxes neatly
+                    "class": (
+                        "w-full px-3 py-2 border border-gray-300 rounded-md "
+                        "focus:outline-none focus:ring-2 focus:ring-blue-500 "
+                        "focus:border-blue-500 text-sm bg-white"
+                    )
                 }
             ),
+
+            
             'itemtype': forms.Select(attrs={'class': base_input_classes}),
             'itemname': forms.TextInput(attrs={'class': base_input_classes}),
             'quantity': forms.NumberInput(attrs={'class': base_input_classes}),

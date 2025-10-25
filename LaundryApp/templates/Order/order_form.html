@@ -1,4 +1,4 @@
-{% extends "home.html" %}
+{% extends "base.html" %}
 
 {% block title %}{{ title }}{% endblock %}
 
@@ -330,98 +330,9 @@
                                     </div>
 
                                     <div class="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-4">
-
-                                        <!-- Add Alpine.js -->
-                                        <script src="https://unpkg.com/alpinejs" defer></script>
-                                         <script>
-                                            // Initialize selected services from existing form data
-                                            document.addEventListener('DOMContentLoaded', function () {
-                                                // For each item form, initialize the selected services
-                                                document.querySelectorAll('.item-form').forEach(itemForm => {
-                                                    const checkboxes = itemForm.querySelectorAll('input[name$="servicetype"]');
-                                                    const selectedServices = [];
-
-                                                    checkboxes.forEach(checkbox => {
-                                                        if (checkbox.checked) {
-                                                            selectedServices.push(checkbox.value);
-                                                        }
-                                                    });
-
-                                                    // Find the Alpine.js component and set the selected services
-                                                    const alpineComponent = itemForm.querySelector('[x-data]');
-                                                    if (alpineComponent && alpineComponent.__x) {
-                                                        alpineComponent.__x.$data.selectedServices = selectedServices;
-                                                    }
-                                                });
-                                            });
-                                        </script>
-                                    <!-- Service Type Dropdown - Fixed Version -->
-                                    <div x-data="{ 
-                                        open: false, 
-                                        selectedServices: [], 
-                                        updateFormInputs() {
-                                            // Update the actual form checkboxes
-                                            const formIndex = '{{ forloop.counter0 }}';
-                                            const checkboxes = this.$el.querySelectorAll('input[type=\ checkbox\]'); checkboxes.forEach(checkbox=> {
-                                        checkbox.checked = this.selectedServices.includes(checkbox.value);
-                                        });
-                                        }
-                                        }" class="relative inline-block w-full">
-                                        <!-- Dropdown button -->
-                                        <button @click="open = !open" type="button"
-                                            class="w-full px-4 py-3 bg-white border border-gray-300 rounded-lg shadow-sm hover:shadow transition-all duration-200 text-left focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 relative z-10">
-                                            <div class="flex items-center justify-between">
-                                                <div class="flex items-center">
-                                                    <svg class="w-5 h-5 text-gray-400 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
-                                                    </svg>
-                                                    <span class="text-gray-700"
-                                                        x-text="selectedServices.length > 0 ? selectedServices.join(', ') : 'Select services...'"></span>
-                                                </div>
-                                                <span
-                                                    class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800"
-                                                    x-show="selectedServices.length > 0" x-text="selectedServices.length"></span>
-                                            </div>
-                                        </button>
-                                    
-                                        <!-- Dropdown menu -->
-                                        <div x-show="open" x-transition:enter="transition ease-out duration-200"
-                                            x-transition:enter-start="opacity-0 transform -translate-y-2"
-                                            x-transition:enter-end="opacity-100 transform translate-y-0"
-                                            x-transition:leave="transition ease-in duration-150"
-                                            x-transition:leave-start="opacity-100 transform translate-y-0"
-                                            x-transition:leave-end="opacity-0 transform -translate-y-2" @click.away="open = false"
-                                            class="absolute mt-1 w-full bg-white border border-gray-200 rounded-lg shadow-xl z-50 py-2"
-                                            style="display: none;">
-                                    
-                                            <!-- Service checkboxes -->
-                                            {% for checkbox in form.servicetype %}
-                                            <label class="flex items-center px-4 py-2 hover:bg-gray-50 transition-colors duration-150 cursor-pointer">
-                                                <input type="checkbox" value="{{ checkbox.choice_label }}" x-model="selectedServices"
-                                                    @change="updateFormInputs()" class="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500">
-                                                <span class="ml-3 text-sm text-gray-700">{{ checkbox.choice_label }}</span>
-                                            </label>
-                                            {% endfor %}
-                                    
-                                            <div class="border-t border-gray-100 mt-2 pt-2 px-4">
-                                                <button @click="open = false" type="button"
-                                                    class="w-full py-2 text-sm text-blue-600 hover:text-blue-800 font-medium text-center">
-                                                    Apply
-                                                </button>
-                                            </div>
-                                        </div>
-                                    
-                                        <!-- Hidden container for actual form checkboxes -->
-                                        <div class="hidden">
-                                            {% for checkbox in form.servicetype %}
-                                            {{ checkbox.tag }}
-                                            {% endfor %}
-                                        </div>
+                                    <div>
+                                        {{ form.servicetype }}
                                     </div>
-
-
-
-
                                         <!-- Item Category -->
                                         <div class="relative">
                                             {{ form.itemtype }}
@@ -462,7 +373,7 @@
                                         <div class="relative">
                                             {{ form.unit_price }}
                                             <label class="form-label absolute left-4 top-3 pointer-events-none">
-                                                Amount (KSh) *
+                                                Total Billed (KSh) *
                                             </label>
                                             {% if form.unit_price.errors %}
                                             <div class="text-red-500 text-sm mt-2">{{ form.unit_price.errors }}</div>
@@ -665,7 +576,7 @@
             /** ------------------------------
              * Shop field auto-lock for Shop A and Shop B users
              -------------------------------*/
-            '{% if not user.is_superuser %}'
+           
             const shopSelect = document.getElementById('id_shop');
             if (shopSelect) {
                 // Get the user's shop from the template variable
@@ -697,7 +608,7 @@
 
                 }
             }
-            '{% endif %}'
+            
             /** ------------------------------
              * Form fields styling
              -------------------------------*/
@@ -1017,4 +928,3 @@
     </script>
 </body>
 {% endblock %}
-

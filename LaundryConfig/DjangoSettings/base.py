@@ -107,17 +107,7 @@ CRISPY_TEMPLATE_PACK = "tailwind"
 EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
 DEFAULT_AUTO_FIELD = env('DEFAULT_AUTO_FIELD')
 
-# MPESA_ENVIRONMENT = env('MPESA_ENVIRONMENT')
-# MPESA_CONSUMER_KEY = env('MPESA_CONSUMER_KEY')
-# MPESA_CONSUMER_SECRET = env('MPESA_CONSUMER_SECRET')
-# MPESA_SHORTCODE = env('MPESA_SHORTCODE')
-# MPESA_EXPRESS_SHORTCODE = env('MPESA_EXPRESS_SHORTCODE')
-# MPESA_SHORTCODE_TYPE = env('MPESA_SHORTCODE_TYPE')
-# MPESA_PASSKEY = env('MPESA_PASSKEY')
-# MPESA_INITIATOR_USERNAME = env('MPESA_INITIATOR_USERNAME')
-# MPESA_INITIATOR_SECURITY_CREDENTIAL = env('MPESA_INITIATOR_SECURITY_CREDENTIAL')
 
-# For development: emails will be printed to the console
 
 
 # For production: use real SMTP (example with Gmail)
@@ -135,6 +125,10 @@ LOGOUT_REDIRECT_URL = '/accounts/login/'
 
 LOGIN_URL = 'login'
 
+AUTHENTICATION_BACKENDS = [
+    # 'LaundryApp.backends.EmailOrUsernameModelBackend',
+    'django.contrib.auth.backends.ModelBackend',
+]
 
 TEMPLATES = [
     {

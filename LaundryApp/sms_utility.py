@@ -1,42 +1,59 @@
-from twilio.rest import Client
-from twilio.base.exceptions import TwilioRestException
-from django.conf import settings
+import requests
+import json
 import logging
+from django.conf import settings
+from LaundryConfig.env import env
 
 logger = logging.getLogger(__name__)
 
-def send_sms(to_number, body_text):
+TERMII_SMS_URL = "https://api.ng.termii.com/api/sms/send"
+
+def send_sms(to_number, message):
     """
-    Sends an SMS message using the Twilio API and provides detailed feedback.
-    
-    Returns a tuple: (success, message)
-    - success (bool): True if the message was queued successfully, False otherwise.
-    - message (str): A success message or a detailed error message.
+    Send SMS via Termii API
     """
     try:
-        # Get Twilio credentials from settings
-        account_sid = settings.TWILIO_ACCOUNT_SID
-        auth_token = settings.TWILIO_AUTH_TOKEN
-        twilio_number = settings.TWILIO_PHONE_NUMBER
-        
-        # Initialize the Twilio client
-        client = Client(account_sid, auth_token)
-        
-        # Create and send the message
-        message = client.messages.create(
-            to=to_number,
-            from_=twilio_number,
-            body=body_text
+        api_key = env("TERMII_API_KEY")
+        sender_id = env("TERMII_SENDER_ID")       
+        if not api_key:
+            raise ValueError("⚠️ Missing TERMII_API_KEY in Django settings")
+
+        payload = {
+            "to": to_number,
+            "from": sender_id,
+            "sms": message,
+            "type": "plain",
+            "channel": "generic",  # Can be 'dnd', 'whatsapp', or 'generic'
+            "api_key": api_key,
+        }
+
+        headers = {"Content-Type": "application/json"}
+
+        logger.info(f"📤 Sending SMS to {to_number}: {message}")
+
+        response = requests.post(
+            TERMII_SMS_URL,
+            headers=headers,
+            data=json.dumps(payload),
+            timeout=20
         )
-        logger.info(f"SMS queued successfully to {to_number}. SID: {message.sid}")
-        return True, f"SMS queued successfully. SID: {message.sid}"
-    
-    except TwilioRestException as e:
-        error_message = f"Twilio API Error (Code {e.code}): {e.msg}"
-        logger.error(error_message)
-        return False, error_message
-        
+
+        # Parse the response
+        if response.status_code in [200, 201]:
+            data = response.json()
+            if data.get("code") == "ok":
+                logger.info(f"✅ SMS sent successfully to {to_number}")
+                return True, f"SMS sent successfully to {to_number}"
+            else:
+                logger.error(f"❌ SMS failed: {data}")
+                return False, f"Failed to send SMS: {data}"
+        else:
+            logger.error(f"❌ HTTP Error ({response.status_code}): {response.text}")
+            return False, f"HTTP Error {response.status_code}: {response.text}"
+
+    except requests.exceptions.Timeout:
+        logger.error("⏰ Request to Termii API timed out")
+        return False, "Request timeout"
     except Exception as e:
-        error_message = f"Unexpected error sending SMS: {e}"
-        logger.error(error_message)
-        return False, error_message
+        logger.error(f"⚠️ Unexpected error sending SMS via Termii: {e}")
+        return False, str(e)

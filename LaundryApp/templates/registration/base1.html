@@ -1,0 +1,36 @@
+{% load static tailwind_tags %}
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}My App{% endblock %}</title>
+
+    {% tailwind_css %}
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"
+        integrity="sha512-iecdLmaskl7CVkqkXNQ/Z3j5gkP2Q5yV2cY9b7zY4lJk+WwZp+S1JcRjJ1lvVWmvCqj5vR2ApZgU0U2sgCkW2w=="
+        crossorigin="anonymous" referrerpolicy="no-referrer" />
+</head>
+
+<body class="h-screen overflow-hidden bg-gray-50">
+    <!-- Background Image Container -->
+    <div class="fixed inset-0 -z-10">
+        <img src="{% static 'background-images/bg.png' %}" alt="Background"
+            class="w-full h-full object-cover">
+        <div class="absolute inset-0 bg-black/20"></div>
+    </div>
+
+
+    <!-- Main Content -->
+    <main class="relative z-10 h-[calc(100vh-4rem)] overflow-hidden">
+        <div class="h-full flex items-center justify-center px-4 sm:px-6 lg:px-8">
+            {% block content %}{% endblock %}
+        </div>
+    </main>
+
+    <!-- Footer -->
+    
+</body>
+
+</html>

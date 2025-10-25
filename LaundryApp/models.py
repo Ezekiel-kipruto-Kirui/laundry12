@@ -4,6 +4,7 @@ import uuid
 import logging
 from django.db import models, transaction, IntegrityError
 from django.db.models import Sum
+import requests
 from django.utils import timezone
 from django.db.models.signals import post_save
 from django.dispatch import receiver
@@ -22,8 +23,15 @@ try:
     from django.db.models import JSONField
 except ImportError:
     from django.contrib.postgres.fields import JSONField
-
-
+class shoptype(models.Model):
+    SHOP_CHOICE = (
+        ('Shop A','Shop A'),
+        ('Shop B','Shop B'),
+        ('Hotel','Hotel')
+    )
+    shoptype= models.CharField(max_length=50, choices=SHOP_CHOICE)
+    def __str__(self):
+        return f"{self.shoptype}"
 class CustomUserManager(BaseUserManager):
     def create_user(self, email, password=None, **extra_fields):
         if not email:
@@ -49,16 +57,10 @@ class CustomUserManager(BaseUserManager):
 class UserProfile(AbstractUser):
     username = None
     email = models.EmailField(unique=True)
-
     USERNAME_FIELD = 'email'
     REQUIRED_FIELDS = []
 
-    APP_CHOICES = (
-        ('laundry', 'Laundry'),
-        ('hotel', 'Hotel'),
-    )
-    app_type = models.CharField(max_length=20, choices=APP_CHOICES, default='hotel')
-
+   
     USER_TYPE_CHOICES = (
         ('admin', 'Admin'),
         ('staff', 'Staff'),
@@ -68,17 +70,7 @@ class UserProfile(AbstractUser):
     objects = CustomUserManager()
 
     def __str__(self):
-        return f"{self.email} ({self.app_type} - {self.user_type})"
-class LaundryProfile(models.Model):
-    user = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="laundry_profile")
-    SHOP_CHOICES = (
-        ('shop A', 'Shop A'),
-        ('shop B', 'Shop B'),
-    )
-    shop = models.CharField(max_length=50, choices=SHOP_CHOICES, default='shop A', db_index=True)
-
-    def __str__(self):
-        return f"{self.user.username} - {self.shop}"
+        return f"{self.email} - {self.user_type})"
 
 @receiver(post_save, sender=AbstractUser)
 def create_user_profile(sender, instance, created, **kwargs):
@@ -124,7 +116,7 @@ class Order(models.Model):
     customer = models.ForeignKey(
         Customer, on_delete=models.CASCADE, related_name='orders', db_index=True
     )
-    uniquecode = models.CharField(max_length=6, unique=True, blank=True, editable=False)
+    uniquecode = models.CharField(max_length=10, unique=True, blank=True, editable=False)
 
     PAYMENT_TYPE_CHOICES = (
         ('cash', 'Cash'),
@@ -323,23 +315,44 @@ class Payment(models.Model):
         return f"Payment for {self.order.uniquecode} - KSh {self.price}"
 
 
+from django.dispatch import receiver
+
+
+logger = logging.getLogger(__name__)
+
+
 @receiver(post_save, sender=Order)
 def handle_order_sms(sender, instance, created, **kwargs):
     customer_phone = str(instance.customer.phone)
     order_code = instance.uniquecode
 
     if not customer_phone or not customer_phone.startswith('+'):
-        logger.warning(f"Could not send SMS for order {order_code}: Invalid phone number format.")
+        logger.warning(f"⚠️ Invalid phone number for order {order_code}: {customer_phone}")
         return
 
     message_body = None
+
     if created:
-        message_body = f"Hello {instance.customer.name}! Your order {order_code} has been received and is now pending."
-    elif (instance.order_status == 'Completed' and
-          instance.previous_order_status not in (None, 'Completed')):
-        message_body = f"Hi {instance.customer.name}, your order {order_code} is now complete! Thank you for your business."
+        message_body = (
+            f"Hello {instance.customer.name}! "
+            f"Your order {order_code} has been received and is now pending."
+        )
+
+    elif instance.order_status == 'Completed' and getattr(instance, "previous_order_status", None) not in (None, 'Completed'):
+        message_body = (
+            f"Hi {instance.customer.name}, your order {order_code} is now complete! "
+            "Thank you for choosing our laundry service."
+        )
+
+    elif instance.order_status == 'Delivered_picked' and getattr(instance, "previous_order_status", None) not in (None, 'Delivered_picked'):
+        message_body = (
+            f"Hello {instance.customer.name}, your order {order_code} has been delivered successfully. "
+            "We appreciate your trust in our services!"
+        )
 
     if message_body:
         success, response_message = send_sms(customer_phone, message_body)
-        if not success:
-            logger.error(f"Failed to send SMS for order {order_code}: {response_message}")
+        if success:
+            logger.info(f"✅ SMS sent for order {order_code}: {response_message}")
+        else:
+            logger.error(f"❌ Failed to send SMS for order {order_code}: {response_message}")

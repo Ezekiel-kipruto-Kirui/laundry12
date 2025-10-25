@@ -131,6 +131,16 @@
             });
         });
     });
+
+        fetch('/api/shoptypes/')
+  .then(response => response.json())
+  .then(data => {
+            console.log("Shop types:", data);
+      // You can use this data to build dropdowns or check access dynamically
+  });
+
+
+
 </script>
 
 <style>

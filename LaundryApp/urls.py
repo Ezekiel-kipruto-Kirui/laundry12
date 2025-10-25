@@ -1,7 +1,7 @@
 from django.contrib import admin
 from django.urls import path, include
 from . import views
-from .businesses import *
+from .backends import *
 from LaundryApp.View import Expenses, customers, usermanage
 from django.views.decorators.cache import cache_page
 from django.contrib.auth import views as auth_views
@@ -36,8 +36,8 @@ urlpatterns = [
     path('', views.get_laundry_profit_and_hotel, name='dashboard'),
     path('Laundry-dashboard', views.laundrydashboard, name='Laundrydashboard'),
     path('Report/', cache_page(60 * 5)(views.dashboard_view), name='laundryapp_dashboard'),
-    path('dbw', dashboard_home, name='dashboard_home'),
-    path('api/dashboard-data/', get_dashboard_data, name='dashboard_data'),
+#     path('dbw', dashboard_home, name='dashboard_home'),
+     # path('api/dashboard-data/', views.get_dashboard_data, name='dashboard_data'),
     
     # Order Management
     path('createorder/', views.createorder, name='createorder'),
@@ -77,6 +77,7 @@ urlpatterns = [
     path("expense-fields/", Expenses.expense_field_list, name="expense_field_list"),
     path("expense-fields/edit/<int:field_id>/", Expenses.edit_expense_field, name="edit_expense_field"),
     path("expense-fields/delete/<int:field_id>/", Expenses.delete_expense_field, name="delete_expense_field"),
+   
     
 
 ]

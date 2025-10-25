@@ -16,7 +16,7 @@ from django.contrib.auth.decorators import login_required
 from django.http import Http404
 from django.urls import reverse
 from django.utils import timezone
-from django.views.decorators.csrf import csrf_exempt
+from django.views.decorators.csrf import csrf_exempt, csrf_protect
 from django.views.decorators.http import require_POST
 from django.db.models import Q, Prefetch, Sum, Count, Avg, F, ExpressionWrapper, DecimalField, Value
 from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
@@ -37,7 +37,6 @@ from .models import (
     OrderItem, 
     ExpenseField, 
     ExpenseRecord, 
-    LaundryProfile,
 )
 from .forms import ( 
     CustomerForm, 
@@ -48,7 +47,6 @@ from .forms import (
     ProfileEditForm, 
     ExpenseFieldForm,
     ExpenseRecordForm,
-    LaundryProfileForm 
 )
 from HotelApp.models import HotelExpenseRecord
 from .resource import OrderResource
@@ -66,6 +64,12 @@ ALLOWED_EXPORT_FORMATS = ['csv', 'xlsx']
 VALID_ORDER_STATUSES = ['pending', 'processing', 'Completed', 'Delivered_picked']
 VALID_PAYMENT_STATUSES = ['pending', 'partial', 'completed']
 
+# Shop constants
+SHOP_A = 'Shop A'
+SHOP_B = 'Shop B'
+HOTEL_USER = 'hotel'
+ALL_SHOPS = [SHOP_A, SHOP_B]
+
 class OrderManagerError(Exception):
     """Custom exception for order management operations"""
     pass
@@ -82,29 +86,87 @@ class InvalidDataError(OrderManagerError):
     """Raised when invalid data is provided"""
     pass
 
-# Cached functions and reusable queries
+# ==================== PERMISSION FUNCTIONS ====================
+
+def get_user_profile(user):
+    """Safely get user profile"""
+    try:
+        if hasattr(user, 'userprofile'):
+            return user.userprofile
+        elif hasattr(user, 'profile'):
+            return user.profile
+        return None
+    except Exception as e:
+        logger.error(f"Error getting user profile for {user.id}: {str(e)}")
+        return None
+
 def get_user_shops(request):
     """Get the shops associated with the current user based on profile"""
     if request.user.is_superuser:
-        return None  # Superusers can access all shops
+        return ALL_SHOPS  # Superusers can access all shops
     
     try:
-        # Check if user has a laundry profile with shop assignment
-        if hasattr(request.user, 'laundry_profile') and request.user.laundry_profile.shop:
-            # Return the shop as a list to maintain compatibility
-            return [request.user.laundry_profile.shop.title()]
+        user_profile = get_user_profile(request.user)
+        if user_profile:
+            user_type = user_profile.user_type
+            
+            # Hotel users, staff, and admin can access both shops
+            if user_type in ['hotel', 'staff', 'admin']:
+                return ALL_SHOPS
+            
+            # For other users, check laundry profile
+            elif hasattr(request.user, 'laundry_profile') and request.user.laundry_profile.shop:
+                shop = request.user.laundry_profile.shop
+                # Ensure shop name is in the correct format
+                if shop in ALL_SHOPS:
+                    return [shop]
+                # Try to normalize shop name
+                elif 'a' in shop.lower():
+                    return [SHOP_A]
+                elif 'b' in shop.lower():
+                    return [SHOP_B]
+        
+        logger.warning(f"No valid shop assignment found for user {request.user.id}")
         return []  # If no shop is assigned, return empty list
     except Exception as e:
         logger.error(f"Error getting user shops for user {request.user.id}: {str(e)}")
-        return []  # If any error occurs, return empty list
+        return []
+
+def can_access_all_shops(user):
+    """Check if user can access all shops"""
+    if user.is_superuser:
+        return True
+    
+    user_profile = get_user_profile(user)
+    if user_profile:
+        user_type = user_profile.user_type
+        return user_type in ['admin', 'hotel', 'staff']
+    
+    return False
+
+def can_see_all_orders(user):
+    """Check if user can see all orders regardless of creator"""
+    if user.is_superuser:
+        return True
+    
+    user_profile = get_user_profile(user)
+    if user_profile:
+        user_type = user_profile.user_type
+        # Staff, hotel, and admin users can see all orders
+        return user_type in ['admin', 'staff', 'hotel']
+    
+    return False
 
 def apply_order_permissions(queryset, request):
     """Apply permission-based filtering to order queryset"""
+    # If user can see all orders, return the full queryset
+    if can_see_all_orders(request.user):
+        return queryset
+    
     user_shops = get_user_shops(request)
     
-    if user_shops is not None:  # Not superuser
+    if not can_access_all_shops(request.user):
         if user_shops:  # User has shop assignments
-            # Use exact match since we normalized to title case
             queryset = queryset.filter(shop__in=user_shops)
         else:  # User has no shop assignments
             queryset = queryset.none()
@@ -113,9 +175,13 @@ def apply_order_permissions(queryset, request):
 
 def apply_customer_permissions(queryset, request):
     """Apply permission-based filtering to customer queryset"""
+    # If user can see all orders, they can see all customers
+    if can_see_all_orders(request.user):
+        return queryset
+    
     user_shops = get_user_shops(request)
     
-    if user_shops is not None:  # Not superuser
+    if not can_access_all_shops(request.user):
         if user_shops:  # User has shop assignments
             # Get customers who have orders in the user's shops
             customer_ids = Order.objects.filter(
@@ -129,21 +195,35 @@ def apply_customer_permissions(queryset, request):
 
 def is_admin(user):
     """Check if user has admin privileges"""
-    return user.is_superuser or getattr(user, 'user_type', None) == 'admin'
+    if user.is_superuser:
+        return True
+    
+    user_profile = get_user_profile(user)
+    return user_profile and user_profile.user_type == 'admin'
 
 def is_staff(user):
     """Check if user has staff privileges"""
-    return user.is_staff or getattr(user, 'user_type', None) in ['admin', 'staff']
+    if user.is_staff or user.is_superuser:
+        return True
+    
+    user_profile = get_user_profile(user)
+    return user_profile and user_profile.user_type in ['admin', 'staff', 'hotel']
 
-# Decorators for permission checking
+def is_hotel_user(user):
+    """Check if user is a hotel user"""
+    user_profile = get_user_profile(user)
+    return user_profile and user_profile.user_type == 'hotel'
+
+# ==================== DECORATORS ====================
+
 def shop_required(view_func):
     """Decorator to ensure user has a shop assignment"""
     @wraps(view_func)
     def _wrapped_view(request, *args, **kwargs):
         user_shops = get_user_shops(request)
-        if not user_shops and not request.user.is_superuser:
+        if not user_shops and not can_access_all_shops(request.user):
             messages.error(request, "You don't have permission to access this page.")
-            return redirect('dashboard')
+            return redirect('laundry:Laundrydashboard')
         return view_func(request, *args, **kwargs)
     return _wrapped_view
 
@@ -153,7 +233,7 @@ def admin_required(view_func):
     def _wrapped_view(request, *args, **kwargs):
         if not is_admin(request.user):
             messages.error(request, "You don't have admin privileges.")
-            return redirect('laundry:dashboard')
+            return redirect('laundry:Laundrydashboard')
         return view_func(request, *args, **kwargs)
     return _wrapped_view
 
@@ -167,9 +247,21 @@ def staff_required(view_func):
         return view_func(request, *args, **kwargs)
     return _wrapped_view
 
+def hotel_user_required(view_func):
+    """Decorator to ensure user is a hotel user"""
+    @wraps(view_func)
+    def _wrapped_view(request, *args, **kwargs):
+        if not is_hotel_user(request.user):
+            messages.error(request, "You don't have hotel user privileges.")
+            return redirect('laundry:Laundrydashboard')
+        return view_func(request, *args, **kwargs)
+    return _wrapped_view
+
+# ==================== UTILITY FUNCTIONS ====================
+
 def get_base_order_queryset():
     """Base queryset for orders with common prefetching"""
-    return Order.objects.select_related('customer').prefetch_related(
+    return Order.objects.select_related('customer', 'created_by').prefetch_related(
         Prefetch('items', queryset=OrderItem.objects.only(
             'servicetype', 'itemname', 'quantity', 'itemtype', 
             'itemcondition', 'total_item_price', 'unit_price'
@@ -178,33 +270,37 @@ def get_base_order_queryset():
         'id', 'uniquecode', 'order_status', 'payment_status', 'payment_type',
         'shop', 'delivery_date', 'amount_paid', 'balance', 'total_price', 
         'created_at', 'customer__name', 'customer__phone', 'customer__address', 
-        'addressdetails'
+        'addressdetails', 'created_by__email', 'created_by__first_name', 'created_by__last_name'
     )
 
 def check_order_permission(request, order):
     """Check if user has permission to access this order"""
+    # Staff, hotel, and admin users can access all orders
+    if can_see_all_orders(request.user):
+        return True
+    
     user_shops = get_user_shops(request)
+    if user_shops and order.shop in user_shops:
+        return True
     
-    if user_shops is not None and user_shops:  # Not superuser
-        if order.shop not in user_shops:
-            return False
-    
-    return True
+    return False
 
 def check_customer_permission(request, customer):
     """Check if user has permission to access this customer"""
-    user_shops = get_user_shops(request)
+    # Staff, hotel, and admin users can access all customers
+    if can_see_all_orders(request.user):
+        return True
     
-    if user_shops is not None and user_shops:  # Not superuser
+    user_shops = get_user_shops(request)
+    if user_shops:
         # Check if customer has orders in user's shops
         customer_shop_orders = Order.objects.filter(
             customer=customer,
             shop__in=user_shops
         ).exists()
-        if not customer_shop_orders:
-            return False
+        return customer_shop_orders
     
-    return True
+    return False
 
 def validate_order_status(status):
     """Validate order status"""
@@ -294,6 +390,7 @@ def serialize_order_for_json(order):
     """Serialize order data for JSON response"""
     try:
         customer_phone = str(order.customer.phone) if order.customer.phone else ''
+        created_by_name = order.created_by.get_full_name() if order.created_by and order.created_by.get_full_name() else order.created_by.email if order.created_by else 'System'
         
         order_data = {
             'id': order.id,
@@ -309,6 +406,8 @@ def serialize_order_for_json(order):
             'total_price': float(order.total_price or 0),
             'order_status': order.order_status,
             'payment_status': order.payment_status,
+            'shop': order.shop,
+            'created_by': created_by_name,
             'created_at': order.created_at.strftime('%Y-%m-%d %H:%M') if order.created_at else '',
         }
 
@@ -349,7 +448,8 @@ def validate_date_range(from_date_str, to_date_str):
     
     return from_date, to_date
 
-# Views
+# ==================== VIEWS ====================
+
 @login_required
 @admin_required
 def dashboard_view(request):
@@ -414,11 +514,11 @@ def dashboard_view(request):
             'to_date': None,
         })
 
-
 @login_required
 @shop_required
+@csrf_protect
 def customordertable(request):
-    """Order table view with AJAX support"""
+    """Order table view with AJAX support and CSRF protection"""
     # Check for export request FIRST - this should work for both AJAX and regular requests
     export_format = request.GET.get('export', '')
     if export_format:
@@ -430,7 +530,7 @@ def customordertable(request):
                 Q(uniquecode__isnull=True) | Q(uniquecode='')
             )
 
-            # Apply permission filtering
+            # Apply permission filtering - staff users will get all orders
             orders = apply_order_permissions(orders, request)
 
             # Apply filters in a single optimized block
@@ -450,12 +550,15 @@ def customordertable(request):
                     Q(customer__name__icontains=search_query) |
                     Q(customer__phone__icontains=search_query) |
                     Q(items__servicetype__icontains=search_query) |
-                    Q(items__itemname__icontains=search_query)
+                    Q(items__itemname__icontains=search_query) |
+                    Q(created_by__email__icontains=search_query) |
+                    Q(created_by__first_name__icontains=search_query) |
+                    Q(created_by__last_name__icontains=search_query)
                 )
                 
-            # Shop filter - available for superusers
+            # Shop filter - available for users who can access all shops
             shop_filter = request.GET.get('shop', '')
-            if shop_filter and request.user.is_superuser:
+            if shop_filter and can_access_all_shops(request.user):
                 # Validate shop filter against available choices
                 valid_shops = [choice[0] for choice in Order.SHOP_CHOICE]
                 if shop_filter in valid_shops:
@@ -489,74 +592,15 @@ def customordertable(request):
         'order_status_choices': Order.ORDER_STATUS_CHOICES,
         'payment_status_choices': Order.PAYMENT_STATUS_CHOICES,
         'today': timezone.now().date(),
+        'can_see_all_orders': can_see_all_orders(request.user),
+        'can_access_all_shops': can_access_all_shops(request.user),
     }
     
-    # Add shop choices for superusers to enable filtering
-    if request.user.is_superuser:
+    # Add shop choices for users who can access all shops to enable filtering
+    if can_access_all_shops(request.user):
         context['shop_choices'] = Order.SHOP_CHOICE
     
     return render(request, 'Order/orders_table.html', context)
-
-
-def handle_export_request(request, export_format):
-    """Handle export requests separately from AJAX data requests"""
-    try:
-        # Start with base queryset - include ALL orders (excluding Delivered_picked)
-        orders = get_base_order_queryset().exclude(
-            order_status__in=['Delivered_picked']
-        ).exclude(
-            Q(uniquecode__isnull=True) | Q(uniquecode='')
-        )
-
-        # Apply permission filtering
-        orders = apply_order_permissions(orders, request)
-
-        # Apply filters in a single optimized block
-        filters = Q()
-        
-        # Payment status filter
-        payment_filter = request.GET.get('payment_status', '')
-        if payment_filter:
-            validate_payment_status(payment_filter)
-            filters &= Q(payment_status=payment_filter)
-
-        # Search filter
-        search_query = request.GET.get('search', '')
-        if search_query:
-            filters &= (
-                Q(uniquecode__icontains=search_query) |
-                Q(customer__name__icontains=search_query) |
-                Q(customer__phone__icontains=search_query) |
-                Q(items__servicetype__icontains=search_query) |
-                Q(items__itemname__icontains=search_query)
-            )
-            
-        # Shop filter - available for superusers
-        shop_filter = request.GET.get('shop', '')
-        if shop_filter and request.user.is_superuser:
-            # Validate shop filter against available choices
-            valid_shops = [choice[0] for choice in Order.SHOP_CHOICE]
-            if shop_filter in valid_shops:
-                filters &= Q(shop=shop_filter)
-
-        if filters:
-            orders = orders.filter(filters).distinct()
-
-        # Handle the export
-        return handle_export(orders, export_format)
-    
-    except InvalidDataError as e:
-        logger.warning(f"Invalid data in export request: {str(e)}")
-        messages.error(request, f"Export failed: {str(e)}")
-        return redirect('laundry:customordertable')
-    except OrderManagerError as e:
-        logger.error(f"Order manager error in export request: {str(e)}")
-        messages.error(request, f"Export failed: {str(e)}")
-        return redirect('laundry:customordertable')
-    except Exception as e:
-        logger.error(f"Unexpected error in export request: {str(e)}")
-        messages.error(request, "An unexpected error occurred during export.")
-        return redirect('laundry:customordertable')
 
 def handle_ajax_request(request):
     """Handle AJAX requests for order data (without export)"""
@@ -568,7 +612,7 @@ def handle_ajax_request(request):
             Q(uniquecode__isnull=True) | Q(uniquecode='')
         )
 
-        # Apply permission filtering
+        # Apply permission filtering - staff users will get all orders
         orders = apply_order_permissions(orders, request)
 
         # Apply filters in a single optimized block
@@ -588,12 +632,15 @@ def handle_ajax_request(request):
                 Q(customer__name__icontains=search_query) |
                 Q(customer__phone__icontains=search_query) |
                 Q(items__servicetype__icontains=search_query) |
-                Q(items__itemname__icontains=search_query)
+                Q(items__itemname__icontains=search_query) |
+                Q(created_by__email__icontains=search_query) |
+                Q(created_by__first_name__icontains=search_query) |
+                Q(created_by__last_name__icontains=search_query)
             )
             
-        # Shop filter - available for superusers
+        # Shop filter - available for users who can access all shops
         shop_filter = request.GET.get('shop', '')
-        if shop_filter and request.user.is_superuser:
+        if shop_filter and can_access_all_shops(request.user):
             # Validate shop filter against available choices
             valid_shops = [choice[0] for choice in Order.SHOP_CHOICE]
             if shop_filter in valid_shops:
@@ -627,11 +674,12 @@ def handle_ajax_request(request):
                 'start_index': page_obj.start_index(),
                 'end_index': page_obj.end_index(),
                 'count': page_obj.paginator.count,
-            }
+            },
+            'can_see_all_orders': can_see_all_orders(request.user),
         }
         
-        # Add shop choices for superusers in AJAX response
-        if request.user.is_superuser:
+        # Add shop choices for users who can access all shops in AJAX response
+        if can_access_all_shops(request.user):
             data['shop_choices'] = Order.SHOP_CHOICE
 
         return JsonResponse(data)
@@ -660,8 +708,10 @@ def handle_ajax_request(request):
 
 @login_required
 @shop_required
+@require_POST
+@csrf_protect
 def update_order_status_ajax(request, order_id, status):
-    """Update order status via AJAX"""
+    """Update order status via AJAX with CSRF protection"""
     try:
         validate_order_status(status)
         
@@ -740,12 +790,14 @@ def order_detail(request, order_id):
 @login_required
 @shop_required
 @transaction.atomic
+@require_POST
+@csrf_protect
 def order_edit(request):
-    """Update order via AJAX with transaction safety"""
+    """Update order via AJAX with transaction safety and CSRF protection"""
     # Check if it's an AJAX request
     is_ajax = request.headers.get('x-requested-with') == 'XMLHttpRequest'
     
-    if request.method != 'POST' or not is_ajax:
+    if not is_ajax:
         return JsonResponse({
             'success': False,
             'message': "Invalid request method or not an AJAX request."
@@ -878,8 +930,10 @@ def order_edit(request):
 
 @login_required
 @shop_required
+@require_POST
+@csrf_protect
 def order_delete(request, order_code):
-    """Delete an order via AJAX"""
+    """Delete an order via AJAX with CSRF protection"""
     try:
         # Get the order
         order = Order.objects.only('uniquecode', 'shop').get(uniquecode=order_code)
@@ -888,35 +942,19 @@ def order_delete(request, order_code):
         if not check_order_permission(request, order):
             raise PermissionDeniedError("You don't have permission to delete this order.")
         
-        if request.method == 'POST':
-            order_code = order.uniquecode
-            order.delete()
-            
-            logger.info(f"Order {order_code} deleted by user {request.user.id}")
-            
-            if request.headers.get('x-requested-with') == 'XMLHttpRequest':
-                return JsonResponse({
-                    'success': True,
-                    'message': f'Order {order_code} deleted successfully!'
-                })
-            else:
-                messages.success(request, f'Order {order_code} deleted successfully!')
-                return redirect('laundry:customordertable')
+        order_code = order.uniquecode
+        order.delete()
         
-        # If it's a GET request and AJAX, return confirmation data
+        logger.info(f"Order {order_code} deleted by user {request.user.id}")
+        
         if request.headers.get('x-requested-with') == 'XMLHttpRequest':
             return JsonResponse({
                 'success': True,
-                'order': {
-                    'uniquecode': order.uniquecode,
-                    'customer_name': order.customer.name,
-                },
-                'message': f'Are you sure you want to delete order {order.uniquecode}?'
+                'message': f'Order {order_code} deleted successfully!'
             })
-        
-        # Regular GET request - render confirmation page
-        context = {'order': order}
-        return render(request, 'Order/order_confirm_delete.html', context)
+        else:
+            messages.success(request, f'Order {order_code} deleted successfully!')
+            return redirect('laundry:customordertable')
         
     except Order.DoesNotExist:
         logger.warning(f"Order not found: {order_code}")
@@ -940,8 +978,10 @@ def order_delete(request, order_code):
 
 @login_required
 @shop_required
+@require_POST
+@csrf_protect
 def update_payment_status(request, order_code):
-    """Update payment status of an order"""
+    """Update payment status of an order with CSRF protection"""
     try:
         # Load full order
         order = Order.objects.get(uniquecode=order_code)
@@ -949,12 +989,6 @@ def update_payment_status(request, order_code):
         # Check if user has permission
         if not check_order_permission(request, order):
             raise PermissionDeniedError("You don't have permission to update this order.")
-
-        if request.method != 'POST':
-            return JsonResponse({
-                'success': False,
-                'message': 'Invalid request method.'
-            }, status=405)
 
         payment_status = request.POST.get('payment_status')
         amount_paid_raw = request.POST.get('amount_paid', "0")
@@ -1015,8 +1049,9 @@ def update_payment_status(request, order_code):
 @login_required
 @shop_required
 @transaction.atomic
+@csrf_protect
 def createorder(request):
-    """View to handle order creation with Django forms"""
+    """View to handle order creation with Django forms and CSRF protection"""
     user_shops = get_user_shops(request)
     default_shop = user_shops[0] if user_shops else None
 
@@ -1158,34 +1193,50 @@ def createorder(request):
         'item_formset': item_formset,
         'user_has_single_shop': user_shops and len(user_shops) == 1,
         'user_shop': default_shop,
+        'can_see_all_orders': can_see_all_orders(request.user),
     }
     return render(request, 'Order/order_form.html', context)
 
 @login_required
+@csrf_protect
 def laundrydashboard(request):
-    """Laundry dashboard view"""
+    """Laundry dashboard view with CSRF protection - updated for staff users"""
     if not request.user.is_authenticated:
         return redirect('login')
 
     try:
         # Get user's shops
         user_shops = get_user_shops(request)
+        
+        # Debug logging
+        logger.info(f"User {request.user.email} (type: {getattr(request.user, 'user_type', 'unknown')}) shops: {user_shops}")
+        logger.info(f"Can access all shops: {can_access_all_shops(request.user)}")
+        logger.info(f"Can see all orders: {can_see_all_orders(request.user)}")
 
         # Base queryset - exclude delivered orders from counts
-        if request.user.is_superuser:
-            # Superuser sees all orders
+        if can_see_all_orders(request.user):
+            # Users who can see all orders see all orders regardless of shop
             orders = Order.objects.all()
             # For counts, exclude delivered orders
             count_orders = Order.objects.exclude(order_status='Delivered_picked')
+            logger.info(f"User can see all orders, total orders: {count_orders.count()}")
+        elif can_access_all_shops(request.user):
+            # Users who can access all shops see all orders from both shops
+            orders = Order.objects.all()
+            # For counts, exclude delivered orders
+            count_orders = Order.objects.exclude(order_status='Delivered_picked')
+            logger.info(f"User can access all shops, total orders: {count_orders.count()}")
         elif user_shops:
-            # Staff sees only their shop's orders
+            # Regular users see only their shop's orders
             orders = Order.objects.filter(shop__in=user_shops)
             # For counts, exclude delivered orders
             count_orders = Order.objects.filter(shop__in=user_shops).exclude(order_status='Delivered_picked')
+            logger.info(f"User has shops {user_shops}, orders: {count_orders.count()}")
         else:
             # Users with no shop assignments see nothing
             orders = Order.objects.none()
             count_orders = Order.objects.none()
+            logger.warning(f"User has no shop assignments: {user_shops}")
 
         # Calculate overall stats using count_orders (which excludes delivered orders)
         total_orders = count_orders.count()
@@ -1193,14 +1244,14 @@ def laundrydashboard(request):
         completed_orders = count_orders.filter(order_status='Completed').count()
 
         # Get recent orders (including delivered)
-        recent_orders = orders.select_related('customer').order_by('-created_at')[:10]
+        recent_orders = orders.select_related('customer', 'created_by').order_by('-created_at')[:10]
 
-        # Shop-specific data for superuser
+        # Shop-specific data for users who can access all shops
         shop_performance = None
         shop_a_data = None
         shop_b_data = None
         
-        if request.user.is_superuser:
+        if can_access_all_shops(request.user):
             # Get shop performance data for all shops
             shop_performance = {}
             shops = Order.objects.values_list('shop', flat=True).distinct()
@@ -1243,11 +1294,14 @@ def laundrydashboard(request):
             'shop_performance': shop_performance,
             'shop_a_data': shop_a_data,
             'shop_b_data': shop_b_data,
+            'can_access_all_shops': can_access_all_shops(request.user),
+            'can_see_all_orders': can_see_all_orders(request.user),
+            'user_type': getattr(request.user, 'user_type', 'unknown'),
         }
         return render(request, 'dashboard.html', context)
         
     except Exception as e:
-        logger.error(f"Error in laundry dashboard: {str(e)}")
+        logger.error(f"Error in laundry dashboard: {str(e)}", exc_info=True)
         messages.error(request, "An error occurred while loading the dashboard.")
         return render(request, 'dashboard.html', {
             'user_shops': [],
@@ -1258,15 +1312,19 @@ def laundrydashboard(request):
             'shop_performance': None,
             'shop_a_data': None,
             'shop_b_data': None,
+            'can_access_all_shops': False,
+            'can_see_all_orders': False,
+            'user_type': getattr(request.user, 'user_type', 'unknown'),
         })
-    
+
+@login_required
+@admin_required
+@csrf_protect
 def get_laundry_profit_and_hotel(request):
     """
     Display current month data by default without user selection
+    Admin only view with CSRF protection
     """
-    if not request.user.is_authenticated or not request.user.is_superuser:
-        return redirect('login')
-
     try:
         current_date = now()
         current_year = current_date.year
@@ -1283,11 +1341,7 @@ def get_laundry_profit_and_hotel(request):
         # Create a simple admin instance wrapper
         class SimpleAdmin:
             def get_user_shops(self, request):
-                # For superusers, return None to show all shops
-                if request.user.is_superuser:
-                    return None
-                # Add your shop logic here for non-superusers
-                return ['Shop A', 'Shop B']
+                return get_user_shops(request)
         
         # Initialize DashboardAnalytics with the simple admin
         analytics = DashboardAnalytics(SimpleAdmin())
@@ -1358,8 +1412,11 @@ def get_laundry_profit_and_hotel(request):
             'current_month_name': current_month_name,
             'dashboard_title': f"{current_month_name} {current_date.year} Dashboard"
         })
+
+@login_required
+@csrf_protect
 def logout_view(request):
-    """Log out the current user and redirect to login page"""
+    """Log out the current user and redirect to login page with CSRF protection"""
     try:
         auth_logout(request)
         messages.info(request, "You have been successfully logged out.")
@@ -1368,3 +1425,28 @@ def logout_view(request):
         messages.error(request, "An error occurred during logout.")
     
     return redirect('login')
+
+# ==================== DEBUG VIEW ====================
+
+@login_required
+def debug_user_info(request):
+    """Temporary view to debug user permissions"""
+    user = request.user
+    user_profile = get_user_profile(user)
+    
+    debug_info = {
+        'user_id': user.id,
+        'email': user.email,
+        'is_superuser': user.is_superuser,
+        'is_staff': user.is_staff,
+        'has_userprofile': hasattr(user, 'userprofile'),
+        'user_type': getattr(user_profile, 'user_type', 'No profile') if user_profile else 'No profile',
+        'user_shops': get_user_shops(request),
+        'can_access_all_shops': can_access_all_shops(user),
+        'can_see_all_orders': can_see_all_orders(user),
+        'is_admin': is_admin(user),
+        'is_staff_user': is_staff(user),
+        'is_hotel_user': is_hotel_user(user),
+    }
+    
+    return JsonResponse(debug_info)
