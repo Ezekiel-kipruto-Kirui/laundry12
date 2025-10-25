@@ -36,7 +36,7 @@ SECRET_KEY = env('SECRET_KEY')
 DEBUG = env.bool('DJANGO_DEBUG', default=False)  # Set to False for production
 
 # This allows your Render URL to be a valid host
-ALLOWED_HOSTS = ['https://CeanpageLaundry.onrender.com','*']
+ALLOWED_HOSTS = ['https://CeanpageLaundry.onrender.com','www.cleanpage.shop','www.cleanpage.shop']
 
 CSRF_TRUSTED_ORIGINS = [
     'https://CeanpageLaundry.onrender.com',
