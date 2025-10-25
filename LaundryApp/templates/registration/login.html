@@ -75,19 +75,20 @@
                             </label>
                             <div class="relative">
                                 <div class="flex flex-row items-center justify-center">
-                                <div class="absolute ml-2 inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                                    <svg class="w-5 h-5 text-gray-500" fill="currentColor" viewBox="0 0 20 20">
-                                        <path
-                                            d="M2.003 5.884L10 9.882l7.997-3.998A2 2 0 0016 4H4a2 2 0 00-1.997 1.884z">
-                                        </path>
-                                        <path d="M18 8.118l-8 4-8-4V14a2 2 0 002 2h12a2 2 0 002-2V8.118z"></path>
-                                    </svg>
-                                </div>
-                                <input id="id_username" name="username" type="text" required class="block w-full pl-10 pr-3 py-3 border border-gray-300 rounded-lg 
+                                    <div
+                                        class="absolute ml-2 inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                        <svg class="w-5 h-5 text-gray-500" fill="currentColor" viewBox="0 0 20 20">
+                                            <path
+                                                d="M2.003 5.884L10 9.882l7.997-3.998A2 2 0 0016 4H4a2 2 0 00-1.997 1.884z">
+                                            </path>
+                                            <path d="M18 8.118l-8 4-8-4V14a2 2 0 002 2h12a2 2 0 002-2V8.118z"></path>
+                                        </svg>
+                                    </div>
+                                    <input id="id_username" name="username" type="text" required class="block w-full pl-10 pr-3 py-3 border border-gray-300 rounded-lg 
                                            focus:ring-2 focus:ring-blue-600 focus:border-blue-600 
                                            transition duration-200 ease-in-out bg-gray-50/50 hover:bg-gray-50"
-                                    placeholder="Enter your email" autocomplete="username">
-                                    </div>
+                                        placeholder="Enter your email" autocomplete="username">
+                                </div>
                             </div>
                         </div>
 
@@ -98,36 +99,37 @@
                             </label>
                             <div class="relative">
                                 <div class="flex flex-row items-center justify-center">
-                                <div class="absolute ml-2 inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                                    <svg class="w-5 h-5 text-gray-500" fill="currentColor" viewBox="0 0 20 20">
-                                        <path fill-rule="evenodd"
-                                            d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z"
-                                            clip-rule="evenodd"></path>
-                                    </svg>
-                                </div>
-                                
-                                <input id="id_password" name="password" type="password" required class="block w-full pl-10 pr-12 py-3 border border-gray-300 rounded-lg 
+                                    <div
+                                        class="absolute ml-2 inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                        <svg class="w-5 h-5 text-gray-500" fill="currentColor" viewBox="0 0 20 20">
+                                            <path fill-rule="evenodd"
+                                                d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z"
+                                                clip-rule="evenodd"></path>
+                                        </svg>
+                                    </div>
+
+                                    <input id="id_password" name="password" type="password" required class="block w-full pl-10 pr-12 py-3 border border-gray-300 rounded-lg 
                                            focus:ring-2 focus:ring-blue-600 focus:border-blue-600 
                                            transition duration-200 ease-in-out bg-gray-50/50 hover:bg-gray-50"
-                                    placeholder="Enter your password" autocomplete="current-password">
+                                        placeholder="Enter your password" autocomplete="current-password">
 
-                                <!-- Toggle Password Button -->
-                                <button type="button" id="togglePassword"
-                                    class="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-500 hover:text-blue-600 focus:outline-none focus:text-blue-600 transition-colors duration-200"
-                                    aria-label="Toggle password visibility" aria-pressed="false">
-                                    <!-- Eye icon - will be toggled via JavaScript -->
-                                    <svg id="eyeIcon" class="w-5 h-5" fill="none" stroke="currentColor"
-                                        viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                            d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                            d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z">
-                                        </path>
-                                    </svg>
-                                </button>
+                                    <!-- Toggle Password Button -->
+                                    <button type="button" id="togglePassword"
+                                        class="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-500 hover:text-blue-600 focus:outline-none focus:text-blue-600 transition-colors duration-200"
+                                        aria-label="Toggle password visibility" aria-pressed="false">
+                                        <!-- Eye icon - will be toggled via JavaScript -->
+                                        <svg id="eyeIcon" class="w-5 h-5" fill="none" stroke="currentColor"
+                                            viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                                d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                                d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z">
+                                            </path>
+                                        </svg>
+                                    </button>
                                 </div>
                             </div>
-                           
+
                         </div>
                     </div>
 
@@ -137,14 +139,27 @@
                                hover:from-blue-700 hover:to-indigo-800 
                                focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-600
                                transition-all duration-300 ease-in-out shadow-md hover:shadow-lg
-                               disabled:opacity-50 disabled:cursor-not-allowed" id="submitBtn">
-                        <span id="btn-text">Sign in</span>
-                        <svg id="btn-spinner" class="hidden animate-spin ml-2 h-5 w-5 text-white"
-                            xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4">
-                            </circle>
-                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"></path>
-                        </svg>
+                               disabled:opacity-50 disabled:cursor-not-allowed relative overflow-hidden"
+                        id="submitBtn">
+                        <!-- Button Text -->
+                        <span id="btn-text" class="transition-all duration-300">Sign in</span>
+
+                        <!-- Spinner -->
+                        <div id="btn-spinner"
+                            class="absolute inset-0 flex items-center justify-center bg-gradient-to-r from-blue-600 to-indigo-700 rounded-lg opacity-0 transition-opacity duration-300">
+                            <div class="flex items-center space-x-2">
+                                <!-- Spinner SVG -->
+                                <svg class="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg"
+                                    fill="none" viewBox="0 0 24 24">
+                                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor"
+                                        stroke-width="4"></circle>
+                                    <path class="opacity-75" fill="currentColor"
+                                        d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z">
+                                    </path>
+                                </svg>
+                                <span class="text-white text-sm font-medium">Signing in...</span>
+                            </div>
+                        </div>
                     </button>
                 </form>
 
@@ -176,6 +191,10 @@
         const togglePassword = document.getElementById("togglePassword");
         const passwordField = document.getElementById("id_password");
         const eyeIcon = document.getElementById("eyeIcon");
+        const loginForm = document.getElementById("loginForm");
+        const submitBtn = document.getElementById("submitBtn");
+        const btnText = document.getElementById("btn-text");
+        const btnSpinner = document.getElementById("btn-spinner");
 
         // Check if elements exist
         if (!togglePassword || !passwordField || !eyeIcon) {
@@ -216,11 +235,64 @@
             passwordField.focus();
         });
 
+        // Login form submission handler
+        if (loginForm && submitBtn && btnText && btnSpinner) {
+            loginForm.addEventListener('submit', function (e) {
+                // Basic validation
+                const username = document.getElementById('id_username').value.trim();
+                const password = document.getElementById('id_password').value.trim();
+
+                if (username && password) {
+                    // Show loading state
+                    submitBtn.disabled = true;
+                    btnText.style.opacity = '0';
+                    btnSpinner.style.opacity = '1';
+
+                    // Change cursor to indicate loading
+                    submitBtn.style.cursor = 'wait';
+
+                    // Optional: Add a small delay to show the spinner (for better UX)
+                    setTimeout(() => {
+                        // The form will continue with submission
+                    }, 100);
+                }
+            });
+        }
+
+        // Optional: Reset loading state if form submission fails (for demo purposes)
+        // This would typically be handled by your backend redirecting back to login page
+        window.addEventListener('pageshow', function (event) {
+            if (event.persisted || (window.performance && window.performance.navigation.type === 2)) {
+                // Page was loaded from cache (back/forward navigation)
+                resetLoadingState();
+            }
+        });
+
+        function resetLoadingState() {
+            if (submitBtn && btnText && btnSpinner) {
+                submitBtn.disabled = false;
+                btnText.style.opacity = '1';
+                btnSpinner.style.opacity = '0';
+                submitBtn.style.cursor = 'pointer';
+            }
+        }
+
         // Optional: Add keyboard shortcut (Alt+P) to toggle password visibility
         document.addEventListener('keydown', function (e) {
             if (e.altKey && e.key === 'p') {
                 e.preventDefault();
                 togglePassword.click();
+            }
+        });
+
+        // Optional: Add Enter key submission with loading state
+        document.addEventListener('keydown', function (e) {
+            if (e.key === 'Enter' && !submitBtn.disabled) {
+                const activeElement = document.activeElement;
+                if (activeElement && (activeElement.id === 'id_username' || activeElement.id === 'id_password')) {
+                    // Trigger form submission
+                    loginForm.dispatchEvent(new Event('submit'));
+                }
             }
         });
     });
@@ -250,6 +322,37 @@
 
     #eyeIcon {
         display: block;
+    }
+
+    /* Spinner animation */
+    @keyframes spin {
+        0% {
+            transform: rotate(0deg);
+        }
+
+        100% {
+            transform: rotate(360deg);
+        }
+    }
+
+    .animate-spin {
+        animation: spin 1s linear infinite;
+    }
+
+    /* Smooth transitions */
+    #submitBtn {
+        transition: all 0.3s ease-in-out;
+    }
+
+    #btn-text,
+    #btn-spinner {
+        transition: opacity 0.3s ease-in-out;
+    }
+
+    /* Loading state styles */
+    .loading {
+        pointer-events: none;
+        opacity: 0.7;
     }
 </style>
 {% endblock %}

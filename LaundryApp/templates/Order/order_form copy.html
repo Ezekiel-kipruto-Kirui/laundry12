@@ -266,7 +266,7 @@
                                 </div>
 
                                 <!-- Shop Field -->
-                                
+                                {% if user.is_superuser %}
                                 <div class="relative">
                                     {{ order_form.shop }}
                                     <label for="id_shop" class="form-label absolute left-4 top-3 pointer-events-none">
@@ -276,7 +276,7 @@
                                     <div class="text-red-500 text-sm mt-2">{{ order_form.shop.errors }}</div>
                                     {% endif %}
                                 </div>
-                               
+                                {% endif %}
 
 
                             </div>
@@ -577,37 +577,37 @@
              * Shop field auto-lock for Shop A and Shop B users
              -------------------------------*/
            
-            // const shopSelect = document.getElementById('id_shop');
-            // if (shopSelect) {
-            //     // Get the user's shop from the template variable
-            //     const userShop = '{{ user_shop }}';
+            const shopSelect = document.getElementById('id_shop');
+            if (shopSelect) {
+                // Get the user's shop from the template variable
+                const userShop = '{{ user_shop }}';
 
-            //     if (userShop) {
-            //         // Set the shop value and disable the select
-            //         shopSelect.value = userShop;
-            //         shopSelect.disabled = true;
+                if (userShop) {
+                    // Set the shop value and disable the select
+                    shopSelect.value = userShop;
+                    shopSelect.disabled = true;
 
-            //         // Create a hidden input to ensure the value is submitted
-            //         const hiddenShopInput = document.createElement('input');
-            //         hiddenShopInput.type = 'hidden';
-            //         hiddenShopInput.name = 'shop';
-            //         hiddenShopInput.value = userShop;
-            //         shopSelect.parentNode.appendChild(hiddenShopInput);
+                    // Create a hidden input to ensure the value is submitted
+                    const hiddenShopInput = document.createElement('input');
+                    hiddenShopInput.type = 'hidden';
+                    hiddenShopInput.name = 'shop';
+                    hiddenShopInput.value = userShop;
+                    shopSelect.parentNode.appendChild(hiddenShopInput);
 
-            //         // Style the disabled select
-            //         addClasses(shopSelect, 'bg-gray-100', 'cursor-not-allowed');
+                    // Style the disabled select
+                    addClasses(shopSelect, 'bg-gray-100', 'cursor-not-allowed');
 
-            //         // Hide the shop field label and select for better UX
-            //         const shopLabel = document.querySelector('label[for="id_shop"]');
-            //         if (shopLabel) {
-            //             shopLabel.style.display = 'none';
-            //         }
-            //         shopSelect.style.display = 'none';
+                    // Hide the shop field label and select for better UX
+                    const shopLabel = document.querySelector('label[for="id_shop"]');
+                    if (shopLabel) {
+                        shopLabel.style.display = 'none';
+                    }
+                    shopSelect.style.display = 'none';
 
-            //         // Show a message indicating the auto-assigned shop
+                    // Show a message indicating the auto-assigned shop
 
-            //     }
-            // }
+                }
+            }
             
             /** ------------------------------
              * Form fields styling
