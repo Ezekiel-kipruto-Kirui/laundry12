@@ -158,7 +158,7 @@ class Order(models.Model):
     total_price = models.DecimalField(max_digits=12, decimal_places=2, default=0, editable=False)
     balance = models.DecimalField(max_digits=12, decimal_places=2, default=0)
     created_at = models.DateTimeField(auto_now_add=True, db_index=True)
-    created_by = models.CharField(max_length=20, db_index=True)
+    # created_by = models.CharField(max_length=20, db_index=True)
     previous_order_status = models.CharField(max_length=50, blank=True, null=True)
 
     def save(self, *args, **kwargs):
