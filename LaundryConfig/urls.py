@@ -16,7 +16,7 @@ Including another URLconf
 """
 from django.contrib import admin
 from django.urls import path,include
-from LaundryApp.commonview import redirect_after_login,home
+from LaundryApp.commonview import redirect_after_login
 from django.shortcuts import redirect
 
 urlpatterns = [
@@ -29,7 +29,7 @@ urlpatterns = [
     path('Laundry/', include(('LaundryApp.urls', 'laundry'), namespace='laundry')),
     path('Hotel/', include(('HotelApp.urls', 'hotel'), namespace='hotel')),
 
-     path('login', lambda request: redirect('login')),
-     path('',home,name='home'),
+     path('', lambda request: redirect('login')),
+     
      
 ]

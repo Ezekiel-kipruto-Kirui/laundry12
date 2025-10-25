@@ -3,4 +3,4 @@ from .base import *
 DEBUG = env.bool('DJANGO_DEBUG',default=False)
 
 # NPM_BIN_PATH = env("NPM_BIN_PATH", default=None)
-ALLOWED_HOSTS = ['elite-laundry0010.onrender.com',"localhost", "127.0.0.1"]
+ALLOWED_HOSTS = ['https://CeanpageLaundry.onrender.com','www.cleanpage.shop','cleanpage.shop','elite-laundry0010.onrender.com']
