@@ -1,7 +1,7 @@
 from django.contrib import admin
 from django.urls import path, include
 from . import views
-from .backends import *
+from .middleware import *
 from LaundryApp.View import Expenses, customers, usermanage
 from django.views.decorators.cache import cache_page
 from django.contrib.auth import views as auth_views
@@ -17,7 +17,8 @@ urlpatterns = [
     path('accounts/', include('django_registration.backends.activation.urls')),
     path('accounts/', include('django.contrib.auth.urls')),
     path('logout', views.logout_view, name='logout'),
-    
+     path('api/customer/check-or-create/', views.check_or_create_customer, name='check_or_create_customer'),
+    path('api/orders/create/', views.OrderCreateView.as_view(), name='order_create'),
     # Password Reset URLs
     path('password_reset/', 
          auth_views.PasswordResetView.as_view(template_name="registration/password_reset.html"), 
@@ -36,9 +37,8 @@ urlpatterns = [
     path('', views.get_laundry_profit_and_hotel, name='dashboard'),
     path('Laundry-dashboard', views.laundrydashboard, name='Laundrydashboard'),
     path('Report/', cache_page(60 * 5)(views.dashboard_view), name='laundryapp_dashboard'),
-#     path('dbw', dashboard_home, name='dashboard_home'),
-     # path('api/dashboard-data/', views.get_dashboard_data, name='dashboard_data'),
-    
+     
+     #path('api/dashboard-data/', views.get_dashboard_data, name='dashboard_data'),
     # Order Management
     path('createorder/', views.createorder, name='createorder'),
     path('Tables/', views.customordertable, name='customordertable'),

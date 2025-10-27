@@ -59,6 +59,7 @@ INSTALLED_APPS = [
     # by collectstatic and for its static file storage engine to work.
     'whitenoise.runserver_nostatic', # For development
     'multiselectfield', 
+    'rest_framework',
     "unfold",
     'django_registration',
     'django.contrib.admin',
@@ -82,6 +83,7 @@ INSTALLED_APPS = [
 ]
 
 MIDDLEWARE = [
+    
     'django.middleware.security.SecurityMiddleware',
     # Place Whitenoise middleware at the top for efficiency
     'whitenoise.middleware.WhiteNoiseMiddleware',
@@ -91,6 +93,8 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'LaundryApp.middleware.ActiveShopMiddleware',
+    
 ]
 ACCOUNT_ACTIVATION_DAYS = 0  # One-week activation window
 REGISTRATION_OPEN = True
@@ -120,8 +124,10 @@ EMAIL_HOST_PASSWORD = env('EMAIL_HOST_PASSWORD')  # not your Gmail password, use
 
 AUTH_USER_MODEL = 'LaundryApp.UserProfile'
 ROOT_URLCONF = 'LaundryConfig.urls'
-LOGIN_REDIRECT_URL = '/redirect-after-login/'  # after login, always check role
+  # after login, always check role
 LOGOUT_REDIRECT_URL = '/accounts/login/'
+LOGIN_REDIRECT_URL = 'select_shop'
+
 
 LOGIN_URL = 'login'
 
@@ -140,6 +146,7 @@ TEMPLATES = [
                 'django.template.context_processors.request',
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
+                'LaundryApp.context_processors.active_shop',
             ],
              'builtins': [
                 'django.contrib.humanize.templatetags.humanize',  # Add this

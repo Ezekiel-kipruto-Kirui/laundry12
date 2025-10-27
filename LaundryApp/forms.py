@@ -206,28 +206,6 @@ class OrderForm(forms.ModelForm):
         self.fields['balance'].required = False
 
 
-# class OrderItemForm(forms.ModelForm):
-#     """Form for order item creation and editing"""
-#     class Meta:
-#         model = OrderItem
-#         fields = [
-#             'servicetype',
-#             'itemtype',
-#             'itemname',
-#             'quantity',
-#             'itemcondition',
-#             'unit_price',
-#             'additional_info'
-#         ]
-#         widgets = {
-#             'servicetype': forms.Select(attrs={'class': 'form-control'}),
-#             'itemtype': forms.Select(attrs={'class': 'form-control'}),
-#             'itemname': forms.TextInput(attrs={'class': 'form-control'}),
-#             'quantity': forms.NumberInput(attrs={'class': 'form-control'}),
-#             'itemcondition': forms.Select(attrs={'class': 'form-control'}),
-#             'unit_price': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
-#             'additional_info': forms.Textarea(attrs={'class': 'form-control', 'rows': 2}),
-#         }
 
 
 class OrderItemForm(forms.ModelForm):
@@ -266,6 +244,8 @@ class OrderItemForm(forms.ModelForm):
         super().__init__(*args, **kwargs)
         # Set initial choices for servicetype
         self.fields['servicetype'].choices = OrderItem.SERVICE_TYPES
+
+
 # ---------------------------
 # Expenses Forms
 # ---------------------------

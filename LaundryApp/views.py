@@ -51,6 +51,45 @@ from .forms import (
 from HotelApp.models import HotelExpenseRecord
 from .resource import OrderResource
 from .analytics import DashboardAnalytics
+# laundry/LaundryApp/views.py
+from rest_framework import status, generics
+from rest_framework.response import Response
+from rest_framework.decorators import api_view
+from .models import Customer, Order
+from .serializers import CustomerSerializer, OrderSerializer
+
+@api_view(['POST'])
+def check_or_create_customer(request):
+    phone = request.data.get('phone')
+    name = request.data.get('name')
+    address = request.data.get('address')
+
+    if not phone:
+        return Response({"error": "Phone is required"}, status=status.HTTP_400_BAD_REQUEST)
+
+    customer = Customer.objects.filter(phone=phone).first()
+    if customer:
+        serializer = CustomerSerializer(customer)
+        return Response({
+            "exists": True,
+            "message": "Customer already exists.",
+            "customer": serializer.data
+        })
+    else:
+        # Create a new customer
+        serializer = CustomerSerializer(data={"name": name, "phone": phone, "address": address})
+        if serializer.is_valid():
+            serializer.save()
+            return Response({
+                "exists": False,
+                "message": "New customer created successfully.",
+                "customer": serializer.data
+            }, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+class OrderCreateView(generics.CreateAPIView):
+    queryset = Order.objects.all()
+    serializer_class = OrderSerializer
 
 # Setup logger
 logger = logging.getLogger(__name__)
@@ -957,150 +996,8 @@ def update_payment_status(request, order_code):
 @csrf_protect
 def createorder(request):
     """View to handle order creation with Django forms and CSRF protection"""
-    user_shops = get_user_shops(request)
-    default_shop = user_shops[0] if user_shops else None
-
-    if request.method == 'POST':
-        try:
-            post_data = request.POST.copy()
-
-            # Force shop if user has only one
-            if user_shops and len(user_shops) == 1:
-                post_data['shop'] = user_shops[0]
-
-            # Default order_status
-            if not post_data.get('order_status'):
-                post_data['order_status'] = 'pending'
-
-            # Customer handling
-            phone = post_data.get('phone', '').strip()
-            customer_id = post_data.get('customer_id', '').strip()
-            customer = None
-            customer_exists = False
-
-            if customer_id:
-                try:
-                    customer = Customer.objects.get(id=customer_id)
-                    customer_exists = True
-                    if customer.name != post_data.get('name', ''):
-                        customer.name = post_data.get('name', '')
-                        customer.save()
-                except Customer.DoesNotExist:
-                    customer_exists = False
-            elif phone:
-                try:
-                    customer = Customer.objects.get(phone=phone)
-                    customer_exists = True
-                    if customer.name != post_data.get('name', ''):
-                        customer.name = post_data.get('name', '')
-                        customer.save()
-                except Customer.DoesNotExist:
-                    customer_exists = False
-
-            if customer_exists:
-                customer_form_is_valid = True
-                customer_form = None
-            else:
-                customer_form = CustomerForm(post_data)
-                customer_form_is_valid = customer_form.is_valid()
-
-            # Order + Items
-            order_form = OrderForm(post_data)
-            OrderItemFormSet = forms.formset_factory(OrderItemForm, extra=0)
-            item_formset = OrderItemFormSet(post_data, prefix='items')
-
-            order_form_is_valid = order_form.is_valid()
-            item_formset_is_valid = item_formset.is_valid()
-
-            if all([customer_form_is_valid, order_form_is_valid, item_formset_is_valid]):
-                if not customer_exists:
-                    customer = customer_form.save()
-
-                order = order_form.save(commit=False)
-                order.customer = customer
-                # Note: Removed created_by field since it doesn't exist in the model
-                if not order.order_status:
-                    order.order_status = 'pending'
-                order.total_price = 0
-                order.balance = -order.amount_paid
-                order.save()
-
-                # Save items
-                for form in item_formset:
-                    if form.cleaned_data and not form.cleaned_data.get('DELETE', False):
-                        order_item = form.save(commit=False)
-                        order_item.order = order
-
-                        if "servicetype" in form.cleaned_data:
-                            services = form.cleaned_data["servicetype"]
-                            if isinstance(services, list):
-                                order_item.servicetype = services
-
-                        if hasattr(order_item, 'quantity') and hasattr(order_item, 'unit_price'):
-                            if hasattr(order_item, 'total_item_price'):
-                                order_item.total_item_price = order_item.quantity * order_item.unit_price
-
-                        order_item.save()
-
-                # Update totals
-                total_price = sum(
-                    (item.total_item_price or item.unit_price)
-                    for item in order.items.all()
-                )
-                order.total_price = total_price
-                order.balance = total_price - (order.amount_paid or 0)
-                order.save()
-
-                messages.success(request, f'Order created successfully! Code: {order.uniquecode}')
-                return redirect('laundry:customordertable')
-
-            else:
-                error_messages = []
-                if customer_form and not customer_form_is_valid:
-                    for field, errors in customer_form.errors.items():
-                        for error in errors:
-                            error_messages.append(f"Customer {field}: {error}")
-                if not order_form_is_valid:
-                    for field, errors in order_form.errors.items():
-                        for error in errors:
-                            error_messages.append(f"Order {field}: {error}")
-                if not item_formset_is_valid:
-                    for i, form in enumerate(item_formset):
-                        for field, errors in form.errors.items():
-                            for error in errors:
-                                error_messages.append(f"Item {i+1} {field}: {error}")
-
-                messages.error(request, 'Please correct errors: ' + '; '.join(error_messages))
-
-        except IntegrityError as e:
-            if 'uniquecode' in str(e):
-                logger.error(f"Order creation error (unique code conflict): {str(e)}")
-                messages.error(request, 'Could not create order due to system error. Please try again.')
-            else:
-                logger.error(f"Order creation error: {str(e)}")
-                messages.error(request, f'Error creating order: {str(e)}')
-        except Exception as e:
-            logger.error(f"Order creation error: {str(e)}")
-            messages.error(request, f'Error creating order: {str(e)}')
-
-    else:  # GET
-        customer_form = CustomerForm()
-        order_form = OrderForm()
-        if user_shops and len(user_shops) == 1:
-            order_form.fields['shop'].initial = user_shops[0]
-        order_form.fields['order_status'].initial = 'pending'
-        OrderItemFormSet = forms.formset_factory(OrderItemForm, extra=1)
-        item_formset = OrderItemFormSet(prefix='items')
-
-    context = {
-        'customer_form': customer_form,
-        'order_form': order_form,
-        'item_formset': item_formset,
-        'user_has_single_shop': user_shops and len(user_shops) == 1,
-        'user_shop': default_shop,
-        'can_see_all_orders': can_see_all_orders(request.user),
-    }
-    return render(request, 'Order/order_form.html', context)
+    context = {}
+    return render(request, 'Order/order_form.html')
 
 @login_required
 @csrf_protect

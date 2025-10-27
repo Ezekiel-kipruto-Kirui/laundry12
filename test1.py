@@ -1,21 +1,10 @@
-import requests
-
-url = "https://api.ng.termii.com/api/sms/send"
-
-payload = {
-    "to": "+254701396967",   # your phone number in full international format
-    "from": "Clean-page",        # or your registered sender ID if you have one
-    "sms": "Hello Ezekiel, this is a Termii live test!",
-    "type": "plain",
-    "channel": "generic",
-    "api_key": "TLUequQQJyJswOQythPnCLonRiJSscPRbUnOYJMeblsLBuHAdXotDBVBdHKgTt"  # replace this with your real key
-}
-
-headers = {
-    "Content-Type": "application/json"
-}
-
-response = requests.post(url, headers=headers, json=payload)
-
-print("Status Code:", response.status_code)
-print("Response:", response.text)
+from twilio.rest import Client
+account_sid = 'ACfc9ecbb175421404e332998629ac2f7d'
+auth_token = '[AuthToken]'
+client = Client(account_sid, auth_token)
+message = client.messages.create(
+  messaging_service_sid='MG18ea6033e13457302b919d53c946d2b2',
+  body='Hellow this is Clean page Laundry',
+  to='+254701396967'
+)
+print(message.sid)

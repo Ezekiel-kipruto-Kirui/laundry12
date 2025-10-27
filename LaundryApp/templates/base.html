@@ -207,6 +207,7 @@
         </div>
 
         <!-- Navigation with Scrollable Container -->
+       
         <div class="sidebar-scrollable">
             <nav class="p-2 lg:p-4 space-y-1">
                 <!-- Superuser sees everything -->
@@ -324,7 +325,8 @@
                     <span class="sidebar-text">Site Management</span>
                 </a>
 
-        {% elif not user.is_superuser%}
+    {% elif not user.is_superuser and active_shop_name == "Shop A" or active_shop_name == "Shop B" %}
+
         <!-- Laundry Management Dropdown -->
         <div class="dropdown-group" id="laundry-dropdown-group">
             <div class="dropdown-toggle flex items-center space-x-3 px-3 py-2 lg:px-4 lg:py-3 text-gray-300 hover:bg-gray-700 hover:text-white rounded-lg transition-colors group cursor-pointer"
@@ -366,7 +368,7 @@
                 </a>
             </div>
         </div>
-        
+        {% elif not user.is_superuser and active_shop_name == "Hotel" %}
         <!-- Hotel Management Dropdown -->
         <div class="dropdown-group" id="hotel-dropdown-group">
             <div class="dropdown-toggle flex items-center space-x-3 px-3 py-2 lg:px-4 lg:py-3 text-gray-300 hover:bg-gray-700 hover:text-white rounded-lg transition-colors group cursor-pointer"
@@ -422,6 +424,7 @@
                 {% endif %}
             </nav>
         </div>
+        
     </div>
 
     <!-- Main Content -->

@@ -230,13 +230,14 @@
                                     title="Edit Order">
                                     <i class="fas fa-edit"></i>
                                 </a>
-
+                                {% if user.is_superuser %}
                                 <!-- Delete Button -->
                                 <button onclick="confirmDelete('{{ order.id }}')"
                                     class="p-2 text-red-600 hover:text-red-800 hover:bg-red-50 rounded-lg transition-colors"
                                     title="Delete Order">
                                     <i class="fas fa-trash"></i>
                                 </button>
+                                {% endif %}
                             </div>
                         </td>
                     </tr>

@@ -1,930 +1,717 @@
 {% extends "base.html" %}
-
+{% load static %}
 {% block title %}{{ title }}{% endblock %}
 
 {% block content %}
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Laundry Order Form</title>
-<!-- Load Tailwind CSS first -->
-<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<!doctype html>
+<html lang="en">
 
-<!-- Remove the tailwind.config script block since it's not needed without Tailwind JS -->
-<style>
-    .form-input,
-    .form-select,
-    .form-textarea {
-        border: 1px solid #e5e7eb;
-        box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.03);
-        transition: all 0.2s ease;
-        color: #374151;
-        font-weight: 500;
-        background-color: #fafafa;
-    }
-
-    .form-input:focus,
-    .form-select:focus,
-    .form-textarea:focus {
-        border-color: #e91e63;
-        box-shadow: 0 0 0 3px rgba(233, 30, 99, 0.1);
-        outline: none;
-        background-color: #fff;
-    }
-
-    .form-input::placeholder,
-    .form-textarea::placeholder {
-        color: #9ca3af;
-        font-weight: 400;
-    }
-
-    .form-label {
-        color: #6b7280;
-        font-weight: 500;
-        transition: all 0.2s ease;
-    }
-
-    .form-input:focus+.form-label,
-    .form-select:focus+.form-label,
-    .form-textarea:focus+.form-label,
-    .form-input:not(:placeholder-shown)+.form-label,
-    .form-select:not([value=""])+.form-label,
-    .form-textarea:not(:placeholder-shown)+.form-label {
-        transform: translateY(-1.5rem) scale(0.85);
-        background: linear-gradient(to bottom, #f9fafb, #fff);
-        padding: 0 0.5rem;
-        margin-left: 0.25rem;
-        color: #e91e63;
-        font-weight: 600;
-    }
-
-    .step-active {
-        color: #e91e63;
-        font-weight: 600;
-    }
-
-    .step-icon-active {
-        background: linear-gradient(135deg, #e91e63, #d81b60);
-        box-shadow: 0 4px 6px -1px rgba(233, 30, 99, 0.3);
-        border-color: transparent !important;
-    }
-
-    @media (max-width: 768px) {
-        .step-text {
-            display: none;
-        }
-
-        .progress-line {
-            left: 20px;
-            right: 20px;
-        }
-
-        .form-step {
-            padding-left: 0.5rem;
-            padding-right: 0.5rem;
-        }
-    }
-
-    .form-step {
-        transition: opacity 0.3s ease, transform 0.3s ease;
-    }
-
-    button:focus,
-    input:focus,
-    select:focus,
-    textarea:focus {
-        outline: 2px solid #e91e63;
-        outline-offset: 2px;
-    }
-</style>
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Create Laundry Order</title>
+    <link href="{% static 'css/dist/styles.css' %}" rel="stylesheet">
 </head>
 
-<body class="font-inter bg-gray-50 min-h-screen">
-    <!-- Toast Notification -->
-    <div id="toast"
-        class="fixed top-4 right-4 left-4 md:left-auto md:right-6 z-50 transition-all duration-300 transform -translate-y-8 opacity-0">
-        <div id="toast-message" class="px-6 py-4 rounded-lg shadow-lg text-white font-medium text-center md:text-left">
+<body class="bg-gray-50 min-h-screen p-6">
+    <div class="max-w-4xl mx-auto bg-white/90 backdrop-blur-xl rounded-2xl shadow-lg p-8 border border-gray-100 mt-10">
+        <!-- Progress Steps -->
+        <div class="flex justify-center mb-8">
+            <div class="flex items-center space-x-4">
+                <div class="flex items-center">
+                    <div id="step1-indicator"
+                        class="w-8 h-8 rounded-full bg-blue-600 text-white flex items-center justify-center font-semibold">
+                        1</div>
+                    <span class="ml-2 text-sm font-medium text-blue-600">Customer</span>
+                </div>
+                <div class="w-12 h-1 bg-gray-300"></div>
+                <div class="flex items-center">
+                    <div id="step2-indicator"
+                        class="w-8 h-8 rounded-full bg-gray-300 text-gray-600 flex items-center justify-center font-semibold">
+                        2</div>
+                    <span class="ml-2 text-sm font-medium text-gray-500">Order Details</span>
+                </div>
+                <div class="w-12 h-1 bg-gray-300"></div>
+                <div class="flex items-center">
+                    <div id="step3-indicator"
+                        class="w-8 h-8 rounded-full bg-gray-300 text-gray-600 flex items-center justify-center font-semibold">
+                        3</div>
+                    <span class="ml-2 text-sm font-medium text-gray-500">Items</span>
+                </div>
+                <div class="w-12 h-1 bg-gray-300"></div>
+                <div class="flex items-center">
+                    <div id="step4-indicator"
+                        class="w-8 h-8 rounded-full bg-gray-300 text-gray-600 flex items-center justify-center font-semibold">
+                        4</div>
+                    <span class="ml-2 text-sm font-medium text-gray-500">Payment</span>
+                </div>
+            </div>
         </div>
-    </div>
 
-    <div class="pt-20 pb-10 px-4">
-        <div class="max-w-5xl mx-auto">
-            <!-- Main Form Card -->
-            <div class="bg-white rounded-2xl shadow-xl border border-gray-100 overflow-hidden">
-                <!-- Step Indicator -->
-                <div class="px-4 md:px-8 pt-6 md:pt-8 pb-4">
-                    <div class="flex justify-between items-center relative mb-8 md:mb-10">
-                        <!-- Progress line -->
-                        <div
-                            class="absolute top-6 left-10 right-10 md:left-16 md:right-16 h-1 bg-gradient-to-r from-accent-500 to-purple-600 z-0 progress-line">
-                        </div>
+        <h1 class="text-3xl font-bold text-gray-800 mb-6 text-center">Customer Information</h1>
 
-                        <!-- Steps -->
-                        <div class="step relative z-10 flex flex-col items-center" data-step="1">
-                            <div
-                                class="w-10 h-10 md:w-12 md:h-12 rounded-full bg-accent-500 border-2 border-accent-500 flex items-center justify-center shadow-lg mb-2 md:mb-3 step-icon-active">
-                                <i class="fas fa-user text-white text-sm md:text-base"></i>
-                            </div>
-                            <span class="text-xs md:text-sm font-medium step-active step-text">Customer</span>
-                        </div>
+        <!-- Step 1: Customer -->
+        <div id="step-customer" class="">
 
-                        <div class="step relative z-10 flex flex-col items-center" data-step="2">
-                            <div
-                                class="w-10 h-10 md:w-12 md:h-12 rounded-full bg-gray-100 border-2 border-gray-300 flex items-center justify-center shadow-lg mb-2 md:mb-3">
-                                <i class="fas fa-clipboard-list text-gray-400 text-sm md:text-base"></i>
-                            </div>
-                            <span class="text-xs md:text-sm font-medium text-gray-500 step-text">Order Details</span>
-                        </div>
+            <form id="customerForm" class="space-y-5 p-4">
+                {% csrf_token %}
+                <div>
+                    <label class="block text-sm font-medium text-gray-700">Phone Number</label>
+                    <input id="phone" name="phone" type="text" required
+                        class="mt-2 w-full rounded-lg border border-gray-300 bg-gray-50 focus:bg-white focus:border-blue-500 focus:ring-2 focus:ring-blue-200 p-3 transition duration-150" />
+                </div>
 
-                        <div class="step relative z-10 flex flex-col items-center" data-step="3">
-                            <div
-                                class="w-10 h-10 md:w-12 md:h-12 rounded-full bg-gray-100 border-2 border-gray-300 flex items-center justify-center shadow-lg mb-2 md:mb-3">
-                                <i class="fas fa-tshirt text-gray-400 text-sm md:text-base"></i>
-                            </div>
-                            <span class="text-xs md:text-sm font-medium text-gray-500 step-text">Items</span>
-                        </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700">Full Name</label>
+                    <input id="name" name="name" type="text"
+                        class="mt-2 w-full rounded-lg border border-gray-300 bg-gray-50 focus:bg-white focus:border-blue-500 focus:ring-2 focus:ring-blue-200 p-3 transition duration-150" />
+                </div>
 
-                        <div class="step relative z-10 flex flex-col items-center" data-step="4">
-                            <div
-                                class="w-10 h-10 md:w-12 md:h-12 rounded-full bg-gray-100 border-2 border-gray-300 flex items-center justify-center shadow-lg mb-2 md:mb-3">
-                                <i class="fas fa-credit-card text-gray-400 text-sm md:text-base"></i>
-                            </div>
-                            <span class="text-xs md:text-sm font-medium text-gray-500 step-text">Payment</span>
-                        </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700">Address</label>
+                    <input id="address" name="address" type="text"
+                        class="mt-2 w-full rounded-lg border border-gray-300 bg-gray-50 focus:bg-white focus:border-blue-500 focus:ring-2 focus:ring-blue-200 p-3 transition duration-150" />
+                </div>
+
+                <div class="flex justify-end mt-6">
+                    <button id="customerNext" type="submit"
+                        class="px-6 py-2.5 rounded-lg bg-blue-600 text-white font-medium hover:bg-blue-700 hover:shadow transition duration-200">
+                        Next →
+                    </button>
+                </div>
+            </form>
+        </div>
+
+        <!-- Step 2: Order Details -->
+        <div id="step-order-details" class="hidden">
+            <h2 class="text-lg font-semibold text-gray-700 mb-3">Order Details</h2>
+
+            <form id="orderDetailsForm" class="space-y-6 p-4">
+                {% csrf_token %}
+                <input type="hidden" id="customer_id" name="customer_id" />
+
+                <div class="grid grid-cols-1 gap-6">
+                    {% if not active_shop_name %}
+                    <div class="activeshop">
+                        <label class="block text-sm font-medium text-gray-700">Shop</label>
+                        <select id="shop" name="shop" required
+                            class="mt-2 w-full rounded-lg border border-gray-300 bg-gray-50 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 p-3">
+                            <option value="">-- Select Shop --</option>
+                            <option value="Shop A">Shop A</option>
+                            <option value="Shop B">Shop B</option>
+                        </select>
+                    </div>
+                    {% else %}
+                    <input type="hidden" id="shop" name="shop" value="{{ active_shop_name }}">
+                    {% endif %}
+
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700">Delivery Date</label>
+                        <input id="delivery_date" name="delivery_date" type="date" required
+                            class="mt-2 w-full rounded-lg border border-gray-300 bg-gray-50 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 p-3" />
                     </div>
                 </div>
 
-                <form id="order-form" class="p-4 md:p-8 space-y-6 md:space-y-8" method="post"
-                    enctype="multipart/form-data">
-                    {% csrf_token %}
-                    <input type="hidden" id="customer_id" name="customer_id" value="">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700">Address Details (Optional)</label>
+                    <textarea id="addressdetails" name="addressdetails" rows="2"
+                        class="mt-2 w-full rounded-lg border border-gray-300 bg-gray-50 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 p-3"></textarea>
+                </div>
 
-                    <!-- Display form errors at the top -->
-                    {% if customer_form.errors or order_form.errors or item_formset.errors %}
-                    <div id="error-messages" class="bg-yellow-100 shadow-md rounded-lg p-4 mb-6">
-                        <h3 class="text-yellow-800 font-semibold mb-2">Please review the following issues:</h3>
-                        <ul class="text-yellow-700 text-sm list-disc pl-5">
-                            {% for field in customer_form %}
-                            {% for error in field.errors %}
-                            <li>{{ field.label }}: {{ error }}</li>
-                            {% endfor %}
-                            {% endfor %}
-                            {% for field in order_form %}
-                            {% for error in field.errors %}
-                            <li>{{ field.label }}: {{ error }}</li>
-                            {% endfor %}
-                            {% endfor %}
-                            {% for form in item_formset %}
-                            {% for field in form %}
-                            {% for error in field.errors %}
-                            <li>Item {{ forloop.parentloop.counter }} - {{ field.label }}: {{ error }}</li>
-                            {% endfor %}
-                            {% endfor %}
-                            {% endfor %}
-                        </ul>
-                    </div>
-                    {% endif %}
+                <div class="flex justify-between mt-6">
+                    <button type="button" id="backToCustomer"
+                        class="px-6 py-2.5 rounded-lg bg-gray-300 text-gray-700 font-medium hover:bg-gray-400 transition duration-200">
+                        ← Back
+                    </button>
+                    <button type="submit" id="orderDetailsNext"
+                        class="px-6 py-2.5 rounded-lg bg-blue-600 text-white font-medium hover:bg-blue-700 hover:shadow transition duration-200">
+                        Next →
+                    </button>
+                </div>
+            </form>
+        </div>
 
+        <!-- Step 3: Items -->
+        <div id="step-items" class="hidden">
+            <h2 class="text-lg font-semibold text-gray-700 mb-3">Order Items</h2>
 
-                    <!-- Step 1: Customer Information -->
-                    <div class="form-step" data-step="1">
-                        <div class="bg-white rounded-xl p-4 md:p-6 shadow-sm border border-gray-200 mb-6">
-                            <h2 class="text-lg md:text-xl font-semibold text-accent-600 mb-4 flex items-center">
-                                <i class="fas fa-user-circle mr-2 md:mr-3"></i>Customer Information
-                            </h2>
+            <div class="space-y-6">
+                <div class="flex items-center justify-between mb-2">
+                    <h3 class="text-md font-semibold text-gray-700">Add Items to Order</h3>
+                    <button id="addItemBtn" type="button"
+                        class="text-sm bg-green-600 hover:bg-green-700 text-white px-3 py-1.5 rounded-md shadow-sm transition duration-150">
+                        + Add Item
+                    </button>
+                </div>
+                <div id="itemsContainer" class="space-y-4 p-4"></div>
 
-                            <!-- Customer Search -->
-                            <div class="mb-6 relative">
-                                <div class="relative">
-                                    <input type="text" id="customer-search"
-                                        class="form-input w-full px-4 py-3 rounded-lg">
-                                    <label for="customer-search"
-                                        class="form-label absolute left-4 top-3 pointer-events-none">
-                                        Search Customers by Phone or Name
-                                    </label>
-                                </div>
-                                <div id="customer-results"
-                                    class="absolute left-0 right-0 mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-60 overflow-y-auto z-50 hidden">
-                                </div>
-                            </div>
-
-                            <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6">
-                                <!-- Name Field -->
-                                <div class="relative">
-                                    {{ customer_form.name }}
-                                    <label for="id_name" class="form-label absolute left-4 top-3 pointer-events-none">
-                                        Customer Name *
-                                    </label>
-                                    {% if customer_form.name.errors %}
-                                    <div class="text-red-500 text-sm mt-2">{{ customer_form.name.errors }}</div>
-                                    {% endif %}
-                                </div>
-
-                                <!-- Phone Field -->
-                                <div class="relative">
-                                    {{ customer_form.phone }}
-                                    <label for="id_phone" class="form-label absolute left-4 top-3 pointer-events-none">
-                                        Phone Number *
-                                    </label>
-                                    {% if customer_form.phone.errors %}
-                                    <div class="text-red-500 text-sm mt-2">{{ customer_form.phone.errors }}</div>
-                                    {% endif %}
-                                </div>
-
-                            </div>
-                            <div class="relative mt-4">
-                                {{ customer_form.address }}
-                                <label for="address" class="form-label absolute left-4 top-3 pointer-events-none">
-                                    Estate/Address
-                                </label>
-                                {% if customer_form.address.errors %}
-                                <div class="text-red-500 text-sm mt-2">{{ customer_form.errors }}</div>
-                                {% endif %}
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Step 2: Order Details -->
-                    <div class="form-step hidden" data-step="2">
-                        <div class="bg-white rounded-xl p-4 md:p-6 shadow-sm border border-gray-200 mb-6">
-                            <h2 class="text-lg md:text-xl font-semibold text-accent-600 mb-4 md:mb-6 flex items-center">
-                                <i class="fas fa-clipboard-list mr-2 md:mr-3"></i>Order Details
-                            </h2>
-
-                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
-
-                                <!-- Delivery Date Field -->
-                                <div class="relative">
-                                    {{ order_form.delivery_date }}
-                                    <label for="id_delivery_date"
-                                        class="form-label absolute left-4 top-3 pointer-events-none">
-                                        Picking date/Delivery Date
-                                    </label>
-                                    {% if order_form.delivery_date.errors %}
-                                    <div class="text-red-500 text-sm mt-2">{{ order_form.delivery_date.errors }}</div>
-                                    {% endif %}
-                                </div>
-
-                                <!-- Shop Field -->
-                                {% if user.is_superuser %}
-                                <div class="relative">
-                                    {{ order_form.shop }}
-                                    <label for="id_shop" class="form-label absolute left-4 top-3 pointer-events-none">
-                                        Shop
-                                    </label>
-                                    {% if order_form.shop.errors %}
-                                    <div class="text-red-500 text-sm mt-2">{{ order_form.shop.errors }}</div>
-                                    {% endif %}
-                                </div>
-                                {% endif %}
-
-
-                            </div>
-
-                            <div class="grid grid-cols-1 gap-4 md:gap-6 mt-4 md:mt-6">
-                                <!-- Address Field -->
-
-
-                                <!-- Address Details Field -->
-                                <div class="relative">
-                                    {{ order_form.addressdetails }}
-                                    <label for="addressdetails"
-                                        class="form-label absolute left-4 top-3 pointer-events-none">
-                                        Delivered to/Picked from
-                                    </label>
-                                    {% if order_form.addressdetails.errors %}
-                                    <div class="text-red-500 text-sm mt-2">{{ order_form.addressdetails.errors }}</div>
-                                    {% endif %}
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Step 3: Order Items -->
-                    <div class="form-step hidden" data-step="3">
-                        <div class="bg-white rounded-xl p-4 md:p-6 shadow-sm border border-gray-200 mb-6">
-                            <div class="flex justify-between items-center mb-4 md:mb-6">
-                                <h2 class="text-lg md:text-xl font-semibold text-accent-600 flex items-center">
-                                    <i class="fas fa-tshirt mr-2 md:mr-3"></i>Order Items
-                                </h2>
-                                <button type="button" id="add-item-btn"
-                                    class="bg-blue-500 hover:bg-accent-600 text-white px-3 py-2 md:px-4 md:py-2 rounded-lg font-semibold flex items-center transition-colors shadow-md hover:shadow-lg text-sm md:text-base">
-                                    <i class="fas fa-plus mr-1 md:mr-2"></i> Add Item
-                                </button>
-                            </div>
-
-                            <div id="order-items-container" class="space-y-4 md:space-y-6">
-                                {{ item_formset.management_form }}
-
-                                {% for form in item_formset %}
-                                <div class="bg-white p-4 md:p-6 rounded-xl border border-gray-200 shadow-sm hover:shadow-md transition-shadow item-form"
-                                    id="item-{{ forloop.counter0 }}">
-                                    <div class="flex justify-between items-start mb-3 md:mb-4">
-                                        <span class="font-semibold text-gray-700">Item #{{ forloop.counter }}</span>
-                                        {% if forloop.counter0 > 0 or item_formset.total_form_count > 1 %}
-                                        <button type="button"
-                                            class="remove-item text-red-500 hover:text-red-700 transition-colors">
-                                            <i class="fas fa-times-circle text-lg md:text-xl"></i>
-                                        </button>
-                                        {% endif %}
-                                    </div>
-
-                                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-4">
-                                    <div>
-                                        {{ form.servicetype }}
-                                    </div>
-                                        <!-- Item Category -->
-                                        <div class="relative">
-                                            {{ form.itemtype }}
-                                            <label class="form-label absolute left-4 top-3 pointer-events-none">
-                                                Item Category *
-                                            </label>
-                                            {% if form.itemtype.errors %}
-                                            <div class="text-red-500 text-sm mt-2">{{ form.itemtype.errors }}</div>
-                                            {% endif %}
-                                        </div>
-                                    </div>
-
-                                    <!-- Item Names -->
-                                    <div class="relative mt-4 md:mt-6">
-                                        {{ form.itemname }}
-                                        <label class="form-label absolute left-4 top-3 pointer-events-none">
-                                            Item Names *
-                                        </label>
-                                        <p class="text-xs text-gray-500 mt-2">Separate multiple items with commas</p>
-                                        {% if form.itemname.errors %}
-                                        <div class="text-red-500 text-sm mt-2">{{ form.itemname.errors }}</div>
-                                        {% endif %}
-                                    </div>
-
-                                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6 mt-4 md:mt-6">
-                                        <!-- Quantity -->
-                                        <div class="relative">
-                                            {{ form.quantity }}
-                                            <label class="form-label absolute left-4 top-3 pointer-events-none">
-                                                Quantity *
-                                            </label>
-                                            {% if form.quantity.errors %}
-                                            <div class="text-red-500 text-sm mt-2">{{ form.quantity.errors }}</div>
-                                            {% endif %}
-                                        </div>
-
-                                        <!-- Unit Price -->
-                                        <div class="relative">
-                                            {{ form.unit_price }}
-                                            <label class="form-label absolute left-4 top-3 pointer-events-none">
-                                                Total Billed (KSh) *
-                                            </label>
-                                            {% if form.unit_price.errors %}
-                                            <div class="text-red-500 text-sm mt-2">{{ form.unit_price.errors }}</div>
-                                            {% endif %}
-                                        </div>
-
-                                        <!-- Item Condition -->
-                                        <div class="relative">
-                                            {{ form.itemcondition }}
-                                            <label class="form-label absolute left-4 top-3 pointer-events-none">
-                                                Item Condition
-                                            </label>
-                                            {% if form.itemcondition.errors %}
-                                            <div class="text-red-500 text-sm mt-2">{{ form.itemcondition.errors }}</div>
-                                            {% endif %}
-                                        </div>
-                                    </div>
-
-                                    <!-- Additional Info -->
-                                    <div class="relative mt-4 md:mt-6">
-                                        {{ form.additional_info }}
-                                        <label class="form-label absolute left-4 top-3 pointer-events-none">
-                                            Additional Information
-                                        </label>
-                                        {% if form.additional_info.errors %}
-                                        <div class="text-red-500 text-sm mt-2">{{ form.additional_info.errors }}</div>
-                                        {% endif %}
-                                    </div>
-
-                                    {% if form.DELETE %}
-                                    {{ form.DELETE }}
-                                    {% endif %}
-                                    {{ form.id }}
-                                </div>
-                                {% endfor %}
-                            </div>
-
-                            <!-- Total Display -->
-                            <div class="mt-6 p-4 bg-gray-50 rounded-lg">
-                                <div class="flex justify-between items-center">
-                                    <span class="text-lg font-semibold text-gray-700">Order Total:</span>
-                                    <span id="order-total" class="text-2xl font-bold text-accent-600">KSh 0.00</span>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Step 4: Payment Information -->
-                    <div class="form-step hidden" data-step="4">
-                        <div class="bg-white rounded-xl p-4 md:p-6 shadow-sm border border-gray-200 mb-6">
-                            <h2 class="text-lg md:text-xl font-semibold text-accent-600 mb-4 md:mb-6 flex items-center">
-                                <i class="fas fa-credit-card mr-2 md:mr-3"></i>Payment Information
-                            </h2>
-
-                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
-                                <!-- Payment Method -->
-                                <div class="relative">
-                                    {{ order_form.payment_type }}
-                                    <label for="id_payment_type"
-                                        class="form-label absolute left-4 top-3 pointer-events-none">
-                                        Payment Method
-                                    </label>
-
-                                    {% if order_form.payment_type.errors %}
-                                    <div class="text-red-500 text-sm mt-2">{{ order_form.payment_type.errors }}</div>
-                                    {% endif %}
-                                </div>
-                                <div class="relative amount_paid">
-                                    {{ order_form.amount_paid }}
-                                    <label for="amount_paid_id"
-                                        class="form-label absolute left-4 top-3 pointer-events-none">
-                                        Amount Paid
-                                    </label>
-                                </div>
-                                <!-- Payment Status -->
-
-                            </div>
-                            <!-- <div class=" flex flex-row justify-between relative w-full h-12 rounded-md relative bg-gray-100 bodder-2 border-gray-300 mt-4 ">
-                                <p class="m-2">Balance</p>
-                                <p class="balnce m-2"></p>
-                            
-                            </div> -->
-                        </div>
-                    </div>
-
-                    <!-- Form Actions -->
-                    <div class="flex justify-between items-center pt-4 md:pt-6 border-t border-gray-200 mt-6 md:mt-8">
-                        <button type="button" id="prev-btn"
-                            class="bg-white text-gray-700 border border-gray-300 px-4 py-2 md:px-6 md:py-3 rounded-lg font-semibold hover:bg-gray-50 transition-colors shadow-sm hidden text-sm md:text-base">
-                            <i class="fas fa-arrow-left mr-1 md:mr-2"></i> Previous
-                        </button>
-
-                        <button type="button" id="next-btn"
-                            class="ml-auto bg-blue-500 hover:bg-accent-600 text-white px-4 py-2 md:px-6 md:py-3 rounded-lg font-semibold transition-colors shadow-md hover:shadow-lg text-sm md:text-base">
-                            Next <i class="fas fa-arrow-right ml-1 md:ml-2"></i>
-                        </button>
-
-                        <button type="submit" id="submit-btn"
-                            class="bg-blue-500 hover:bg-accent-600 text-white px-4 py-2 md:px-6 md:py-3 rounded-lg font-semibold flex items-center transition-colors shadow-md hover:shadow-lg hidden text-sm md:text-base">
-                            <i class="fas fa-check-circle mr-1 md:mr-2"></i> Create Order
-                        </button>
-                    </div>
-                </form>
+                <div class="flex justify-between mt-6">
+                    <button type="button" id="backToOrderDetails"
+                        class="px-6 py-2.5 rounded-lg bg-gray-300 text-gray-700 font-medium hover:bg-gray-400 transition duration-200">
+                        ← Back
+                    </button>
+                    <button type="button" id="itemsNext"
+                        class="px-6 py-2.5 rounded-lg bg-blue-600 text-white font-medium hover:bg-blue-700 hover:shadow transition duration-200">
+                        Next →
+                    </button>
+                </div>
             </div>
+        </div>
+
+        <!-- Step 4: Payment -->
+        <div id="step-payment" class="hidden">
+            <h2 class="text-lg font-semibold text-gray-700 mb-3">Payment Information</h2>
+
+            <form id="paymentForm" class="space-y-6 p-4">
+                {% csrf_token %}
+
+                <div class="grid grid-cols-2 gap-6">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700">Payment Type</label>
+                        <select id="payment_type" name="payment_type" required
+                            class="mt-2 w-full rounded-lg border border-gray-300 bg-gray-50 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 p-3">
+                            <option value="">-- Select Payment Type --</option>
+                            <option value="cash">Cash</option>
+                            <option value="mpesa">M-Pesa</option>
+                            <option value="card">Credit/Debit Card</option>
+                            <option value="bank_transfer">Bank Transfer</option>
+                            <option value="other">Other</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700">Amount Paid</label>
+                        <input id="amount_paid" name="amount_paid" type="number" step="0.01" min="0" value="0"
+                            class="mt-2 w-full rounded-lg border border-gray-300 bg-gray-50 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 p-3" />
+                    </div>
+                </div>
+
+                <!-- Totals -->
+                <div class="grid grid-cols-2 gap-4 mt-6">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700">Total Price</label>
+                        <input id="total_price" name="total_price" readonly
+                            class="mt-2 w-full rounded-lg border border-gray-200 bg-gray-100 p-3 text-gray-700 font-semibold" />
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700">Balance</label>
+                        <input id="balance" name="balance" readonly
+                            class="mt-2 w-full rounded-lg border border-gray-200 bg-gray-100 p-3 text-gray-700 font-semibold" />
+                    </div>
+                </div>
+
+                <div class="flex justify-between mt-6">
+                    <button type="button" id="backToItems"
+                        class="px-6 py-2.5 rounded-lg bg-gray-300 text-gray-700 font-medium hover:bg-gray-400 transition duration-200">
+                        ← Back
+                    </button>
+                    <button type="submit" id="submitOrderBtn"
+                        class="bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-2.5 rounded-lg font-medium shadow transition duration-200">
+                        Create Order
+                    </button>
+                </div>
+            </form>
+        </div>
+
+        <!-- Modal: existing customer found -->
+        <div id="customerModal"
+            class="fixed inset-0 hidden bg-black/40 backdrop-blur-sm items-center justify-center transition-all duration-200">
+            <div class="bg-white rounded-xl shadow-lg p-6 w-full max-w-md mx-auto ">
+                <div>
+                    <h3 class="text-xl font-semibold text-gray-800 mb-3">Customer Found</h3>
+                    <p class="text-sm text-gray-600 mb-4">A customer with this phone already exists. Select to use
+                        existing
+                        or
+                        create new.</p>
+
+                    <div id="foundCustomerInfo"
+                        class="space-y-1 text-sm text-gray-800 border rounded-lg p-3 bg-gray-50">
+                    </div>
+                </div>
+
+                <div class="p-4 grid grid-cols-2 gap-4 m-4">
+                    <button id="useExistingBtn"
+                        class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md transition">Use
+                        This
+                        Customer</button>
+                    <button id="createNewBtn"
+                        class="bg-gray-200 hover:bg-gray-300 px-4 py-2 rounded-md transition">Create
+                        New</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Notifications -->
+        <div id="toast"
+            class="fixed bottom-6 right-6 hidden bg-gray-900 text-white px-4 py-2 rounded-lg shadow-lg text-sm">
         </div>
     </div>
 
     <script>
-        // Add classes to form inputs for styling
-        document.addEventListener('DOMContentLoaded', function () {
-            // Style all input fields
-            const inputs = document.querySelectorAll('input:not([type="hidden"]):not([type="checkbox"]):not([type="radio"])');
-            inputs.forEach(input => {
-                input.classList.add('form-input', 'w-full', 'px-4', 'py-3', 'rounded-lg');
-                if (!input.placeholder) input.placeholder = ' ';
-            });
 
-            // Style all select fields
-            const selects = document.querySelectorAll('select');
-            selects.forEach(select => {
-                select.classList.add('form-select', 'w-full', 'px-4', 'py-3', 'rounded-lg', 'appearance-none');
 
-                // Fix for "invalid form control" error - ensure required selects have a valid option
-                if (select.required) {
-                    // Check if there's no selected option or the selected option has empty value
-                    if (!select.value || select.value === '') {
-                        // Try to select the first non-empty option
-                        const firstValidOption = select.querySelector('option:not([value=""])');
-                        if (firstValidOption) {
-                            firstValidOption.selected = true;
-                        } else if (select.options.length > 0) {
-                            // If all options are empty, select the first one anyway
-                            select.options[0].selected = true;
-                        }
+        // CSRF helper
+        function getCookie(name) {
+            let cookieValue = null;
+            if (document.cookie && document.cookie !== '') {
+                const cookies = document.cookie.split(';');
+                for (let i = 0; i < cookies.length; i++) {
+                    const cookie = cookies[i].trim();
+                    if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                        break;
                     }
-                }
-
-                if (!select.querySelector('option[value=""]')) {
-                    const emptyOption = document.createElement('option');
-                    emptyOption.value = '';
-                    emptyOption.textContent = '';
-                    select.prepend(emptyOption);
-                }
-            });
-
-            // Style all textarea fields
-            const textareas = document.querySelectorAll('textarea');
-            textareas.forEach(textarea => {
-                textarea.classList.add('form-textarea', 'w-full', 'px-4', 'py-3', 'rounded-lg');
-                if (!textarea.placeholder) textarea.placeholder = ' ';
-            });
-        });
-    </script>
-
-
-
-
-    <script>
-        setTimeout(function () {
-            const msg = document.getElementById("error-messages");
-            if (msg) {
-                msg.style.transition = "opacity 1s ease";
-                msg.style.opacity = "0";
-                setTimeout(() => msg.remove(), 1000); // remove after fade
-            }
-        }, 5000); // 5 seconds
-
-        document.addEventListener('DOMContentLoaded', function () {
-            /** ------------------------------
-             * Utility Functions
-             -------------------------------*/
-            function addClasses(el, ...classes) { el.classList.add(...classes); }
-            function removeClasses(el, ...classes) { el.classList.remove(...classes); }
-            function showToast(message, type) {
-                const toast = document.getElementById('toast');
-                const toastMessage = document.getElementById('toast-message');
-                if (!toast || !toastMessage) return;
-
-                toastMessage.textContent = message;
-                const toastElement = toast.querySelector('div');
-                if (toastElement) {
-                    const colors = {
-                        success: "bg-green-500",
-                        error: "bg-red-500",
-                        info: "bg-blue-500",
-                        default: "bg-gray-500"
-                    };
-                    toastElement.className = `px-6 py-4 rounded-lg shadow-lg text-white font-medium ${colors[type] || colors.default}`;
-                }
-
-                toast.classList.replace("opacity-0", "opacity-100");
-                toast.classList.replace("-translate-y-8", "translate-y-0");
-
-                setTimeout(() => {
-                    toast.classList.replace("opacity-100", "opacity-0");
-                    toast.classList.replace("translate-y-0", "-translate-y-8");
-                }, 3000);
-            }
-
-            /** ------------------------------
-             * Shop field auto-lock for Shop A and Shop B users
-             -------------------------------*/
-           
-            const shopSelect = document.getElementById('id_shop');
-            if (shopSelect) {
-                // Get the user's shop from the template variable
-                const userShop = '{{ user_shop }}';
-
-                if (userShop) {
-                    // Set the shop value and disable the select
-                    shopSelect.value = userShop;
-                    shopSelect.disabled = true;
-
-                    // Create a hidden input to ensure the value is submitted
-                    const hiddenShopInput = document.createElement('input');
-                    hiddenShopInput.type = 'hidden';
-                    hiddenShopInput.name = 'shop';
-                    hiddenShopInput.value = userShop;
-                    shopSelect.parentNode.appendChild(hiddenShopInput);
-
-                    // Style the disabled select
-                    addClasses(shopSelect, 'bg-gray-100', 'cursor-not-allowed');
-
-                    // Hide the shop field label and select for better UX
-                    const shopLabel = document.querySelector('label[for="id_shop"]');
-                    if (shopLabel) {
-                        shopLabel.style.display = 'none';
-                    }
-                    shopSelect.style.display = 'none';
-
-                    // Show a message indicating the auto-assigned shop
-
                 }
             }
-            
-            /** ------------------------------
-             * Form fields styling
-             -------------------------------*/
-            document.querySelectorAll('input, select, textarea').forEach(field => {
-                if (field.type === 'hidden' || field.classList.contains('no-style')) return;
-                addClasses(field, 'w-full', 'px-4', 'py-3', 'border', 'border-gray-300',
-                    'rounded-lg', 'focus:outline-none', 'transition-all', 'duration-200', 'bg-white');
-                field.addEventListener('focus', () => {
-                    addClasses(field, 'ring-2', 'ring-accent-500', 'border-accent-500');
-                    removeClasses(field, 'border-gray-300');
-                });
-                field.addEventListener('blur', () => {
-                    removeClasses(field, 'ring-2', 'ring-accent-500', 'border-accent-500');
-                    addClasses(field, 'border-gray-300');
-                });
-            });
+            return cookieValue;
+        }
+        const csrftoken = getCookie('csrftoken');
 
-            /** ------------------------------
-             * Multi-step form logic
-             -------------------------------*/
-            const steps = document.querySelectorAll('.form-step');
-            const stepIndicators = document.querySelectorAll('.step');
-            const prevBtn = document.getElementById('prev-btn');
-            const nextBtn = document.getElementById('next-btn');
-            const submitBtn = document.getElementById('submit-btn');
-            const orderForm = document.getElementById('order-form');
-            let currentStep = 1;
+        // UI helpers
+        function showToast(msg) {
+            const t = document.getElementById('toast');
+            t.textContent = msg;
+            t.classList.remove('hidden');
+            setTimeout(() => t.classList.add('hidden'), 3000);
+        }
 
-            function updateFormSteps() {
-                steps.forEach(step => step.classList.toggle('hidden', parseInt(step.dataset.step) !== currentStep));
+        function updateProgressSteps(currentStep) {
+            const steps = [1, 2, 3, 4];
+            steps.forEach(step => {
+                const indicator = document.getElementById(`step${step}-indicator`);
+                const isCompleted = step < currentStep;
+                const isCurrent = step === currentStep;
 
-                stepIndicators.forEach((indicator, idx) => {
-                    const stepNumber = idx + 1;
-                    const stepElement = indicator.querySelector('div');
-                    const stepText = indicator.querySelector('span');
-                    const icon = stepElement?.querySelector('i');
-                    if (!stepElement || !stepText) return;
-
-                    if (stepNumber === currentStep) {
-                        stepElement.className = "w-10 h-10 md:w-12 md:h-12 rounded-full bg-accent-500 border-2 border-accent-500 flex items-center justify-center shadow-lg mb-2 md:mb-3";
-                        icon?.classList.replace("text-gray-400", "text-white");
-                        stepText.className = "text-xs md:text-sm font-medium text-accent-600 step-text";
-                    } else if (stepNumber < currentStep) {
-                        stepElement.className = "w-10 h-10 md:w-12 md:h-12 rounded-full bg-green-500 border-2 border-green-500 flex items-center justify-center shadow-lg mb-2 md:mb-3";
-                        icon?.classList.replace("text-gray-400", "text-white");
-                        stepText.className = "text-xs md:text-sm font-medium text-green-600 step-text";
-                    } else {
-                        stepElement.className = "w-10 h-10 md:w-12 md:h-12 rounded-full bg-gray-100 border-2 border-gray-300 flex items-center justify-center shadow-lg mb-2 md:mb-3";
-                        icon?.classList.replace("text-white", "text-gray-400");
-                        stepText.className = "text-xs md:text-sm font-medium text-gray-500 step-text";
-                    }
-                });
-
-                prevBtn?.classList.toggle('hidden', currentStep === 1);
-                if (nextBtn && submitBtn) {
-                    nextBtn.classList.toggle('hidden', currentStep === steps.length);
-                    submitBtn.classList.toggle('hidden', currentStep !== steps.length);
-                }
-            }
-
-            nextBtn?.addEventListener('click', () => {
-                const currentStepEl = document.querySelector(`.form-step[data-step="${currentStep}"]`);
-                if (!currentStepEl) return;
-
-                const requiredFields = currentStepEl.querySelectorAll('[required]');
-                let isValid = true;
-
-                requiredFields.forEach(field => {
-                    const error = field.parentNode.querySelector('.text-red-500');
-                    if (!field.value.trim()) {
-                        isValid = false;
-                        addClasses(field, 'border-red-500', 'ring-red-500');
-                        if (!error) {
-                            const errorDiv = document.createElement('div');
-                            errorDiv.className = 'text-red-500 text-sm mt-1';
-                            errorDiv.textContent = 'This field is required';
-                            field.parentNode.appendChild(errorDiv);
-                        }
-                    } else {
-                        removeClasses(field, 'border-red-500', 'ring-red-500');
-                        error?.remove();
-                    }
-                });
-
-                if (isValid) { currentStep++; updateFormSteps(); }
-                else {
-                    showToast('Please fill in all required fields', 'error');
-                    requiredFields[0]?.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                }
-            });
-
-            prevBtn?.addEventListener('click', () => { currentStep--; updateFormSteps(); });
-
-            /** ------------------------------
-             * Customer search with tooltip
-             -------------------------------*/
-            const customerSearch = document.getElementById('customer-search');
-            const customerResults = document.getElementById('customer-results');
-            const customerIdInput = document.getElementById('customer_id');
-            const customerNameInput = document.getElementById('id_name');
-            const customerPhoneInput = document.getElementById('id_phone');
-            const customerAddressInput = document.getElementById('id_address');
-            if (customerSearch && customerResults) {
-                let searchTimeout;
-
-                // Show loading state
-                function showLoading() {
-                    customerResults.innerHTML = '<div class="p-3 text-center text-gray-500">Searching...</div>';
-                    customerResults.classList.remove('hidden');
-                }
-
-                // Show error state
-                function showError() {
-                    customerResults.innerHTML = '<div class="p-3 text-center text-red-500">Error searching customers</div>';
-                    customerResults.classList.remove('hidden');
-                }
-
-                // Show no results
-                function showNoResults() {
-                    customerResults.innerHTML = '<div class="p-3 text-center text-gray-500">No customers found</div>';
-                    customerResults.classList.remove('hidden');
-                }
-
-                customerSearch.addEventListener('input', function () {
-                    clearTimeout(searchTimeout);
-                    const query = this.value.trim();
-
-                    if (query.length < 2) {
-                        customerResults.classList.add('hidden');
-                        return;
-                    }
-
-                    showLoading();
-
-                    searchTimeout = setTimeout(() => {
-                        fetch(`/Laundry/search-customers/?q=${encodeURIComponent(query)}`)
-                            .then(res => {
-                                if (!res.ok) throw new Error('Network response was not ok');
-                                return res.json();
-                            })
-                            .then(data => {
-                                customerResults.innerHTML = '';
-
-                                if (data.customers && data.customers.length) {
-                                    data.customers.forEach(c => {
-                                        const div = document.createElement('div');
-                                        div.className = 'p-3 border-b border-gray-200 hover:bg-gray-50 cursor-pointer transition-colors';
-                                        div.innerHTML = `
-                                    <div class="font-medium text-gray-800">${c.name}</div>
-                                    <div class="text-sm text-gray-600">${c.phone}</div>
-                                     <div class="text-sm text-gray-600">${c.address}</div>
-                                `;
-                                        div.onclick = () => {
-                                            customerIdInput.value = c.id;
-                                            customerNameInput.value = c.name;
-                                            customerPhoneInput.value = c.phone;
-                                            customerAddressInput.value = c.address;
-                                            customerResults.classList.add('hidden');
-                                            customerSearch.value = '';
-                                            showToast(`Customer selected: ${c.name}`, 'success');
-                                        };
-                                        customerResults.appendChild(div);
-                                    });
-                                    customerResults.classList.remove('hidden');
-                                } else {
-                                    showNoResults();
-                                }
-                            })
-                            .catch(error => {
-                                console.error('Error fetching customers:', error);
-                                showError();
-                            });
-                    }, 300);
-                });
-
-                // Hide results when clicking outside
-                document.addEventListener('click', e => {
-                    if (!customerSearch.contains(e.target) && !customerResults.contains(e.target)) {
-                        customerResults.classList.add('hidden');
-                    }
-                });
-
-                // Show results when focusing on search (if there's a query)
-                customerSearch.addEventListener('focus', function () {
-                    const query = this.value.trim();
-                    if (query.length >= 2 && customerResults.children.length > 0) {
-                        customerResults.classList.remove('hidden');
-                    }
-                });
-            }
-
-            /** ------------------------------
-             * Items management & total calculation
-             -------------------------------*/
-            let itemCount = parseInt("{{ item_formset.total_form_count }}");
-            const addItemBtn = document.getElementById('add-item-btn');
-            const orderItemsContainer = document.getElementById('order-items-container');
-            const totalFormsInput = document.getElementById('id_items-TOTAL_FORMS');
-
-            function calculateTotal() {
-                const orderTotalElement = document.getElementById('order-total');
-                if (!orderTotalElement) return;
-                let total = 0;
-                document.querySelectorAll('.item-form').forEach(item => {
-                    if (item.style.display === 'none') return;
-                    //const qty = parseFloat(item.querySelector('input[name$="quantity"]')?.value) || 0;
-                    const price = parseFloat(item.querySelector('input[name$="unit_price"]')?.value) || 0;
-                    total += price;
-                    // const balance = document.querySelector('.balnce')
-                    // balance = total - amount_paid
-                });
-                orderTotalElement.textContent = `KSh ${total.toFixed(2)}`;
-            }
-
-            addItemBtn?.addEventListener('click', () => {
-                const template = document.querySelector('.item-form:last-child');
-                if (!template) return;
-
-                const newItem = template.cloneNode(true);
-                const newIndex = itemCount;
-
-                newItem.querySelectorAll('input, select, textarea').forEach(input => {
-                    if (input.name) {
-                        input.name = input.name.replace(/items-\d+-/, `items-${newIndex}-`);
-                        input.id = input.id.replace(/items-\d+-/, `items-${newIndex}-`);
-                        input.value = '';
-                    }
-                });
-
-                const itemNumber = newItem.querySelector('.font-semibold.text-gray-700');
-                if (itemNumber) itemNumber.textContent = `Item #${newIndex + 1}`;
-
-                const qtyInput = newItem.querySelector('input[name$="quantity"]');
-                if (qtyInput) qtyInput.value = 1;
-                const priceInput = newItem.querySelector('input[name$="unit_price"]');
-                if (priceInput) priceInput.value = 0;
-
-                let removeBtn = newItem.querySelector('.remove-item');
-                if (!removeBtn) {
-                    removeBtn = document.createElement('button');
-                    removeBtn.type = 'button';
-                    removeBtn.className = 'remove-item text-red-500 hover:text-red-700 transition-colors';
-                    removeBtn.innerHTML = '<i class="fas fa-times-circle text-xl"></i>';
-                    newItem.querySelector('.flex.justify-between.items-start')?.appendChild(removeBtn);
-                }
-                removeBtn.onclick = () => {
-                    if (document.querySelectorAll('.item-form').length > 1) {
-                        newItem.querySelector('input[name$="DELETE"]')?.setAttribute('value', 'on');
-                        newItem.style.display = 'none';
-                        calculateTotal();
-                    }
-                };
-
-                orderItemsContainer.appendChild(newItem);
-                itemCount++; totalFormsInput.value = itemCount;
-                calculateTotal();
-            });
-
-            document.addEventListener('click', e => {
-                if (e.target.closest('.remove-item')) {
-                    const item = e.target.closest('.item-form');
-                    if (item && document.querySelectorAll('.item-form').length > 1) {
-                        item.querySelector('input[name$="DELETE"]')?.setAttribute('value', 'on');
-                        item.style.display = 'none';
-                        calculateTotal();
-                    }
-                }
-            });
-
-            document.addEventListener('input', e => {
-                if (e.target.name?.includes('quantity') || e.target.name?.includes('unit_price')) {
-                    calculateTotal();
-                }
-            });
-
-            /** ------------------------------
-             * Final form submission
-             -------------------------------*/
-            orderForm?.addEventListener('submit', e => {
-                let isValid = true;
-                orderForm.querySelectorAll('[required]').forEach(field => {
-                    const error = field.parentNode.querySelector('.text-red-500');
-                    if (!field.value.trim()) {
-                        isValid = false;
-                        addClasses(field, 'border-red-500', 'ring-red-500');
-                        if (!error) {
-                            const errorDiv = document.createElement('div');
-                            errorDiv.className = 'text-red-500 text-sm mt-1';
-                            errorDiv.textContent = 'This field is required';
-                            field.parentNode.appendChild(errorDiv);
-                        }
-                    } else {
-                        removeClasses(field, 'border-red-500', 'ring-red-500');
-                        error?.remove();
-                    }
-                });
-
-                if (!isValid) {
-                    e.preventDefault();
-                    showToast('Please fill in all required fields before submitting', 'error');
-                    const firstError = orderForm.querySelector('.border-red-500');
-                    firstError?.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                    const errorStep = firstError?.closest('.form-step');
-                    if (errorStep) { currentStep = parseInt(errorStep.dataset.step); updateFormSteps(); }
+                if (isCompleted) {
+                    indicator.className = 'w-8 h-8 rounded-full bg-green-500 text-white flex items-center justify-center font-semibold';
+                    indicator.textContent = '✓';
+                } else if (isCurrent) {
+                    indicator.className = 'w-8 h-8 rounded-full bg-blue-600 text-white flex items-center justify-center font-semibold';
+                    indicator.textContent = step;
                 } else {
-                    submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i> Creating Order...';
-                    submitBtn.disabled = true;
+                    indicator.className = 'w-8 h-8 rounded-full bg-gray-300 text-gray-600 flex items-center justify-center font-semibold';
+                    indicator.textContent = step;
+                }
+            });
+        }
+
+        function showStep(stepNumber) {
+            document.getElementById('step-customer').classList.add('hidden');
+            document.getElementById('step-order-details').classList.add('hidden');
+            document.getElementById('step-items').classList.add('hidden');
+            document.getElementById('step-payment').classList.add('hidden');
+
+            switch (stepNumber) {
+                case 1:
+                    document.getElementById('step-customer').classList.remove('hidden');
+                    break;
+                case 2:
+                    document.getElementById('step-order-details').classList.remove('hidden');
+                    break;
+                case 3:
+                    document.getElementById('step-items').classList.remove('hidden');
+                    break;
+                case 4:
+                    document.getElementById('step-payment').classList.remove('hidden');
+                    break;
+            }
+            updateProgressSteps(stepNumber);
+        }
+
+        // Elements
+        const customerForm = document.getElementById('customerForm');
+        const orderDetailsForm = document.getElementById('orderDetailsForm');
+        const paymentForm = document.getElementById('paymentForm');
+        const customerModal = document.getElementById('customerModal');
+        const foundCustomerInfo = document.getElementById('foundCustomerInfo');
+        const useExistingBtn = document.getElementById('useExistingBtn');
+        const createNewBtn = document.getElementById('createNewBtn');
+        const customerIdInput = document.getElementById('customer_id');
+
+        let lastFoundCustomer = null;
+
+        // Step navigation
+        document.getElementById('backToOrderDetails').addEventListener('click', () => showStep(2));
+        document.getElementById('backToItems').addEventListener('click', () => showStep(3));
+
+        // Customer form submission
+        customerForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            const rawphone = document.getElementById('phone').value.trim();
+            const name = document.getElementById('name').value.trim();
+            const address = document.getElementById('address').value.trim();
+
+            let phone = rawphone;
+            if (!rawphone) {
+                showToast('Phone is required');
+                return;
+            }
+
+            if (rawphone.startsWith('+254')) {
+                phone = rawphone;
+            } else if (rawphone.startsWith('0')) {
+                phone = '+254' + rawphone.substring(1);
+            } else if (rawphone.startsWith('7')) {
+                phone = '+254' + rawphone;
+            } else {
+                phone = rawphone;
+            }
+
+            try {
+                const resp = await fetch('/Laundry/api/customer/check-or-create/', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': csrftoken
+                    },
+                    body: JSON.stringify({ phone, name, address })
+                });
+
+                const data = await resp.json();
+
+                if (!resp.ok) {
+                    showToast(Object.values(data).flat().join(' ') || 'Error checking customer');
+                    return;
+                }
+
+                if (data.exists === true) {
+                    lastFoundCustomer = data.customer;
+                    foundCustomerInfo.innerHTML = `
+                        <div><strong>${data.customer.name}</strong></div>
+                        <div>${data.customer.phone}</div>
+                        <div class="text-sm text-gray-600">${data.customer.address || ''}</div>
+                    `;
+                    customerModal.classList.remove('hidden');
+                    customerModal.classList.add('flex');
+                } else {
+                    lastFoundCustomer = data.customer;
+                    customerIdInput.value = data.customer.id;
+                    showToast('New customer created');
+                    showStep(2);
+                }
+            } catch (err) {
+                console.error(err);
+                showToast('Network error');
+            }
+        });
+
+        useExistingBtn.addEventListener('click', () => {
+            if (!lastFoundCustomer) return;
+            customerIdInput.value = lastFoundCustomer.id;
+            customerModal.classList.add('hidden');
+            customerModal.classList.remove('flex');
+            showStep(2);
+            showToast('Using existing customer');
+        });
+
+        createNewBtn.addEventListener('click', () => {
+            customerModal.classList.add('hidden');
+            customerModal.classList.remove('flex');
+            showToast('To create a new customer, change the phone number.');
+        });
+
+        // Order details form submission
+        orderDetailsForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            '{% if user.is_superuser %}'
+            const shop = document.getElementById('shop').value;
+            '{% elif not user.is_superuser%}'
+            shop = "{{ active_shop_name }}";
+            '{% endif %}'
+            const delivery_date = document.getElementById('delivery_date').value;
+
+            if (!shop || !delivery_date) {
+                showToast('Please fill all required fields');
+                return;
+            }
+
+            showStep(3);
+        });
+
+        // Items step navigation
+        document.getElementById('itemsNext').addEventListener('click', () => {
+            const itemRows = itemsContainer.querySelectorAll('.item-row');
+            if (itemRows.length === 0) {
+                showToast('Please add at least one item');
+                return;
+            }
+
+            // Validate items
+            let valid = true;
+            itemRows.forEach(row => {
+                const selectedServices = Array.from(row.querySelectorAll('.service-checkbox:checked'));
+                if (selectedServices.length === 0) {
+                    valid = false;
+                    showToast('Select at least one service type for each item');
                 }
             });
 
-            /** ------------------------------
-             * Init
-             -------------------------------*/
-            updateFormSteps();
-            calculateTotal();
+            if (valid) {
+                showStep(4);
+            }
         });
+
+        // --- Order items dynamic logic ---
+        const addItemBtn = document.getElementById('addItemBtn');
+        const itemsContainer = document.getElementById('itemsContainer');
+        const totalPriceInput = document.getElementById('total_price');
+        const balanceInput = document.getElementById('balance');
+        const amountPaidInput = document.getElementById('amount_paid');
+
+        function computeTotals() {
+            let total = 0;
+            const itemRows = itemsContainer.querySelectorAll('.item-row');
+            itemRows.forEach(row => {
+                const qty = parseFloat(row.querySelector('.item-quantity').value) || 0;
+                const unit = parseFloat(row.querySelector('.item-unit_price').value) || 0;
+                const lineTotal = (qty * unit).toFixed(2);
+                row.querySelector('.item-line-total').textContent = lineTotal;
+                total += parseFloat(lineTotal);
+            });
+            totalPriceInput.value = total.toFixed(2);
+            const paid = parseFloat(amountPaidInput.value) || 0;
+            const balance = Math.max(0, total - paid);
+            balanceInput.value = balance.toFixed(2);
+        }
+
+        function createItemRow() {
+            const serviceOptions = [
+                { value: 'Washing', label: 'Washing' },
+                { value: 'Folding', label: 'Folding' },
+                { value: 'Ironing', label: 'Ironing' },
+                { value: 'Dry cleaning', label: 'Dry cleaning' }
+            ];
+
+            const itemTypeOptions = ['Clothing', 'Bedding', 'Household items', 'Footwares'];
+            const itemConditionOptions = ['new', 'Old', 'Torn'];
+
+            const wrapper = document.createElement('div');
+            wrapper.className = 'item-row border rounded p-3 bg-gray-50';
+
+            wrapper.innerHTML = `
+                <div class="grid grid-cols-3 gap-3">
+                    <div>
+                        <label class="block text-sm mb-2">Service Type</label>
+                        <div class="service-dropdown relative">
+                            <button type="button" class="service-dropdown-btn w-full text-left p-2 border rounded bg-white flex justify-between items-center">
+                                <span class="service-selected-text">Select services...</span>
+                                <span>▼</span>
+                            </button>
+                            <div class="service-checkbox-container absolute z-10 w-full mt-1 bg-white border rounded shadow-lg hidden max-h-48 overflow-y-auto">
+                                ${serviceOptions.map(service => `
+                                    <label class="flex items-center p-2 hover:bg-gray-100 cursor-pointer">
+                                        <input type="checkbox" value="${service.value}" class="service-checkbox mr-2">
+                                        <span>${service.label}</span>
+                                    </label>
+                                `).join('')}
+                            </div>
+                        </div>
+                    </div>
+
+                    <div>
+                        <label class="block text-sm">Item Category</label>
+                        <select class="mt-1 block w-full p-2 border rounded item-itemtype">
+                            <option value="">--Select--</option>
+                            ${itemTypeOptions.map(it => `<option value="${it}">${it}</option>`).join('')}
+                        </select>
+                    </div>
+
+                    <div>
+                        <label class="block text-sm">Condition</label>
+                        <select class="mt-1 block w-full p-2 border rounded item-itemcondition">
+                            <option value="">--Select--</option>
+                            ${itemConditionOptions.map(ic => `<option value="${ic}">${ic}</option>`).join('')}
+                        </select>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-3 gap-3 mt-3">
+                    <div>
+                        <label class="block text-sm">Item name(s) (comma-separated)</label>
+                        <input class="mt-1 block w-full p-2 border rounded item-itemname" />
+                    </div>
+                    <div>
+                        <label class="block text-sm">Quantity</label>
+                        <input type="number" min="1" value="1" class="mt-1 block w-full p-2 border rounded item-quantity" />
+                    </div>
+                    <div>
+                        <label class="block text-sm">Unit price</label>
+                        <input type="number" step="0.01" min="0" value="0" class="mt-1 block w-full p-2 border rounded item-unit_price" />
+                    </div>
+                </div>
+
+                <div class="flex items-center justify-between mt-3">
+                    <div class="text-sm">Line total: <span class="item-line-total">0.00</span></div>
+                    <div class="flex gap-2">
+                        <button type="button" class="removeItemBtn bg-red-500 text-white px-2 py-1 rounded text-sm">Remove</button>
+                    </div>
+                </div>
+            `;
+
+            // Service dropdown functionality
+            const dropdownBtn = wrapper.querySelector('.service-dropdown-btn');
+            const checkboxContainer = wrapper.querySelector('.service-checkbox-container');
+            const selectedText = wrapper.querySelector('.service-selected-text');
+            const checkboxes = wrapper.querySelectorAll('.service-checkbox');
+
+            dropdownBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                checkboxContainer.classList.toggle('hidden');
+            });
+
+            checkboxes.forEach(checkbox => {
+                checkbox.addEventListener('change', () => {
+                    const selected = Array.from(checkboxes)
+                        .filter(cb => cb.checked)
+                        .map(cb => cb.value);
+
+                    if (selected.length === 0) {
+                        selectedText.textContent = 'Select services...';
+                    } else {
+                        selectedText.textContent = selected.join(', ');
+                    }
+                });
+            });
+
+            // Close dropdown when clicking outside
+            document.addEventListener('click', () => {
+                checkboxContainer.classList.add('hidden');
+            });
+
+            checkboxContainer.addEventListener('click', (e) => {
+                e.stopPropagation();
+            });
+
+            // Quantity and price listeners
+            wrapper.querySelectorAll('.item-quantity, .item-unit_price').forEach(el => {
+                el.addEventListener('input', computeTotals);
+            });
+
+            wrapper.querySelector('.removeItemBtn').addEventListener('click', () => {
+                wrapper.remove();
+                computeTotals();
+            });
+
+            itemsContainer.appendChild(wrapper);
+            computeTotals();
+        }
+
+        addItemBtn.addEventListener('click', () => createItemRow());
+        createItemRow(); // start with one item
+        amountPaidInput.addEventListener('input', computeTotals);
+
+        // Final order submission
+        paymentForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const customerId = customerIdInput.value;
+            if (!customerId) { showToast('No customer selected'); return; }
+            let shopvalue
+            '{% if user.is_superuser %} '
+            const shop = document.getElementById('shop').value;
+            '{% elif not user.is_superuser%}'
+            shop = "{{ active_shop_name }}";
+            '{% endif %}'
+            const payment_type = document.getElementById('payment_type').value;
+            const delivery_date = document.getElementById('delivery_date').value;
+            const addressdetails = document.getElementById('addressdetails').value;
+            const amount_paid = parseFloat(document.getElementById('amount_paid').value) || 0;
+
+            if (!shop || !payment_type || !delivery_date) {
+                showToast('Fill required order fields');
+                return;
+            }
+
+            // Collect items
+            const items = [];
+            const itemRows = itemsContainer.querySelectorAll('.item-row');
+            for (const row of itemRows) {
+                const selectedServices = Array.from(row.querySelectorAll('.service-checkbox:checked')).map(cb => cb.value);
+                const itemtype = row.querySelector('.item-itemtype').value;
+                const itemname = row.querySelector('.item-itemname').value;
+                const quantity = parseInt(row.querySelector('.item-quantity').value) || 1;
+                const itemcondition = row.querySelector('.item-itemcondition').value;
+                const unit_price = parseFloat(row.querySelector('.item-unit_price').value) || 0;
+                const total_item_price = (quantity * unit_price).toFixed(2);
+
+                if (!selectedServices.length) {
+                    showToast('Select at least one service type for each item');
+                    return;
+                }
+                if (!itemtype) {
+                    showToast('Select item category for each item');
+                    return;
+                }
+                if (!itemcondition) {
+                    showToast('Select item condition for each item');
+                    return;
+                }
+                if (!itemname) {
+                    showToast('Provide item name(s)');
+                    return;
+                }
+
+                items.push({
+                    servicetype: selectedServices.join(','),
+                    itemtype,
+                    itemname,
+                    quantity,
+                    itemcondition,
+                    additional_info: null,
+                    unit_price,
+                    total_item_price
+                });
+            }
+
+            const payload = {
+                customer: customerId,
+                payment_type,
+                shop,
+                delivery_date,
+                addressdetails,
+                amount_paid,
+                items
+            };
+
+            try {
+                const resp = await fetch('/Laundry/api/orders/create/', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': csrftoken
+                    },
+                    body: JSON.stringify(payload)
+                });
+
+                const data = await resp.json();
+                if (resp.ok) {
+                    showToast('Order created successfully');
+                    setTimeout(() => location.reload(), 1000);
+                } else {
+                    console.error('Error response:', data);
+                    let errMsg = 'Order creation failed';
+                    if (typeof data === 'object') {
+                        if (data.errors) {
+                            errMsg = Object.entries(data.errors).map(([k, v]) => `${k}: ${v}`).join(' | ');
+                        } else if (data.non_field_errors) {
+                            errMsg = data.non_field_errors.join(' | ');
+                        } else {
+                            errMsg = Object.entries(data).map(([k, v]) => `${k}: ${v}`).join(' | ');
+                        }
+                    } else if (data && data.message) {
+                        errMsg = data.message;
+                    }
+                    showToast(errMsg);
+                }
+            } catch (err) {
+                console.error('Network error:', err);
+                showToast('Network error when creating order');
+            }
+        });
+
+        // Initialize first step
+        showStep(1);
     </script>
 </body>
+
+</html>
 {% endblock %}
