@@ -200,7 +200,7 @@
                             </th>
                             <th
                                 class="py-4 px-4 text-left font-semibold text-gray-700 text-xs uppercase tracking-wider whitespace-nowrap">
-                                Condition
+                                Created by
                             </th>
                             <th
                                 class="py-4 px-4 text-left font-semibold text-gray-700 text-xs uppercase tracking-wider whitespace-nowrap">
@@ -482,8 +482,9 @@
             </div>
         </div>
     </div>
-
-   <script>
+<script>
+     const createdBy = "{{ created_by|escapejs }}";
+        console.log("Created by:", createdBy);
     class OrderManager {
         constructor() {
             this.currentPage = 1;
@@ -692,6 +693,14 @@
                     this.updateSingleOrderStatus(orderId, status);
                 }
 
+                // Delete order buttons
+                if (e.target.closest('.delete-order-btn')) {
+                    const button = e.target.closest('.delete-order-btn');
+                    const orderId = button.getAttribute('data-order-id');
+                    const orderCode = button.getAttribute('data-order-code');
+                    this.deleteOrder(orderId, orderCode);
+                }
+
                 // Remove item buttons
                 if (e.target.closest('.remove-item')) {
                     const button = e.target.closest('.remove-item');
@@ -733,6 +742,46 @@
                     menu.classList.toggle('hidden');
                 }
             });
+        }
+
+        // NEW: Delete order method using POST request
+        async deleteOrder(orderId, orderCode) {
+            if (!confirm(`Are you sure you want to delete order ${orderCode}? This action cannot be undone.`)) {
+                return;
+            }
+
+            try {
+                const formData = new FormData();
+                formData.append('csrfmiddlewaretoken', this.getCSRFToken());
+
+                const response = await fetch(`/Laundry/order-delete/${orderCode}/`, {
+                    method: 'POST',
+                    body: formData,
+                    headers: {
+                        'X-Requested-With': 'XMLHttpRequest',
+                        'X-CSRFToken': this.getCSRFToken()
+                    }
+                });
+
+                // Check if response is JSON
+                const contentType = response.headers.get('content-type');
+                if (!contentType || !contentType.includes('application/json')) {
+                    const text = await response.text();
+                    throw new Error(`Server returned HTML instead of JSON. Status: ${response.status}`);
+                }
+
+                const data = await response.json();
+
+                if (data.success) {
+                    this.showMessage(`Order ${orderCode} deleted successfully`, 'success');
+                    this.loadOrders(); // Reload the orders list
+                } else {
+                    throw new Error(data.message || 'Failed to delete order');
+                }
+            } catch (error) {
+                console.error('Error deleting order:', error);
+                this.showMessage(error.message || 'Failed to delete order', 'error');
+            }
         }
 
         async openPaymentCompleteModal(orderId) {
@@ -1247,7 +1296,8 @@
             const hasMultipleItems = order.items.length > 1;
             const isSelected = this.selectedOrders.has(order.id.toString());
             const isSuperuser = document.getElementById('shopFilter') !== null;
-
+           
+            
             return `
     <tr class="hover:bg-gray-50 transition-colors duration-150 border-b border-gray-100" data-order-id="${order.id}">
         <td class="w-12 text-center py-4 px-4">
@@ -1312,25 +1362,11 @@
                 `}
             </div>
         </td>
-
-        <!-- Condition Column -->
         <td class="py-4 px-4 text-left">
-            <span class="text-xs ${this.getConditionColor(firstItem.itemcondition)}">
-                ${firstItem.itemcondition || 'N/A'}
-            </span>
-            ${hasMultipleItems ? `
-                <div class="relative group inline-block ml-1">
-                    <span class="text-xs text-gray-500">+${order.items.length - 1}</span>
-                    <div class="absolute left-0 top-full mt-1 hidden group-hover:block z-50 w-48 rounded-md bg-gray-900 px-3 py-2 text-xs text-white shadow-lg transition-opacity duration-200">
-                        <div class="font-medium mb-1">All Conditions:</div>
-                        <ul class="space-y-1">
-                            ${order.items.map(item => `<li class="text-left truncate ${this.getConditionColor(item.itemcondition)}">${item.itemcondition || 'N/A'}</li>`).join('')}
-                        </ul>
-                    </div>
-                </div>
-            ` : ''}
-        </td>
-
+                    <div class="font-semibold text-blue-900 text-xs"> ${createdBy}</div>
+                </td>
+        <!-- Condition Column -->
+      
         <!-- Payment Columns -->
         <td class="py-4 px-4 text-left">
             <div class="font-semibold text-blue-900 text-xs">KSh ${order.amount_paid.toLocaleString()}</div>
@@ -1375,7 +1411,7 @@
 
                 <!-- More Actions Dropdown -->
                 <div class="relative">
-                    <button class="p-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors duration-200"
+                    <button type="button" class="p-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors duration-200"
                         title="More Actions">
                         <i class="fas fa-ellipsis-v text-sm"></i>
                     </button>
@@ -1398,12 +1434,11 @@
                         
                         <div class="border-t border-gray-100 my-1"></div>
                         
-                        <!-- Delete Order -->
-                        <a href="/Laundry/order-delete/${order.uniquecode}/"
-                            class="block px-4 py-2 text-sm text-red-700 hover:bg-red-50 flex items-center"
-                            onclick="return confirm('Are you sure you want to delete this order?')">
+                        <!-- Delete Order Button - UPDATED: Uses POST request -->
+                        <button type="button" class="w-full text-left px-4 py-2 text-sm text-red-700 hover:bg-red-50 flex items-center delete-order-btn"
+                            data-order-id="${order.id}" data-order-code="${order.uniquecode}">
                             <i class="fas fa-trash mr-2"></i> Delete Order
-                        </a>
+                        </button>
                     </div>
                 </div>
             </div>

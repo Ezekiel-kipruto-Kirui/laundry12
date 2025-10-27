@@ -1,0 +1,869 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Laundry Orders Management</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .active-filter {
+            box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.5);
+            /* Blue ring */
+            border-color: rgba(59, 130, 246, 1);
+            /* Blue border */
+        }
+    </style>
+</head>
+
+<body class="min-h-screen bg-gray-50 font-sans">
+    <div class="max-w-full mx-auto p-4 lg:p-6">
+        <!-- Header -->
+        <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
+            <div>
+                <div class="flex items-center gap-3 mb-3">
+                    <a href="{% url 'laundry:Laundrydashboard' %}"
+                        class="inline-flex items-center px-4 py-2 bg-white rounded-lg shadow-sm border border-gray-200 text-gray-700 hover:text-blue-600 hover:shadow-md transition-all duration-200">
+                        <i class="fas fa-home mr-2"></i>
+                        <span class="text-sm font-medium">Dashboard Home</span>
+                    </a>
+                </div>
+                <h1 class="text-2xl font-bold text-gray-900">Orders Management</h1>
+                <p class="text-gray-600 mt-1">Manage and track all laundry orders</p>
+            </div>
+            <div class="flex flex-wrap gap-3">
+                <!-- Search Input -->
+                <div class="relative w-full md:w-auto">
+                    <input type="text" name="search" id="searchInput" placeholder="Search orders..."
+                        class="pl-10 pr-4 py-2.5 border border-gray-200 rounded-lg w-full md:w-64 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 shadow-sm transition-all duration-200">
+                    <i class="fas fa-search absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"></i>
+                </div>
+                <!-- Export Button -->
+                <div class="relative">
+
+                    <button id="exportDropdownBtn"
+                        class="inline-flex items-center gap-2 px-4 py-2.5 bg-blue-500 from-cyan-500 to-blue-500 text-white rounded-lg font-medium shadow-md hover:shadow-lg transition-all duration-200">
+                        <i class="fas fa-download"></i>
+                        <span>Export</span>
+                        <i class="fas fa-chevron-down text-xs"></i>
+                    </button>
+                    <div id="exportDropdown"
+                        class="absolute right-0 mt-1 hidden bg-white rounded-lg shadow-lg py-2 z-20 w-48">
+                        <a class="flex items-center gap-2 px-4 py-2 text-gray-700 hover:bg-gray-100 transition-colors duration-150 export-btn"
+                            href="#" data-format="csv">
+                            <i class="fas fa-file-csv text-green-600"></i> CSV Format
+                        </a>
+                        <a class="flex items-center gap-2 px-4 py-2 text-gray-700 hover:bg-gray-100 transition-colors duration-150 export-btn"
+                            href="#" data-format="xlsx">
+                            <i class="fas fa-file-excel text-green-600"></i> Excel Format
+                        </a>
+                    </div>
+                </div>
+
+                <a href="{% url 'laundry:createorder' %}"
+                    class="inline-flex items-center gap-2 px-4 py-2.5 bg-blue-600 text-white rounded-lg font-medium shadow-md hover:shadow-lg transition-all duration-200">
+                    <i class="fas fa-plus-circle"></i>
+                    <span>New Order</span>
+                </a>
+            </div>
+        </div>
+
+        <!-- Bulk Actions Container -->
+        <div id="bulkActionsContainer" class="hidden bg-gray-50 border border-gray-200 rounded-lg p-3 mb-4">
+            <div class="flex flex-wrap items-center gap-4">
+                <span id="selectedCount" class="text-sm font-medium text-gray-700">0 orders selected</span>
+                <button type="button" id="bulkCompleteBtn"
+                    class="px-4 py-2 bg-green-500 text-white rounded-lg text-sm font-medium hover:bg-green-600 transition-colors">
+                    <i class="fas fa-check-circle mr-2"></i>Mark Selected as Completed
+                </button>
+                <button type="button" id="bulkDeliverBtn"
+                    class="px-4 py-2 bg-purple-500 text-white rounded-lg text-sm font-medium hover:bg-purple-600 transition-colors">
+                    <i class="fas fa-truck mr-2"></i>Mark Selected as Delivered
+                </button>
+                <button type="button" id="clearSelectionBtn"
+                    class="px-4 py-2 bg-gray-500 text-white rounded-lg text-sm font-medium hover:bg-gray-600 transition-colors">
+                    <i class="fas fa-times mr-2"></i>Clear Selection
+                </button>
+            </div>
+        </div>
+
+        <!-- Stats Overview -->
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-5 mb-6" id="statsContainer">
+            <div class="bg-white p-5 rounded-xl shadow-sm border border-gray-100 border-l-4 border-l-blue-500">
+                <div class="flex flex-col items-center text-center w-full">
+                    <div class="p-3 bg-blue-100 rounded-xl mb-3">
+                        <i class="fas fa-clipboard-check text-blue-600 text-xl"></i>
+                    </div>
+                    <p class="text-sm text-gray-500 font-medium">Active Orders</p>
+                    <h3 class="text-3xl font-bold text-gray-800 mt-1" id="totalOrders">0</h3>
+                    <p class="text-xs text-gray-500 mt-2">Excluding delivered orders</p>
+                </div>
+            </div>
+
+            <div class="bg-white p-5 rounded-xl shadow-sm border border-gray-100 border-l-4 border-l-amber-500">
+                <div class="flex flex-col items-center text-center w-full">
+                    <div class="p-3 bg-amber-100 rounded-xl mb-3">
+                        <i class="fas fa-clock text-amber-600 text-xl"></i>
+                    </div>
+                    <p class="text-sm text-gray-500 font-medium">Pending Orders</p>
+                    <h3 class="text-3xl font-bold text-gray-800 mt-1" id="pendingOrders">0</h3>
+                    <p class="text-xs text-gray-500 mt-2">Require attention</p>
+                </div>
+            </div>
+
+            <div class="bg-white p-5 rounded-xl shadow-sm border border-gray-100 border-l-4 border-l-green-500">
+                <div class="flex flex-col items-center text-center w-full">
+                    <div class="p-3 bg-green-100 rounded-xl mb-3">
+                        <i class="fas fa-check-circle text-green-600 text-xl"></i>
+                    </div>
+                    <p class="text-sm text-gray-500 font-medium">Completed</p>
+                    <h3 class="text-3xl font-bold text-gray-800 mt-1" id="completedOrders">0</h3>
+                    <p class="text-xs text-gray-500 mt-2">Ready for delivery</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Filters -->
+        <div class="bg-white p-5 rounded-xl shadow-sm border border-gray-100 mb-6">
+            <form id="filterForm"
+                class="flex flex-col md:flex-row justify-between w-full items-start md:items-center gap-4">
+                <div class="flex flex-wrap gap-3">
+                    <!-- All Orders Filter -->
+                    <button type="button" data-payment=""
+                        class="px-4 py-2 bg-blue-100 text-blue-700 shadow-sm rounded-lg text-sm font-medium flex items-center active-filter payment-filter">
+                        Active Orders
+                    </button>
+
+                    <!-- Payment Status Filters -->
+                    <div class="flex flex-wrap items-center gap-2">
+                        <span class="text-sm text-gray-500 font-medium">Payment:</span>
+                        {% for payment_value, payment_label in payment_status_choices %}
+                        <button type="button" data-payment="{{ payment_value }}"
+                            class="px-3 py-1.5 bg-gray-100 text-gray-700 rounded-full text-sm font-medium payment-filter">
+                            {{ payment_label }}
+                        </button>
+                        {% endfor %}
+                    </div>
+
+                    <!-- Action Filters -->
+                    <div class="flex flex-wrap items-center gap-2">
+                        <span class="text-sm text-gray-500 font-medium">Shop:</span>
+                        <div class="bg-white rounded-full shadow-sm">
+                            <select id="shopFilter"
+                                class="rounded-full p-1 bg-blue-100 text-blue-600 outline-none w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:ring-2 focus:ring-purple-500 focus:border-purple-500">
+                                <option value="">All Shops</option>
+                                <option value="Shop A">Shop A</option>
+                                <option value="Shop B">Shop B</option>
+                                <!-- Shop options will be dynamically added/validated by JS if needed -->
+                            </select>
+                        </div>
+
+                        <span class="text-sm text-gray-500 font-medium ml-3">Actions:</span>
+                        <button type="button" data-action="mark-completed"
+                            class="px-3 py-1.5 bg-green-100 text-green-700 rounded-full text-sm font-medium action-filter">
+                            <i class="fas fa-check-circle mr-1"></i> Mark Completed
+                        </button>
+                        <button type="button" data-action="mark-delivered"
+                            class="px-3 py-1.5 bg-purple-100 text-purple-700 rounded-full text-sm font-medium action-filter">
+                            <i class="fas fa-truck mr-1"></i> Mark Delivered
+                        </button>
+                    </div>
+                </div>
+            </form>
+        </div>
+
+        <!-- Orders Table -->
+        <div class="bg-white rounded-xl overflow-hidden shadow-lg">
+            <div class="overflow-x-auto">
+                <table class="w-full min-w-max">
+                    <thead>
+                        <tr class="bg-gray-50 border-b border-gray-200">
+                            <th
+                                class="w-12 py-4 px-4 text-center font-semibold text-gray-700 text-xs uppercase tracking-wider whitespace-nowrap">
+                                <input type="checkbox" id="selectAllCheckbox"
+                                    class="h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500">
+                            </th>
+                            <th
+                                class="py-4 px-4 text-left font-semibold text-gray-700 text-xs uppercase tracking-wider whitespace-nowrap">
+                                Order Code
+                            </th>
+                            <th
+                                class="py-4 px-4 text-left font-semibold text-gray-700 text-xs uppercase tracking-wider whitespace-nowrap">
+                                Customer
+                            </th>
+                            <th
+                                class="py-4 px-4 text-left font-semibold text-gray-700 text-xs uppercase tracking-wider whitespace-nowrap">
+                                Service
+                            </th>
+                            <th
+                                class="py-4 px-4 text-left font-semibold text-gray-700 text-xs uppercase tracking-wider whitespace-nowrap">
+                                Item Type
+                            </th>
+                            <th
+                                class="py-4 px-4 text-left font-semibold text-gray-700 text-xs uppercase tracking-wider whitespace-nowrap">
+                                Items
+                            </th>
+                            <th
+                                class="py-4 px-4 text-left font-semibold text-gray-700 text-xs uppercase tracking-wider whitespace-nowrap">
+                                Condition
+                            </th>
+                            <th
+                                class="py-4 px-4 text-left font-semibold text-gray-700 text-xs uppercase tracking-wider whitespace-nowrap">
+                                Amount Paid
+                            </th>
+                            <th
+                                class="py-4 px-4 text-left font-semibold text-gray-700 text-xs uppercase tracking-wider whitespace-nowrap">
+                                Balance
+                            </th>
+                            <th
+                                class="py-4 px-4 text-left font-semibold text-gray-700 text-xs uppercase tracking-wider whitespace-nowrap">
+                                Total Billed
+                            </th>
+                            <th
+                                class="py-4 px-4 text-left font-semibold text-gray-700 text-xs uppercase tracking-wider whitespace-nowrap">
+                                Order Status
+                            </th>
+                            <th
+                                class="py-4 px-4 text-left font-semibold text-gray-700 text-xs uppercase tracking-wider whitespace-nowrap">
+                                Payment Status
+                            </th>
+                            <th
+                                class="py-4 px-4 text-left font-semibold text-gray-700 text-xs uppercase tracking-wider whitespace-nowrap">
+                                Actions
+                            </th>
+                        </tr>
+                    </thead>
+                    <tbody id="ordersTableBody" class="divide-y divide-gray-200">
+                        <!-- Orders will be loaded here via AJAX -->
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Loading Spinner -->
+            <div id="loadingSpinner" class="hidden text-center p-8">
+                <div class="inline-flex items-center">
+                    <i class="fas fa-spinner fa-spin text-2xl text-blue-500 mr-3"></i>
+                    <span class="text-gray-600">Loading orders...</span>
+                </div>
+            </div>
+
+            <!-- Pagination -->
+            <div id="paginationContainer" class="px-6 py-4 border-t border-gray-200">
+                <!-- Pagination will be loaded here via AJAX -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Update Order Modal -->
+    <div id="updateOrderModal"
+        class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        <div class="bg-white rounded-xl shadow-xl w-full max-w-4xl max-h-[90vh] overflow-y-auto">
+            <div class="p-6 border-b border-gray-200">
+                <h2 class="text-xl font-bold text-gray-900">Update Order</h2>
+                <button type="button" id="closeModal" class="absolute top-6 right-6 text-gray-400 hover:text-gray-600">
+                    <i class="fas fa-times text-xl"></i>
+                </button>
+            </div>
+            <form id="updateOrderForm">
+                <div class="p-6">
+                    <input type="hidden" id="updateOrderId" name="order_id">
+                    <input type="hidden" name="csrfmiddlewaretoken" value="{{ csrf_token }}">
+
+                    <!-- Customer Information -->
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1"
+                                for="updateCustomerName">Customer Name</label>
+                            <input type="text" id="updateCustomerName" name="name"
+                                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                required>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1" for="updateCustomerPhone">Phone
+                                Number</label>
+                            <input type="text" id="updateCustomerPhone" name="phone"
+                                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                required>
+                        </div>
+                    </div>
+
+                    <!-- Order Information -->
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1" for="updateOrderStatus">Order
+                                Status</label>
+                            <select id="updateOrderStatus" name="order_status"
+                                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                <option value="pending">Pending</option>
+                                <option value="processing">Processing</option>
+                                <option value="Completed">Completed</option>
+                                <option value="Delivered_picked">Delivered</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1"
+                                for="updatePaymentStatus">Payment Status</label>
+                            <select id="updatePaymentStatus" name="payment_status"
+                                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                <option value="pending">Pending</option>
+                                <option value="partial">Partial</option>
+                                <option value="completed">Completed</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- Payment Information -->
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1" for="updateAmountPaid">Amount
+                                Paid</label>
+                            <input type="number" id="updateAmountPaid" name="amount_paid"
+                                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                step="0.01" min="0">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1" for="updateTotalPrice">Total
+                                Price</label>
+                            <input type="number" id="updateTotalPrice" name="total_price"
+                                class="w-full px-3 py-2 border border-gray-300 rounded-md bg-gray-100" step="0.01"
+                                min="0" readonly>
+                        </div>
+                    </div>
+
+                    <!-- Balance Information -->
+                    <div class="mb-6">
+                        <div class="bg-blue-50 p-4 rounded-lg">
+                            <h3 class="font-medium text-blue-800 mb-2">Payment Summary</h3>
+                            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                <div>
+                                    <p class="text-sm text-blue-700">Total Amount:</p>
+                                    <p class="text-lg font-bold text-blue-900" id="modalTotalAmount">KSh 0.00</p>
+                                </div>
+                                <div>
+                                    <p class="text-sm text-blue-700">Amount Paid:</p>
+                                    <p class="text-lg font-bold text-blue-900" id="modalAmountPaid">KSh 0.00</p>
+                                </div>
+                                <div>
+                                    <p class="text-sm text-blue-700">Balance:</p>
+                                    <p class="text-lg font-bold text-blue-900" id="modalBalance">KSh 0.00</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Order Items -->
+                    <div class="mb-6">
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Order Items</label>
+                        <div id="updateItemsContainer" class="border border-gray-300 rounded-md overflow-hidden">
+                            <!-- Items will be dynamically added here -->
+                        </div>
+                        <button type="button" id="addItemBtn"
+                            class="mt-3 inline-flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors">
+                            <i class="fas fa-plus"></i> Add Item
+                        </button>
+                    </div>
+                </div>
+                <div class="p-6 border-t border-gray-200 flex justify-end gap-3">
+                    <button type="button" id="cancelUpdate"
+                        class="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors">
+                        Cancel
+                    </button>
+                    <button type="submit"
+                        class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
+                        Update Order
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Receipt Modal -->
+    <div id="receiptModal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        <div class="bg-white rounded-xl shadow-xl w-full max-w-md">
+            <div class="p-6 border-b border-gray-200">
+                <button type="button" id="closeReceiptModal"
+                    class="absolute top-6 right-6 text-gray-400 hover:text-gray-600">
+                    <i class="fas fa-times text-xl"></i>
+                </button>
+            </div>
+            <div class="p-6">
+                <div id="receiptContent" class="bg-white p-6 border border-gray-300">
+                    <div class="text-center mb-4">
+                        <h3 class="text-lg font-bold">CLEAN PAGE LAUNDRY</h3>
+                        <p class="text-sm text-gray-600">Clean clothes, happy hearts — thank you for coming!</p>
+                    </div>
+                    <div class="border-t border-b border-gray-300 py-3 mb-3">
+                        <div class="flex justify-between mb-2">
+                            <span class="font-medium">Order Code:</span>
+                            <span id="receiptOrderCode">-</span>
+                        </div>
+                        <div class="flex justify-between mb-2">
+                            <span class="font-medium">Date:</span>
+                            <span id="receiptDate">-</span>
+                        </div>
+                    </div>
+                    <div class="mb-4">
+                        <h4 class="font-medium mb-2">Customer Details:</h4>
+                        <p id="receiptCustomerName" class="text-sm">-</p>
+                        <p id="receiptCustomerPhone" class="text-sm">-</p>
+                    </div>
+                    <div class="mb-4">
+                        <h4 class="font-medium mb-2">Order Summary:</h4>
+                        <div id="receiptItems" class="text-sm">
+                            <!-- Items will be added here -->
+                        </div>
+                    </div>
+                    <div class="border-t border-gray-300 pt-3">
+                        <div class="flex justify-between font-medium">
+                            <span>Total Amount:</span>
+                            <span id="receiptTotalAmount">KSh 0.00</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span>Amount Paid:</span>
+                            <span id="receiptAmountPaid">KSh 0.00</span>
+                        </div>
+                        <div class="flex justify-between font-bold border-t border-gray-300 mt-2 pt-2">
+                            <span>Balance:</span>
+                            <span id="receiptBalance">KSh 0.00</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="mt-6 flex justify-end gap-3">
+                    <button type="button" id="cancelPrint"
+                        class="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors">
+                        Cancel
+                    </button>
+                    <button type="button" id="printReceiptBtn"
+                        class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
+                        <i class="fas fa-print mr-2"></i> Print Receipt
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Payment Complete Modal (Completed the missing part) -->
+    <div id="paymentCompleteModal"
+        class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        <div class="bg-white rounded-xl shadow-xl w-full max-w-md">
+            <div class="p-6 border-b border-gray-200">
+                <h2 class="text-xl font-bold text-gray-900">Complete Payment</h2>
+                <button type="button" id="closePaymentModal"
+                    class="absolute top-6 right-6 text-gray-400 hover:text-gray-600">
+                    <i class="fas fa-times text-xl"></i>
+                </button>
+            </div>
+            <div class="p-6">
+                <div class="mb-4">
+                    <p class="text-gray-700 mb-4">Are you sure you want to mark this payment as complete? This will add
+                        the remaining balance to the amount paid.</p>
+                    <input type="hidden" id="completePaymentOrderCode">
+                    <input type="hidden" id="completePaymentCSRF" value="{{ csrf_token }}">
+                </div>
+                <div class="flex justify-end gap-3">
+                    <button type="button" id="cancelPaymentComplete"
+                        class="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors">
+                        Cancel
+                    </button>
+                    <button type="button" id="confirmPaymentComplete"
+                        class="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors">
+                        <i class="fas fa-check-circle mr-2"></i> Confirm Completion
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Delete Confirmation Modal (NEW for the order_delete view) -->
+    <div id="deleteConfirmationModal"
+        class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        <div class="bg-white rounded-xl shadow-xl w-full max-w-sm">
+            <div class="p-6">
+                <h2 class="text-xl font-bold text-red-600 mb-4">Confirm Deletion</h2>
+                <p class="text-gray-700 mb-6">You are about to delete order <span id="deleteOrderCodeDisplay"
+                        class="font-semibold text-gray-900"></span>. This action cannot be undone.</p>
+                <input type="hidden" id="deleteOrderCodeInput">
+                <div class="flex justify-end gap-3">
+                    <button type="button" id="cancelDelete"
+                        class="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors">
+                        Cancel
+                    </button>
+                    <button type="button" id="confirmDelete"
+                        class="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors">
+                        <i class="fas fa-trash-alt mr-2"></i> Delete Permanently
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast/Notification Container (for success/error messages) -->
+    <div id="toastContainer" class="fixed bottom-5 right-5 z-[100] space-y-3 pointer-events-none">
+    </div>
+
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            const tableBody = document.getElementById('ordersTableBody');
+            const loadingSpinner = document.getElementById('loadingSpinner');
+            const paginationContainer = document.getElementById('paginationContainer');
+            const searchInput = document.getElementById('searchInput');
+            const filterForm = document.getElementById('filterForm');
+            const shopFilter = document.getElementById('shopFilter');
+
+            // Delete Modal Elements
+            const deleteModal = document.getElementById('deleteConfirmationModal');
+            const deleteOrderCodeDisplay = document.getElementById('deleteOrderCodeDisplay');
+            const deleteOrderCodeInput = document.getElementById('deleteOrderCodeInput');
+            const confirmDeleteBtn = document.getElementById('confirmDelete');
+            const cancelDeleteBtn = document.getElementById('cancelDelete');
+
+            let currentPage = 1;
+            let currentSearch = '';
+            let currentPaymentStatus = '';
+            let currentShop = '';
+            let currentAction = ''; // For future bulk actions
+
+            // --- Utility Functions ---
+
+            // Function to show custom toasts (notifications)
+            function showToast(message, type = 'success') {
+                const toast = document.createElement('div');
+                toast.className = `p-4 rounded-lg shadow-xl text-white font-medium transition-all duration-300 transform translate-x-0 opacity-100 pointer-events-auto`;
+                let bgColor = 'bg-green-500';
+                let icon = 'fa-check-circle';
+
+                if (type === 'error') {
+                    bgColor = 'bg-red-500';
+                    icon = 'fa-exclamation-triangle';
+                } else if (type === 'warning') {
+                    bgColor = 'bg-amber-500';
+                    icon = 'fa-exclamation-circle';
+                }
+
+                toast.classList.add(bgColor);
+                toast.innerHTML = `<div class="flex items-center"><i class="fas ${icon} mr-2"></i><span>${message}</span></div>`;
+
+                document.getElementById('toastContainer').appendChild(toast);
+
+                setTimeout(() => {
+                    toast.classList.add('opacity-0');
+                    toast.addEventListener('transitionend', () => toast.remove());
+                }, 4000);
+            }
+
+            // Function to generate status badges
+            function getStatusBadge(status) {
+                let colorClass = '';
+                switch (status) {
+                    case 'pending':
+                        colorClass = 'bg-amber-100 text-amber-700';
+                        break;
+                    case 'processing':
+                        colorClass = 'bg-blue-100 text-blue-700';
+                        break;
+                    case 'Completed':
+                        colorClass = 'bg-green-100 text-green-700';
+                        break;
+                    case 'Delivered_picked':
+                        colorClass = 'bg-purple-100 text-purple-700';
+                        break;
+                    case 'partial':
+                        colorClass = 'bg-yellow-100 text-yellow-700';
+                        break;
+                    case 'completed':
+                        colorClass = 'bg-green-100 text-green-700';
+                        break;
+                    default:
+                        colorClass = 'bg-gray-100 text-gray-700';
+                }
+                return `<span class="px-2.5 py-0.5 inline-flex text-xs leading-5 font-semibold rounded-full ${colorClass}">${status.replace('_', ' ')}</span>`;
+            }
+
+            // --- Order Deletion Logic ---
+
+            function openDeleteModal(orderCode) {
+                deleteOrderCodeDisplay.textContent = orderCode;
+                deleteOrderCodeInput.value = orderCode;
+                deleteModal.classList.remove('hidden');
+            }
+
+            function closeDeleteModal() {
+                deleteModal.classList.add('hidden');
+                deleteOrderCodeDisplay.textContent = '';
+                deleteOrderCodeInput.value = '';
+            }
+
+            // Event listener for the table body to delegate delete button clicks
+            tableBody.addEventListener('click', function (e) {
+                const deleteBtn = e.target.closest('.delete-btn');
+                if (deleteBtn) {
+                    const orderCode = deleteBtn.dataset.code;
+                    openDeleteModal(orderCode);
+                }
+            });
+
+            // Handle confirm delete click
+            confirmDeleteBtn.addEventListener('click', function () {
+                const orderCode = deleteOrderCodeInput.value;
+                if (orderCode) {
+                    deleteOrder(orderCode);
+                }
+                closeDeleteModal();
+            });
+
+            // Handle cancel delete click
+            cancelDeleteBtn.addEventListener('click', closeDeleteModal);
+
+            async function deleteOrder(orderCode) {
+                const csrfToken = document.querySelector('[name="csrfmiddlewaretoken"]').value;
+                const deleteUrl = `/laundry/order/delete/${orderCode}/`; // Assuming this is the Django URL pattern
+
+                loadingSpinner.classList.remove('hidden');
+
+                try {
+                    const response = await fetch(deleteUrl, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRFToken': csrfToken,
+                            'X-Requested-With': 'XMLHttpRequest' // Match the check in your Django view
+                        },
+                    });
+
+                    const data = await response.json();
+                    loadingSpinner.classList.add('hidden');
+
+                    if (response.ok && data.success) {
+                        showToast(data.message, 'success');
+                        // Reload data to reflect the deletion
+                        fetchOrders();
+                    } else {
+                        // Handle server-side errors (400, 403, 404, 500)
+                        showToast(data.message || 'Failed to delete order.', 'error');
+                    }
+                } catch (error) {
+                    loadingSpinner.classList.add('hidden');
+                    console.error('Network or parsing error:', error);
+                    showToast('A network error occurred. Please try again.', 'error');
+                }
+            }
+
+
+            // --- Rendering Functions ---
+
+            function renderOrders(orders) {
+                tableBody.innerHTML = '';
+                if (orders.length === 0) {
+                    tableBody.innerHTML = '<tr><td colspan="13" class="text-center py-6 text-gray-500">No orders found matching the current filters.</td></tr>';
+                    return;
+                }
+
+                orders.forEach(order => {
+                    const row = document.createElement('tr');
+                    row.className = 'hover:bg-gray-50 transition-colors';
+                    row.innerHTML = `
+                        <td class="py-4 px-4 text-center">
+                            <input type="checkbox" data-code="${order.uniquecode}"
+                                class="h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500 order-checkbox">
+                        </td>
+                        <td class="py-4 px-4 text-sm font-medium text-gray-900">${order.uniquecode}</td>
+                        <td class="py-4 px-4">
+                            <div class="text-sm font-medium text-gray-900">${order.customer.name}</div>
+                            <div class="text-xs text-gray-500">${order.customer.phone}</div>
+                        </td>
+                        <td class="py-4 px-4 text-sm text-gray-700">${order.servicetype}</td>
+                        <td class="py-4 px-4 text-sm text-gray-700">${order.itemname}</td>
+                        <td class="py-4 px-4 text-sm text-gray-700">${order.total_items}</td>
+                        <td class="py-4 px-4 text-sm text-gray-700">${order.condition}</td>
+                        <td class="py-4 px-4 text-sm text-green-600 font-semibold">KSh ${order.amount_paid.toFixed(2)}</td>
+                        <td class="py-4 px-4 text-sm text-red-600 font-semibold">KSh ${order.balance.toFixed(2)}</td>
+                        <td class="py-4 px-4 text-sm text-blue-600 font-semibold">KSh ${order.total_price.toFixed(2)}</td>
+                        <td class="py-4 px-4 text-sm">${getStatusBadge(order.order_status)}</td>
+                        <td class="py-4 px-4 text-sm">${getStatusBadge(order.payment_status)}</td>
+                        <td class="py-4 px-4 text-sm whitespace-nowrap">
+                            <div class="flex gap-2">
+                                <button title="Edit Order" data-code="${order.uniquecode}" class="text-blue-600 hover:text-blue-800 transition-colors">
+                                    <i class="fas fa-edit"></i>
+                                </button>
+                                <button title="Print Receipt" data-code="${order.uniquecode}" class="text-gray-600 hover:text-gray-800 transition-colors">
+                                    <i class="fas fa-receipt"></i>
+                                </button>
+                                <button title="Delete Order" data-code="${order.uniquecode}" class="text-red-600 hover:text-red-800 transition-colors delete-btn">
+                                    <i class="fas fa-trash-alt"></i>
+                                </button>
+                            </div>
+                        </td>
+                    `;
+                    tableBody.appendChild(row);
+                });
+            }
+
+            function updateStats(stats) {
+                document.getElementById('totalOrders').textContent = stats.total_active_orders || '0';
+                document.getElementById('pendingOrders').textContent = stats.total_pending_orders || '0';
+                document.getElementById('completedOrders').textContent = stats.total_completed_orders || '0';
+            }
+
+            function renderPagination(pagination) {
+                paginationContainer.innerHTML = '';
+                if (!pagination.has_other_pages) return;
+
+                const pages = [];
+                const maxPagesToShow = 5;
+                const numPages = pagination.num_pages;
+                let startPage = Math.max(1, pagination.number - Math.floor(maxPagesToShow / 2));
+                let endPage = Math.min(numPages, startPage + maxPagesToShow - 1);
+
+                if (endPage - startPage + 1 < maxPagesToShow) {
+                    startPage = Math.max(1, endPage - maxPagesToShow + 1);
+                }
+
+                if (pagination.has_previous) {
+                    pages.push({ number: pagination.number - 1, label: '<i class="fas fa-chevron-left"></i>' });
+                }
+
+                for (let i = startPage; i <= endPage; i++) {
+                    pages.push({ number: i, label: i });
+                }
+
+                if (pagination.has_next) {
+                    pages.push({ number: parseInt(pagination.number) + 1, label: '<i class="fas fa-chevron-right"></i>' });
+                }
+
+                const nav = document.createElement('nav');
+                nav.className = 'flex items-center justify-between';
+
+                const pageText = document.createElement('p');
+                pageText.className = 'text-sm text-gray-700';
+                pageText.innerHTML = `Showing <span class="font-medium">${pagination.start_index}</span> to <span class="font-medium">${pagination.end_index}</span> of <span class="font-medium">${pagination.count}</span> results`;
+                nav.appendChild(pageText);
+
+                const ul = document.createElement('ul');
+                ul.className = 'inline-flex items-center -space-x-px';
+
+                pages.forEach(page => {
+                    const li = document.createElement('li');
+                    const isCurrent = page.number == pagination.number;
+
+                    const btn = document.createElement('button');
+                    btn.type = 'button';
+                    btn.dataset.page = page.number;
+                    btn.className = `px-3 py-2 leading-tight border border-gray-300 transition-colors text-sm ${isCurrent ? 'bg-blue-600 text-white hover:bg-blue-700' : 'bg-white text-gray-500 hover:bg-gray-100'}`;
+                    btn.innerHTML = page.label;
+                    btn.disabled = isCurrent;
+
+                    li.appendChild(btn);
+                    ul.appendChild(li);
+                });
+
+                nav.appendChild(ul);
+                paginationContainer.appendChild(nav);
+
+                // Add event listener for pagination buttons
+                ul.querySelectorAll('button').forEach(button => {
+                    button.addEventListener('click', function () {
+                        currentPage = this.dataset.page;
+                        fetchOrders();
+                    });
+                });
+            }
+
+            // --- Main Fetch Function ---
+
+            async function fetchOrders() {
+                loadingSpinner.classList.remove('hidden');
+                tableBody.innerHTML = ''; // Clear table while loading
+
+                const params = new URLSearchParams();
+                if (currentSearch) params.append('search', currentSearch);
+                if (currentPaymentStatus) params.append('payment_status', currentPaymentStatus);
+                if (currentShop) params.append('shop', currentShop);
+                if (currentPage) params.append('page', currentPage);
+
+                // Note: The URL is inferred from the view name 'laundry:customordertable' usually mapping to an index view.
+                const url = `{% url 'laundry:customordertable' %}?${params.toString()}`;
+
+                try {
+                    const response = await fetch(url, {
+                        headers: {
+                            'X-Requested-With': 'XMLHttpRequest'
+                        }
+                    });
+
+                    if (!response.ok) {
+                        throw new Error(`HTTP error! status: ${response.status}`);
+                    }
+
+                    const data = await response.json();
+
+                    if (data.success) {
+                        renderOrders(data.orders);
+                        updateStats(data.stats);
+                        renderPagination(data.pagination);
+                        // Optional: Update shop filter options dynamically here if needed
+                    } else {
+                        showToast(data.message || 'Error fetching orders.', 'error');
+                        tableBody.innerHTML = '<tr><td colspan="13" class="text-center py-6 text-red-500">Error loading data.</td></tr>';
+                    }
+                } catch (error) {
+                    console.error('Fetch error:', error);
+                    showToast('Could not connect to server.', 'error');
+                    tableBody.innerHTML = '<tr><td colspan="13" class="text-center py-6 text-red-500">Network error or invalid response.</td></tr>';
+                } finally {
+                    loadingSpinner.classList.add('hidden');
+                }
+            }
+
+
+            // --- Event Listeners for Filters/Search ---
+
+            // Search input handler (with debounce for performance)
+            let searchTimeout;
+            searchInput.addEventListener('input', function () {
+                clearTimeout(searchTimeout);
+                searchTimeout = setTimeout(() => {
+                    currentSearch = this.value.trim();
+                    currentPage = 1; // Reset to first page on new search
+                    fetchOrders();
+                }, 300); // 300ms debounce
+            });
+
+            // Payment status filter handler
+            document.querySelectorAll('.payment-filter').forEach(button => {
+                button.addEventListener('click', function () {
+                    document.querySelectorAll('.payment-filter').forEach(btn => {
+                        btn.classList.remove('active-filter', 'bg-blue-100', 'text-blue-700');
+                        btn.classList.add('bg-gray-100', 'text-gray-700');
+                    });
+
+                    this.classList.add('active-filter', 'bg-blue-100', 'text-blue-700');
+                    this.classList.remove('bg-gray-100', 'text-gray-700');
+
+                    currentPaymentStatus = this.dataset.payment;
+                    currentPage = 1;
+                    fetchOrders();
+                });
+            });
+
+            // Shop filter handler
+            shopFilter.addEventListener('change', function () {
+                currentShop = this.value;
+                currentPage = 1;
+                fetchOrders();
+            });
+
+            // --- Initialization ---
+
+            // Initial fetch of orders
+            fetchOrders();
+        });
+    </script>
+</body>
+
+</html>
+{% endblock content %}

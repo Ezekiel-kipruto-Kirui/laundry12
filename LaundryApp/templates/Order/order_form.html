@@ -68,7 +68,7 @@
                 </div>
 
                 <div>
-                    <label class="block text-sm font-medium text-gray-700">Address</label>
+                    <label class="block text-sm font-medium text-gray-700">Address/Estate</label>
                     <input id="address" name="address" type="text"
                         class="mt-2 w-full rounded-lg border border-gray-300 bg-gray-50 focus:bg-white focus:border-blue-500 focus:ring-2 focus:ring-blue-200 p-3 transition duration-150" />
                 </div>
@@ -80,7 +80,7 @@
                     </button>
                 </div>
             </form>
-            </div>
+        </div>
 
         <!-- Step 2: Order Details -->
         <div id="step-order-details" class="hidden">
@@ -106,14 +106,14 @@
                     {% endif %}
 
                     <div>
-                        <label class="block text-sm font-medium text-gray-700">Delivery Date</label>
+                        <label class="block text-sm font-medium text-gray-700">Delivery/Picked Date</label>
                         <input id="delivery_date" name="delivery_date" type="date" required
                             class="mt-2 w-full rounded-lg border border-gray-300 bg-gray-50 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 p-3" />
                     </div>
                 </div>
 
                 <div>
-                    <label class="block text-sm font-medium text-gray-700">Address Details (Optional)</label>
+                    <label class="block text-sm font-medium text-gray-700">Delivery/Pick Address </label>
                     <textarea id="addressdetails" name="addressdetails" rows="2"
                         class="mt-2 w-full rounded-lg border border-gray-300 bg-gray-50 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 p-3"></textarea>
                 </div>
@@ -127,8 +127,8 @@
                         class="px-6 py-2.5 rounded-lg bg-blue-600 text-white font-medium hover:bg-blue-700 hover:shadow transition duration-200">
                         Next →
                     </button>
-                    </div>
-                    </form>
+                </div>
+            </form>
         </div>
 
         <!-- Step 3: Items -->
@@ -156,7 +156,7 @@
                     </button>
                 </div>
             </div>
-            </div>
+        </div>
 
         <!-- Step 4: Payment -->
         <div id="step-payment" class="hidden">
@@ -183,7 +183,7 @@
                         <input id="amount_paid" name="amount_paid" type="number" step="0.01" min="0" value="0"
                             class="mt-2 w-full rounded-lg border border-gray-300 bg-gray-50 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 p-3" />
                     </div>
-                    </div>
+                </div>
 
                 <!-- Totals -->
                 <div class="grid grid-cols-2 gap-4 mt-6">
@@ -210,7 +210,7 @@
                     </button>
                 </div>
             </form>
-            </div>
+        </div>
 
         <!-- Modal: existing customer found -->
         <div id="customerModal"
@@ -218,82 +218,85 @@
             <div class="bg-white rounded-xl shadow-lg p-6 w-full max-w-md mx-auto ">
                 <div>
                     <h3 class="text-xl font-semibold text-gray-800 mb-3">Customer Found</h3>
-                    <p class="text-sm text-gray-600 mb-4">A customer with this phone already exists. Select to use existing
+                    <p class="text-sm text-gray-600 mb-4">A customer with this phone already exists. Select to use
+                        existing
                         or
                         create new.</p>
 
-                <div id="foundCustomerInfo" class="space-y-1 text-sm text-gray-800 border rounded-lg p-3 bg-gray-50">
-                </div>
+                    <div id="foundCustomerInfo"
+                        class="space-y-1 text-sm text-gray-800 border rounded-lg p-3 bg-gray-50">
+                    </div>
                 </div>
 
                 <div class="p-4 grid grid-cols-2 gap-4 m-4">
-                    <button id="useExistingBtn" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md transition">Use
+                    <button id="useExistingBtn"
+                        class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md transition">Use
                         This
                         Customer</button>
-                    <button id="createNewBtn" class="bg-gray-200 hover:bg-gray-300 px-4 py-2 rounded-md transition">Create
+                    <button id="createNewBtn"
+                        class="bg-gray-200 hover:bg-gray-300 px-4 py-2 rounded-md transition">Create
                         New</button>
                 </div>
             </div>
-            </div>
+        </div>
 
         <!-- Notifications -->
-        <div id="toast" class="fixed bottom-6 right-6 hidden bg-gray-900 text-white px-4 py-2 rounded-lg shadow-lg text-sm">
+        <div id="toast"
+            class="fixed bottom-6 right-6 hidden bg-gray-900 text-white px-4 py-2 rounded-lg shadow-lg text-sm">
         </div>
     </div>
 
     <script>
-
-
-            // CSRF helper
-            function getCookie(name) {
-                let cookieValue = null;
-                if (document.cookie && document.cookie !== '') {
-                    const cookies = document.cookie.split(';');
-                    for (let i = 0; i < cookies.length; i++) {
-                        const cookie = cookies[i].trim();
-                        if (cookie.substring(0, name.length + 1) === (name + '=')) {
-                            cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
-                            break;
-                        }
+        // CSRF helper
+        function getCookie(name) {
+            let cookieValue = null;
+            if (document.cookie && document.cookie !== '') {
+                const cookies = document.cookie.split(';');
+                for (let i = 0; i < cookies.length; i++) {
+                    const cookie = cookies[i].trim();
+                    if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                        break;
                     }
                 }
-                    return cookieValue;
-                }
-                const csrftoken = getCookie('csrftoken');
-
-            // UI helpers
-            function showToast(msg) {
-                const t = document.getElementById('toast');
-                t.textContent = msg;
-                t.classList.remove('hidden');
-                setTimeout(() => t.classList.add('hidden'), 3000);
             }
+            return cookieValue;
+        }
+        const csrftoken = getCookie('csrftoken');
 
-            function updateProgressSteps(currentStep) {
-                const steps = [1, 2, 3, 4];
-                steps.forEach(step => {
-                    const indicator = document.getElementById(`step${step}-indicator`);
-                    const isCompleted = step < currentStep;
-                    const isCurrent = step === currentStep;
+        // UI helpers
+        function showToast(msg) {
+            const t = document.getElementById('toast');
+            t.textContent = msg;
+            t.classList.remove('hidden');
+            setTimeout(() => t.classList.add('hidden'), 3000);
+        }
 
-                    if (isCompleted) {
-                        indicator.className = 'w-8 h-8 rounded-full bg-green-500 text-white flex items-center justify-center font-semibold';
-                        indicator.textContent = '✓';
-                    } else if (isCurrent) {
-                        indicator.className = 'w-8 h-8 rounded-full bg-blue-600 text-white flex items-center justify-center font-semibold';
-                        indicator.textContent = step;
-                    } else {
-                        indicator.className = 'w-8 h-8 rounded-full bg-gray-300 text-gray-600 flex items-center justify-center font-semibold';
-                        indicator.textContent = step;
-                    }
+        function updateProgressSteps(currentStep) {
+            const steps = [1, 2, 3, 4];
+            steps.forEach(step => {
+                const indicator = document.getElementById(`step${step}-indicator`);
+                const isCompleted = step < currentStep;
+                const isCurrent = step === currentStep;
+
+                if (isCompleted) {
+                    indicator.className = 'w-8 h-8 rounded-full bg-green-500 text-white flex items-center justify-center font-semibold';
+                    indicator.textContent = '✓';
+                } else if (isCurrent) {
+                    indicator.className = 'w-8 h-8 rounded-full bg-blue-600 text-white flex items-center justify-center font-semibold';
+                    indicator.textContent = step;
+                } else {
+                    indicator.className = 'w-8 h-8 rounded-full bg-gray-300 text-gray-600 flex items-center justify-center font-semibold';
+                    indicator.textContent = step;
+                }
             });
         }
 
-            function showStep(stepNumber) {
-                document.getElementById('step-customer').classList.add('hidden');
-                document.getElementById('step-order-details').classList.add('hidden');
-                document.getElementById('step-items').classList.add('hidden');
-                document.getElementById('step-payment').classList.add('hidden');
+        function showStep(stepNumber) {
+            document.getElementById('step-customer').classList.add('hidden');
+            document.getElementById('step-order-details').classList.add('hidden');
+            document.getElementById('step-items').classList.add('hidden');
+            document.getElementById('step-payment').classList.add('hidden');
 
             switch (stepNumber) {
                 case 1:
@@ -312,25 +315,26 @@
             updateProgressSteps(stepNumber);
         }
 
-            // Elements
-            const customerForm = document.getElementById('customerForm');
-            const orderDetailsForm = document.getElementById('orderDetailsForm');
-            const paymentForm = document.getElementById('paymentForm');
-            const customerModal = document.getElementById('customerModal');
-            const foundCustomerInfo = document.getElementById('foundCustomerInfo');
-            const useExistingBtn = document.getElementById('useExistingBtn');
-            const createNewBtn = document.getElementById('createNewBtn');
-            const customerIdInput = document.getElementById('customer_id');
+        // Elements
+        const customerForm = document.getElementById('customerForm');
+        const orderDetailsForm = document.getElementById('orderDetailsForm');
+        const paymentForm = document.getElementById('paymentForm');
+        const customerModal = document.getElementById('customerModal');
+        const foundCustomerInfo = document.getElementById('foundCustomerInfo');
+        const useExistingBtn = document.getElementById('useExistingBtn');
+        const createNewBtn = document.getElementById('createNewBtn');
+        const customerIdInput = document.getElementById('customer_id');
 
-            let lastFoundCustomer = null;
+        let lastFoundCustomer = null;
 
-            // Step navigation
-            document.getElementById('backToOrderDetails').addEventListener('click', () => showStep(2));
-            document.getElementById('backToItems').addEventListener('click', () => showStep(3));
+        // Step navigation
+        document.getElementById('backToCustomer').addEventListener('click', () => showStep(1));
+        document.getElementById('backToOrderDetails').addEventListener('click', () => showStep(2));
+        document.getElementById('backToItems').addEventListener('click', () => showStep(3));
 
-            // Customer form submission
-            customerForm.addEventListener('submit', async (e) => {
-                e.preventDefault();
+        // Customer form submission
+        customerForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
 
             const rawphone = document.getElementById('phone').value.trim();
             const name = document.getElementById('name').value.trim();
@@ -390,30 +394,34 @@
             }
         });
 
-            useExistingBtn.addEventListener('click', () => {
-                if (!lastFoundCustomer) return;
-                customerIdInput.value = lastFoundCustomer.id;
-                customerModal.classList.add('hidden');
-                customerModal.classList.remove('flex');
-                showStep(2);
-                showToast('Using existing customer');
-            });
+        useExistingBtn.addEventListener('click', () => {
+            if (!lastFoundCustomer) return;
+            customerIdInput.value = lastFoundCustomer.id;
+            customerModal.classList.add('hidden');
+            customerModal.classList.remove('flex');
+            showStep(2);
+            showToast('Using existing customer');
+        });
 
-            createNewBtn.addEventListener('click', () => {
-                customerModal.classList.add('hidden');
-                customerModal.classList.remove('flex');
-                showToast('To create a new customer, change the phone number.');
-            });
+        createNewBtn.addEventListener('click', () => {
+            customerModal.classList.add('hidden');
+            customerModal.classList.remove('flex');
+            showToast('To create a new customer, change the phone number.');
+        });
 
-            // Order details form submission
-            orderDetailsForm.addEventListener('submit', (e) => {
-                e.preventDefault();
-                '{% if user.is_superuser %}'
-                const shop = document.getElementById('shop').value;
-                 '{% elif not user.is_superuser%}'
-                shop = "{{ active_shop_name }}";
-                '{% endif %}'
-                const delivery_date = document.getElementById('delivery_date').value;
+        // Order details form submission
+        orderDetailsForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+
+            // Get shop value based on user type
+            let shop;
+            '{% if not active_shop_name %}'
+            shop = document.getElementById('shop').value;
+            '{% else %}'
+            shop = "{{ active_shop_name }}";
+            '{% endif %}'
+
+            const delivery_date = document.getElementById('delivery_date').value;
 
             if (!shop || !delivery_date) {
                 showToast('Please fill all required fields');
@@ -423,12 +431,12 @@
             showStep(3);
         });
 
-            // Items step navigation
-            document.getElementById('itemsNext').addEventListener('click', () => {
-                const itemRows = itemsContainer.querySelectorAll('.item-row');
-                if (itemRows.length === 0) {
-                    showToast('Please add at least one item');
-                    return;
+        // Items step navigation
+        document.getElementById('itemsNext').addEventListener('click', () => {
+            const itemRows = itemsContainer.querySelectorAll('.item-row');
+            if (itemRows.length === 0) {
+                showToast('Please add at least one item');
+                return;
             }
 
             // Validate items
@@ -446,38 +454,39 @@
             }
         });
 
-            // --- Order items dynamic logic ---
-            const addItemBtn = document.getElementById('addItemBtn');
-            const itemsContainer = document.getElementById('itemsContainer');
-            const totalPriceInput = document.getElementById('total_price');
-            const balanceInput = document.getElementById('balance');
-            const amountPaidInput = document.getElementById('amount_paid');
+        // --- Order items dynamic logic ---
+        const addItemBtn = document.getElementById('addItemBtn');
+        const itemsContainer = document.getElementById('itemsContainer');
+        const totalPriceInput = document.getElementById('total_price');
+        const balanceInput = document.getElementById('balance');
+        const amountPaidInput = document.getElementById('amount_paid');
 
-            function computeTotals() {
-                let total = 0;
-                const itemRows = itemsContainer.querySelectorAll('.item-row');
-                itemRows.forEach(row => {
-                    const qty = parseFloat(row.querySelector('.item-quantity').value) || 0;
-                    const unit = parseFloat(row.querySelector('.item-unit_price').value) || 0;
-                    row.querySelector('.item-line-total').textContent = unit;
-                    total += parseFloat(lineTotal);
-                });
-                totalPriceInput.value = total.toFixed(2);
-                const paid = parseFloat(amountPaidInput.value) || 0;
-                const balance = Math.max(0, total - paid);
-                balanceInput.value = balance.toFixed(2);
-            }
+        function computeTotals() {
+            let total = 0;
+            const itemRows = itemsContainer.querySelectorAll('.item-row');
+            itemRows.forEach(row => {
+                const qty = parseFloat(row.querySelector('.item-quantity').value) || 0;
+                const unit = parseFloat(row.querySelector('.item-unit_price').value) || 0;
+                const lineTotal = (qty * unit);
+                row.querySelector('.item-line-total').textContent = lineTotal.toFixed(2);
+                total += lineTotal;
+            });
+            totalPriceInput.value = total.toFixed(2);
+            const paid = parseFloat(amountPaidInput.value) || 0;
+            const balance = Math.max(0, total - paid);
+            balanceInput.value = balance.toFixed(2);
+        }
 
-            function createItemRow() {
-                const serviceOptions = [
-                    { value: 'Washing', label: 'Washing' },
-                    { value: 'Folding', label: 'Folding' },
-                    { value: 'Ironing', label: 'Ironing' },
-                    { value: 'Dry cleaning', label: 'Dry cleaning' }
-                ];
+        function createItemRow() {
+            const serviceOptions = [
+                { value: 'Washing', label: 'Washing' },
+                { value: 'Folding', label: 'Folding' },
+                { value: 'Ironing', label: 'Ironing' },
+                { value: 'Dry cleaning', label: 'Dry cleaning' }
+            ];
 
-                const itemTypeOptions = ['Clothing', 'Bedding', 'Household items', 'Footwares'];
-                const itemConditionOptions = ['new', 'Old', 'Torn'];
+            const itemTypeOptions = ['Clothing', 'Bedding', 'Household items', 'Footwares'];
+            const itemConditionOptions = ['new', 'Old', 'Torn'];
 
             const wrapper = document.createElement('div');
             wrapper.className = 'item-row border rounded p-3 bg-gray-50';
@@ -590,25 +599,32 @@
             computeTotals();
         }
 
-            addItemBtn.addEventListener('click', () => createItemRow());
-            createItemRow(); // start with one item
-            amountPaidInput.addEventListener('input', computeTotals);
+        addItemBtn.addEventListener('click', () => createItemRow());
+        createItemRow(); // start with one item
+        amountPaidInput.addEventListener('input', computeTotals);
 
-            // Final order submission
-            paymentForm.addEventListener('submit', async (e) => {
-                e.preventDefault();
-                const customerId = customerIdInput.value;
-                if (!customerId) { showToast('No customer selected'); return; }
-               let shopvalue 
-        '{% if user.is_superuser %} '
-            const shop = document.getElementById('shop').value;
-             '{% elif not user.is_superuser%}'
-                 shop = "{{ active_shop_name }}";
-                '{% endif %}'
+        // Final order submission
+        paymentForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const customerId = customerIdInput.value;
+            if (!customerId) {
+                showToast('No customer selected');
+                return;
+            }
+
+            // Get shop value based on user type
+            let shop;
+            '{% if not active_shop_name %}'
+            shop = document.getElementById('shop').value;
+            '{% else %}'
+            shop = "{{ active_shop_name }}";
+            '{% endif %}'
+
             const payment_type = document.getElementById('payment_type').value;
             const delivery_date = document.getElementById('delivery_date').value;
             const addressdetails = document.getElementById('addressdetails').value;
             const amount_paid = parseFloat(document.getElementById('amount_paid').value) || 0;
+            const total_price = parseFloat(document.getElementById('total_price').value) || 0;
 
             if (!shop || !payment_type || !delivery_date) {
                 showToast('Fill required order fields');
@@ -645,7 +661,7 @@
                 }
 
                 items.push({
-                    servicetype: selectedServices.join(','),
+                    servicetype: selectedServices,
                     itemtype,
                     itemname,
                     quantity,
@@ -663,8 +679,11 @@
                 delivery_date,
                 addressdetails,
                 amount_paid,
+                total_price,
                 items
             };
+
+            console.log('Submitting payload:', payload); // Debug log
 
             try {
                 const resp = await fetch('/Laundry/api/orders/create/', {
@@ -677,9 +696,13 @@
                 });
 
                 const data = await resp.json();
+                console.log('Response:', data); // Debug log
+
                 if (resp.ok) {
                     showToast('Order created successfully');
-                    setTimeout(() => location.reload(), 1000);
+                    setTimeout(() => {
+                        window.location.href = "{% url 'laundry:customordertable' %}"; // Redirect to orders list
+                    }, 1000);
                 } else {
                     console.error('Error response:', data);
                     let errMsg = 'Order creation failed';
@@ -688,8 +711,10 @@
                             errMsg = Object.entries(data.errors).map(([k, v]) => `${k}: ${v}`).join(' | ');
                         } else if (data.non_field_errors) {
                             errMsg = data.non_field_errors.join(' | ');
+                        } else if (data.detail) {
+                            errMsg = data.detail;
                         } else {
-                            errMsg = Object.entries(data).map(([k, v]) => `${k}: ${v}`).join(' | ');
+                            errMsg = JSON.stringify(data);
                         }
                     } else if (data && data.message) {
                         errMsg = data.message;
@@ -698,13 +723,14 @@
                 }
             } catch (err) {
                 console.error('Network error:', err);
-                showToast('Network error when creating order');
+                showToast('Network error when creating order: ' + err.message);
             }
         });
 
-            // Initialize first step
-            showStep(1);
+        // Initialize first step
+        showStep(1);
     </script>
 </body>
+
 </html>
 {% endblock %}

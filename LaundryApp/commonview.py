@@ -7,6 +7,8 @@ from .models import shoptype
 
 
 def select_shop(request):
+    if request.user.is_superuser:
+        return redirect('laundry:dashboard')
     if request.method == "POST":
         shop_id = request.POST.get("shop")
         if shoptype.objects.filter(id=shop_id).exists():

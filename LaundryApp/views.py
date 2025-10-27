@@ -361,6 +361,7 @@ def serialize_order_for_json(order):
             'payment_status': order.payment_status,
             'shop': order.shop,
             'created_at': order.created_at.strftime('%Y-%m-%d %H:%M') if order.created_at else '',
+            #'created_by':order.created_by
         }
 
         # Serialize items
@@ -379,6 +380,7 @@ def serialize_order_for_json(order):
     except Exception as e:
         logger.error(f"Error serializing order {order.id}: {str(e)}")
         raise OrderManagerError(f"Failed to serialize order data: {str(e)}")
+
 
 def validate_date_range(from_date_str, to_date_str):
     """Validate and parse date range parameters"""
@@ -535,9 +537,11 @@ def customordertable(request):
     # Check if it's an AJAX request for data loading (but not export)
     if request.headers.get('x-requested-with') == 'XMLHttpRequest':
         return handle_ajax_request(request)
-    
+   
     # For initial page load, return basic context
     context = {
+
+        
         'order_status_choices': Order.ORDER_STATUS_CHOICES,
         'payment_status_choices': Order.PAYMENT_STATUS_CHOICES,
         'today': timezone.now().date(),
@@ -649,6 +653,8 @@ def handle_ajax_request(request):
             'error': 'Internal server error',
             'message': 'An unexpected error occurred'
         }, status=500)
+
+
 
 @login_required
 @shop_required
@@ -1206,25 +1212,3 @@ def logout_view(request):
 
 # ==================== DEBUG VIEW ====================
 
-@login_required
-def debug_user_info(request):
-    """Temporary view to debug user permissions"""
-    user = request.user
-    user_profile = get_user_profile(user)
-    
-    debug_info = {
-        'user_id': user.id,
-        'email': user.email,
-        'is_superuser': user.is_superuser,
-        'is_staff': user.is_staff,
-        'has_userprofile': hasattr(user, 'userprofile'),
-        'user_type': getattr(user_profile, 'user_type', 'No profile') if user_profile else 'No profile',
-        'user_shops': get_user_shops(request),
-        'can_access_all_shops': can_access_all_shops(user),
-        'can_see_all_orders': can_see_all_orders(user),
-        'is_admin': is_admin(user),
-        'is_staff_user': is_staff(user),
-        'is_hotel_user': is_hotel_user(user),
-    }
-    
-    return JsonResponse(debug_info)

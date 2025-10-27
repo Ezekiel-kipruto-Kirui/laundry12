@@ -158,10 +158,12 @@ class Order(models.Model):
     total_price = models.DecimalField(max_digits=12, decimal_places=2, default=0, editable=False)
     balance = models.DecimalField(max_digits=12, decimal_places=2, default=0)
     created_at = models.DateTimeField(auto_now_add=True, db_index=True)
-    # created_by = models.CharField(max_length=20, db_index=True)
+    created_by = models.ForeignKey(Customer, on_delete=models.SET_NULL, null=True, blank=True)
+    
     previous_order_status = models.CharField(max_length=50, blank=True, null=True)
 
     def save(self, *args, **kwargs):
+
         with transaction.atomic():
             if not self.uniquecode:
                 prefix = "ORD"
@@ -173,7 +175,7 @@ class Order(models.Model):
                         break
                 else:
                     raise IntegrityError("Could not generate unique order code.")
-
+            
             # Set payment status
             if self.amount_paid == 0:
                 self.payment_status = 'pending'
