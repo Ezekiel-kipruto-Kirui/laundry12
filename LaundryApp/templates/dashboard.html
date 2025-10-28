@@ -1,487 +1,183 @@
 {% extends "base.html" %}
 {% load static %}
 
-
-
-{% block extrahead %}
-<style>
-    :root {
-        --primary: #4f46e5;
-        --primary-light: #6366f1;
-        --primary-dark: #4338ca;
-        --success: #10b981;
-        --warning: #f59e0b;
-        --info: #3b82f6;
-        --danger: #ef4444;
-        --secondary: #8b5cf6;
-        --gray-50: #f9fafb;
-        --gray-100: #f3f4f6;
-        --gray-200: #e5e7eb;
-        --gray-300: #d1d5db;
-        --gray-700: #374151;
-        --gray-900: #111827;
-    }
-
-    .dashboard-container {
-        
-        margin: 0 auto;
-        padding: 1.5rem 1rem;
-    }
-
-    .stats-grid {
-        display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-        gap: 1.5rem;
-        margin-bottom: 2rem;
-    }
-
-    .stat-card {
-        background: white;
-        border-radius: 16px;
-        padding: 1.5rem;
-        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
-        transition: all 0.3s ease;
-        position: relative;
-        overflow: hidden;
-        border-left: 4px solid;
-        display: flex;
-        align-items: center;
-        height: 100%;
-    }
-
-    .stat-card:hover {
-        transform: translateY(-5px);
-        box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.08), 0 10px 10px -5px rgba(0, 0, 0, 0.02);
-    }
-
-    .stat-card::before {
-        content: '';
-        position: absolute;
-        top: 0;
-        left: 0;
-        right: 0;
-        height: 4px;
-        background: linear-gradient(90deg, rgba(255, 255, 255, 0.3) 0%, rgba(255, 255, 255, 0.1) 100%);
-    }
-
-    .stat-icon {
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        width: 60px;
-        height: 60px;
-        border-radius: 12px;
-        margin-right: 1rem;
-        flex-shrink: 0;
-    }
-
-    .stat-content {
-        flex: 1;
-    }
-
-    .stat-label {
-        font-size: 0.875rem;
-        font-weight: 500;
-        color: #6b7280;
-        margin-bottom: 0.25rem;
-    }
-
-    .stat-value {
-        font-size: 1.875rem;
-        font-weight: 700;
-        color: #1f2937;
-        line-height: 1;
-    }
-
-    .pending {
-        border-left-color: #f59e0b;
-    }
-
-    .pending .stat-icon {
-        background-color: rgba(245, 158, 11, 0.1);
-    }
-
-    .processing {
-        border-left-color: #3b82f6;
-    }
-
-    .processing .stat-icon {
-        background-color: rgba(59, 130, 246, 0.1);
-    }
-
-    .completed {
-        border-left-color: #10b981;
-    }
-
-    .completed .stat-icon {
-        background-color: rgba(16, 185, 129, 0.1);
-    }
-
-    .delivered {
-        border-left-color: #8b5cf6;
-    }
-
-    .delivered .stat-icon {
-        background-color: rgba(139, 92, 246, 0.1);
-    }
-
-    .cancelled {
-        border-left-color: #ef4444;
-    }
-
-    .cancelled .stat-icon {
-        background-color: rgba(239, 68, 68, 0.1);
-    }
-
-    .content-grid {
-        display: grid;
-        grid-template-columns: 1fr;
-        gap: 2rem;
-    }
-
-    @media (min-width: 1024px) {
-        .content-grid {
-            grid-template-columns: 1fr 2fr;
-        }
-    }
-
-    .card {
-        background: white;
-        border-radius: 16px;
-        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
-        overflow: hidden;
-    }
-
-    .card-header {
-        padding: 1.25rem 1.5rem;
-        border-bottom: 1px solid #f3f4f6;
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        background-color: #f9fafb;
-    }
-
-    .card-title {
-        font-size: 1.125rem;
-        font-weight: 600;
-        color: #111827;
-    }
-
-    .card-body {
-        padding: 0;
-    }
-
-    .quick-action {
-        display: flex;
-        align-items: center;
-        padding: 1rem 1.5rem;
-        transition: all 0.2s ease;
-        border-bottom: 1px solid #f9fafb;
-    }
-
-    .quick-action:last-child {
-        border-bottom: none;
-    }
-
-    .quick-action:hover {
-        background-color: #f9fafb;
-        transform: translateX(4px);
-    }
-
-    .quick-action-icon {
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        width: 40px;
-        height: 40px;
-        border-radius: 10px;
-        margin-right: 1rem;
-        flex-shrink: 0;
-    }
-
-    .quick-action-content {
-        flex: 1;
-    }
-
-    .quick-action-title {
-        font-size: 0.875rem;
-        font-weight: 500;
-        color: #111827;
-        margin-bottom: 0.25rem;
-    }
-
-    .quick-action-desc {
-        font-size: 0.75rem;
-        color: #6b7280;
-    }
-
-    .table-container {
-        overflow-x: auto;
-    }
-
-    table {
-        width: 100%;
-        border-collapse: separate;
-        border-spacing: 0;
-    }
-
-    th {
-        background-color: #f9fafb;
-        padding: 0.875rem 1.25rem;
-        text-align: left;
-        font-weight: 500;
-        color: #6b7280;
-        text-transform: uppercase;
-        font-size: 0.75rem;
-        letter-spacing: 0.05em;
-        white-space: nowrap;
-    }
-
-    td {
-        padding: 1rem 1.25rem;
-        border-bottom: 1px solid #f3f4f6;
-        white-space: nowrap;
-    }
-
-    tr:last-child td {
-        border-bottom: none;
-    }
-
-    .status-badge {
-        padding: 0.35rem 0.75rem;
-        border-radius: 9999px;
-        font-size: 0.75rem;
-        font-weight: 600;
-        display: inline-flex;
-        align-items: center;
-        white-space: nowrap;
-    }
-
-    .status-badge::before {
-        content: '';
-        display: inline-block;
-        width: 6px;
-        height: 6px;
-        border-radius: 50%;
-        margin-right: 4px;
-    }
-
-    .status-pending {
-        background-color: #fef3c7;
-        color: #d97706;
-    }
-
-    .status-pending::before {
-        background-color: #d97706;
-    }
-
-    .status-processing {
-        background-color: #dbeafe;
-        color: #1d4ed8;
-    }
-
-    .status-processing::before {
-        background-color: #1d4ed8;
-    }
-
-    .status-completed {
-        background-color: #d1fae5;
-        color: #065f46;
-    }
-
-    .status-completed::before {
-        background-color: #065f46;
-    }
-
-    .status-delivered {
-        background-color: #ede9fe;
-        color: #5b21b6;
-    }
-
-    .status-delivered::before {
-        background-color: #5b21b6;
-    }
-
-    .view-all-link {
-        color: #4f46e5;
-        font-size: 0.875rem;
-        font-weight: 500;
-        display: inline-flex;
-        align-items: center;
-    }
-
-    .view-all-link:hover {
-        color: #3730a3;
-    }
-
-    .view-all-link svg {
-        width: 16px;
-        height: 16px;
-        margin-left: 0.25rem;
-    }
-
-    @media (max-width: 768px) {
-        .dashboard-container {
-            padding: 1rem 0.5rem;
-        }
-
-        .stats-grid {
-            grid-template-columns: 1fr;
-            gap: 1rem;
-        }
-
-        .stat-card {
-            padding: 1.25rem;
-        }
-
-        .stat-icon {
-            width: 50px;
-            height: 50px;
-        }
-
-        .stat-value {
-            font-size: 1.5rem;
-        }
-
-        .card-header {
-            padding: 1rem 1.25rem;
-        }
-
-        th,
-        td {
-            padding: 0.75rem 1rem;
-        }
-    }
-</style>
-{% endblock %}
-
 {% block content %}
-<div class="">
+<div class="min-h-screen bg-gray-50">
     <!-- Stats Section -->
-    <div class="stats-grid mt-6 ">
-        <!-- Total Orders Card -->
-        <div class="stat-card pending">
-            <div class="stat-icon">
-                <svg class="h-6 w-6 text-amber-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
-                    stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                        d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
-                </svg>
-            </div>
-            <div class="stat-content">
-                <div class="stat-label">Total Orders</div>
-                <div class="stat-value">{{ total_orders }}</div>
-                <div class="flex sm:flex-col md:flex-col flex-row gap-2 text-xs">
-                    {% if user.is_superuser %}
-                    <span class="text-yellow-600">{{ shop_a_data.total_orders }} Shop A total orders</span>
-                    |<span class="text-green-600">{{ shop_b_data.total_orders }} Shop B total orders</span>
-                    {% endif %}
-                </div>
-            </div>
-        </div>
-
-        <!-- Pending Orders Card -->
-        <div class="stat-card pending">
-            <div class="stat-icon">
-                <svg class="h-6 w-6 text-amber-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
-                    stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                        d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-            </div>
-            <div class="stat-content">
-                <div class="stat-label">Pending</div>
-                <div class="stat-value">{{pending_orders}}</div>
-                <div class="flex sm:flex-col md:flex-col flex-row gap-2 text-xs">
-                    {% if user.is_superuser %} 
-                    <span class="text-yellow-600">{{ shop_a_data.pending_orders }} Shop A pending orders</span>
-                    | <span class="text-green-600">{{ shop_b_data.pending_orders }} Shop B pending orders</span>
-                    {% endif %}
-                </div>
-            </div>
-        </div>
-
-        <!-- Processing Orders Card -->
-       
-        <!-- Completed Orders Card -->
-        <div class="stat-card completed">
-            <div class="stat-icon">
-                <svg class="h-6 w-6 text-green-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
-                    stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                        d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-            </div>
-            <div class="stat-content">
-                <div class="stat-label">Completed</div>
-                <div class="stat-value">{{ completed_orders }}</div>
-                <div class="flex sm:flex-col md:flex-col flex-row gap-2 text-xs">
-                    {% if user.is_superuser %}
-                    <span class="text-yellow-600">{{ shop_a_data.completed_orders }} Shop A pending orders</span>
-                    | <span class="text-green-600">{{ shop_b_data.completed_orders }} Shop B pending orders</span>
-                     {% endif %}
-                </div>
-            </div>
-        </div>
-
-        <!-- Delivered Orders Card -->
-      
-    </div>
-   
-    <!-- Quick Actions & Recent Orders -->
-    <div class="w-full">
-        <!-- Quick Actions -->
-        <div class="card">
-            <div class="card-header">
-                <h3 class="card-title">Quick Actions</h3>
-            </div>
-            <div class="card-body flex flex-col md:flex-row justify-between">
-                <a href="{% url 'laundry:createorder' %}" class="quick-action">
-                    <div class="quick-action-icon bg-blue-100">
-                        <svg class="h-5 w-5 text-blue-600" xmlns="http://www.w3.org/2000/svg" fill="none"
+    <div class="container mx-auto px-4 py-6">
+        <div class="grid sm:grid-cols-1 grid-cols-3  gap-4 md:gap-6 mb-6">
+            <!-- Total Orders Card -->
+            <div
+                class="bg-white rounded-xl shadow-sm border-l-4 border-amber-500 p-4 md:p-6 hover:shadow-md transition-shadow duration-300">
+                <div class="flex items-center">
+                    <div
+                        class="flex items-center justify-center w-12 h-12 md:w-14 md:h-14 bg-amber-100 rounded-lg mr-4">
+                        <svg class="h-6 w-6 md:h-7 md:w-7 text-amber-600" xmlns="http://www.w3.org/2000/svg" fill="none"
                             viewBox="0 0 24 24" stroke="currentColor">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                                d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
                         </svg>
                     </div>
-                    <div class="quick-action-content">
-                        <p class="quick-action-title">Create New Order</p>
-                        <p class="quick-action-desc">Add a new laundry order</p>
+                    <div class="flex-1">
+                        <p class="text-sm md:text-base font-medium text-gray-600">Total Orders</p>
+                        <p class="text-2xl md:text-3xl font-bold text-gray-900">{{ total_orders }}</p>
+                        {% if user.is_superuser %}
+                        <div class="flex flex-wrap gap-1 md:gap-2 mt-1">
+                            <span class="text-xs text-amber-600">{{ shop_a_data.total_orders }} Shop A</span>
+                            <span class="text-xs text-gray-400">|</span>
+                            <span class="text-xs text-green-600">{{ shop_b_data.total_orders }} Shop B</span>
+                        </div>
+                        {% endif %}
                     </div>
-                </a>
+                </div>
+            </div>
 
-                <a href="{% url 'laundry:customordertable' %}"
-                    class="quick-action">
-                    <div class="quick-action-icon bg-amber-100">
-                        <svg class="h-5 w-5 text-amber-600" xmlns="http://www.w3.org/2000/svg" fill="none"
+            <!-- Pending Orders Card -->
+            <div
+                class="bg-white rounded-xl shadow-sm border-l-4 border-amber-500 p-4 md:p-6 hover:shadow-md transition-shadow duration-300">
+                <div class="flex items-center">
+                    <div
+                        class="flex items-center justify-center w-12 h-12 md:w-14 md:h-14 bg-amber-100 rounded-lg mr-4">
+                        <svg class="h-6 w-6 md:h-7 md:w-7 text-amber-600" xmlns="http://www.w3.org/2000/svg" fill="none"
                             viewBox="0 0 24 24" stroke="currentColor">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                 d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                         </svg>
                     </div>
-                    <div class="quick-action-content">
-                        <p class="quick-action-title">View Orders</p>
-                        
+                    <div class="flex-1">
+                        <p class="text-sm md:text-base font-medium text-gray-600">Pending</p>
+                        <p class="text-2xl md:text-3xl font-bold text-gray-900">{{ pending_orders }}</p>
+                        {% if user.is_superuser %}
+                        <div class="flex flex-wrap gap-1 md:gap-2 mt-1">
+                            <span class="text-xs text-amber-600">{{ shop_a_data.pending_orders }} Shop A</span>
+                            <span class="text-xs text-gray-400">|</span>
+                            <span class="text-xs text-green-600">{{ shop_b_data.pending_orders }} Shop B</span>
+                        </div>
+                        {% endif %}
                     </div>
-                </a>
+                </div>
+            </div>
 
-                <a href="{% url 'laundry:customer_management' %}" class="quick-action">
-                    <div class="quick-action-icon bg-green-100">
-                        <svg class="h-5 w-5 text-green-600" xmlns="http://www.w3.org/2000/svg" fill="none"
+            <!-- Completed Orders Card -->
+            <div
+                class="bg-white rounded-xl shadow-sm border-l-4 border-green-500 p-4 md:p-6 hover:shadow-md transition-shadow duration-300">
+                <div class="flex items-center">
+                    <div
+                        class="flex items-center justify-center w-12 h-12 md:w-14 md:h-14 bg-green-100 rounded-lg mr-4">
+                        <svg class="h-6 w-6 md:h-7 md:w-7 text-green-600" xmlns="http://www.w3.org/2000/svg" fill="none"
                             viewBox="0 0 24 24" stroke="currentColor">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+                                d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                         </svg>
                     </div>
-                    <div class="quick-action-content">
-                        <p class="quick-action-title">Manage Customers</p>
-                        <p class="quick-action-desc">View and edit customer information</p>
+                    <div class="flex-1">
+                        <p class="text-sm md:text-base font-medium text-gray-600">Completed</p>
+                        <p class="text-2xl md:text-3xl font-bold text-gray-900">{{ completed_orders }}</p>
+                        {% if user.is_superuser %}
+                        <div class="flex flex-wrap gap-1 md:gap-2 mt-1">
+                            <span class="text-xs text-amber-600">{{ shop_a_data.completed_orders }} Shop A</span>
+                            <span class="text-xs text-gray-400">|</span>
+                            <span class="text-xs text-green-600">{{ shop_b_data.completed_orders }} Shop B</span>
+                        </div>
+                        {% endif %}
                     </div>
-                </a>
+                </div>
             </div>
         </div>
 
-     
+        <!-- Quick Actions -->
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-4 md:gap-6">
+            <div class="lg:col-span-3">
+                <div class="bg-white rounded-xl shadow-sm overflow-hidden">
+                    <div class="border-b border-gray-200 px-4 md:px-6 py-4">
+                        <h3 class="text-lg md:text-xl font-semibold text-gray-900">Quick Actions</h3>
+                    </div>
+                    <div class="grid grid-cols-1 md:grid-cols-3 divide-y md:divide-y-0 md:divide-x divide-gray-100">
+                        <!-- Create New Order -->
+                        <a href="{% url 'laundry:createorder' %}"
+                            class="group p-4 md:p-6 hover:bg-gray-50 transition-colors duration-200">
+                            <div class="flex items-center">
+                                <div
+                                    class="flex items-center justify-center w-10 h-10 md:w-12 md:h-12 bg-blue-100 rounded-lg mr-4 group-hover:bg-blue-200 transition-colors duration-200">
+                                    <svg class="h-5 w-5 md:h-6 md:w-6 text-blue-600" xmlns="http://www.w3.org/2000/svg"
+                                        fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                            d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                                    </svg>
+                                </div>
+                                <div class="flex-1">
+                                    <p
+                                        class="text-sm md:text-base font-medium text-gray-900 group-hover:text-blue-600 transition-colors duration-200">
+                                        Create New Order</p>
+                                    <p class="text-xs md:text-sm text-gray-600 mt-1">Add a new laundry order</p>
+                                </div>
+                                <svg class="h-4 w-4 md:h-5 md:w-5 text-gray-400 group-hover:text-blue-600 transition-colors duration-200"
+                                    xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
+                                    stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                        d="M9 5l7 7-7 7" />
+                                </svg>
+                            </div>
+                        </a>
+
+                        <!-- View Orders -->
+                        <a href="{% url 'laundry:customordertable' %}"
+                            class="group p-4 md:p-6 hover:bg-gray-50 transition-colors duration-200">
+                            <div class="flex items-center">
+                                <div
+                                    class="flex items-center justify-center w-10 h-10 md:w-12 md:h-12 bg-amber-100 rounded-lg mr-4 group-hover:bg-amber-200 transition-colors duration-200">
+                                    <svg class="h-5 w-5 md:h-6 md:w-6 text-amber-600" xmlns="http://www.w3.org/2000/svg"
+                                        fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                            d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                    </svg>
+                                </div>
+                                <div class="flex-1">
+                                    <p
+                                        class="text-sm md:text-base font-medium text-gray-900 group-hover:text-amber-600 transition-colors duration-200">
+                                        View Orders</p>
+                                    <p class="text-xs md:text-sm text-gray-600 mt-1">Manage all laundry orders</p>
+                                </div>
+                                <svg class="h-4 w-4 md:h-5 md:w-5 text-gray-400 group-hover:text-amber-600 transition-colors duration-200"
+                                    xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
+                                    stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                        d="M9 5l7 7-7 7" />
+                                </svg>
+                            </div>
+                        </a>
+
+                        <!-- Manage Customers -->
+                        <a href="{% url 'laundry:customer_management' %}"
+                            class="group p-4 md:p-6 hover:bg-gray-50 transition-colors duration-200">
+                            <div class="flex items-center">
+                                <div
+                                    class="flex items-center justify-center w-10 h-10 md:w-12 md:h-12 bg-green-100 rounded-lg mr-4 group-hover:bg-green-200 transition-colors duration-200">
+                                    <svg class="h-5 w-5 md:h-6 md:w-6 text-green-600" xmlns="http://www.w3.org/2000/svg"
+                                        fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                            d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+                                    </svg>
+                                </div>
+                                <div class="flex-1">
+                                    <p
+                                        class="text-sm md:text-base font-medium text-gray-900 group-hover:text-green-600 transition-colors duration-200">
+                                        Manage Customers</p>
+                                    <p class="text-xs md:text-sm text-gray-600 mt-1">View and edit customer information
+                                    </p>
+                                </div>
+                                <svg class="h-4 w-4 md:h-5 md:w-5 text-gray-400 group-hover:text-green-600 transition-colors duration-200"
+                                    xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
+                                    stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                        d="M9 5l7 7-7 7" />
+                                </svg>
+                            </div>
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
     </div>
 </div>
 {% endblock %}

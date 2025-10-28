@@ -57,8 +57,17 @@ from rest_framework.response import Response
 from rest_framework.decorators import api_view
 from .models import Customer, Order
 from .serializers import CustomerSerializer, OrderSerializer
-
+# tyty=0721422637
+from rest_framework.decorators import api_view, permission_classes
+from rest_framework.permissions import IsAuthenticated
+from rest_framework import status
+from rest_framework.response import Response
+from .models import Customer
+from .serializers import CustomerSerializer
+logger = logging.getLogger(__name__)
+User = get_user_model()
 @api_view(['POST'])
+@permission_classes([IsAuthenticated])  # ✅ Require login
 def check_or_create_customer(request):
     phone = request.data.get('phone')
     name = request.data.get('name')
@@ -67,7 +76,9 @@ def check_or_create_customer(request):
     if not phone:
         return Response({"error": "Phone is required"}, status=status.HTTP_400_BAD_REQUEST)
 
+    # ✅ Check if customer exists
     customer = Customer.objects.filter(phone=phone).first()
+
     if customer:
         serializer = CustomerSerializer(customer)
         return Response({
@@ -75,25 +86,36 @@ def check_or_create_customer(request):
             "message": "Customer already exists.",
             "customer": serializer.data
         })
-    else:
-        # Create a new customer
-        serializer = CustomerSerializer(data={"name": name, "phone": phone, "address": address})
-        if serializer.is_valid():
-            serializer.save()
-            return Response({
-                "exists": False,
-                "message": "New customer created successfully.",
-                "customer": serializer.data
-            }, status=status.HTTP_201_CREATED)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
+    # ✅ If not exists, create and attach the logged-in user
+    serializer = CustomerSerializer(data={
+        "name": name,
+        "phone": phone,
+        "address": address,
+    })
+
+    if serializer.is_valid():
+        customer = serializer.save()  # ✅ attach user
+        return Response({
+            "exists": False,
+            "message": "New customer created successfully.",
+            "customer": CustomerSerializer(customer).data
+        }, status=status.HTTP_201_CREATED)
+
+    return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+@permission_classes([IsAuthenticated])
 class OrderCreateView(generics.CreateAPIView):
     queryset = Order.objects.all()
     serializer_class = OrderSerializer
+     # Require login
+
+    def perform_create(self, serializer):
+        # Automatically set 'created_by' field to the logged-in user
+        serializer.save(created_by=self.request.user)
 
 # Setup logger
-logger = logging.getLogger(__name__)
-User = get_user_model()
+
 
 # Constants
 DEFAULT_PAGE_SIZE = 15
@@ -233,19 +255,30 @@ def hotel_user_required(view_func):
     return _wrapped_view
 
 # ==================== UTILITY FUNCTIONS ====================
-
 def get_base_order_queryset():
     """Base queryset for orders with common prefetching"""
-    return Order.objects.select_related('customer').prefetch_related(
-        Prefetch('items', queryset=OrderItem.objects.only(
-            'servicetype', 'itemname', 'quantity', 'itemtype', 
-            'itemcondition', 'total_item_price', 'unit_price'
-        ))
-    ).only(
-        'id', 'uniquecode', 'order_status', 'payment_status', 'payment_type',
-        'shop', 'delivery_date', 'amount_paid', 'balance', 'total_price', 
-        'created_at', 'customer__name', 'customer__phone', 'customer__address', 
-        'addressdetails'
+    return (
+        Order.objects.select_related('customer', 'created_by')
+        .prefetch_related(
+            Prefetch(
+                'items',
+                queryset=OrderItem.objects.only(
+                    'servicetype',
+                    'itemname',
+                    'quantity',
+                    'itemtype',
+                    'itemcondition',
+                    'total_item_price',
+                    'unit_price',
+                ),
+            )
+        )
+        .only(
+            'id', 'uniquecode', 'order_status', 'payment_status', 'payment_type',
+            'shop', 'delivery_date', 'amount_paid', 'balance', 'total_price',
+            'created_at', 'customer__name', 'customer__phone', 'customer__address',
+            'addressdetails', 'created_by'
+        )
     )
 
 def check_order_permission(request, order):
@@ -344,7 +377,15 @@ def serialize_order_for_json(order):
     """Serialize order data for JSON response"""
     try:
         customer_phone = str(order.customer.phone) if order.customer.phone else ''
-        
+
+        # ✅ Get the first name of the user who created the order
+        created_by = ""
+        if order.created_by and hasattr(order.created_by, 'user'):
+            created_by = order.created_by.user.first_name or 'User'
+        elif hasattr(order.created_by, 'first_name'):
+            created_by = order.created_by.first_name or 'User'
+
+
         order_data = {
             'id': order.id,
             'uniquecode': order.uniquecode,
@@ -353,6 +394,7 @@ def serialize_order_for_json(order):
                 'phone': customer_phone,
                 'address': order.customer.address or '',
             },
+            'created_by': created_by,
             'items': [],
             'amount_paid': float(order.amount_paid or 0),
             'balance': float(order.balance or 0),
@@ -361,7 +403,7 @@ def serialize_order_for_json(order):
             'payment_status': order.payment_status,
             'shop': order.shop,
             'created_at': order.created_at.strftime('%Y-%m-%d %H:%M') if order.created_at else '',
-            #'created_by':order.created_by
+             # ✅ Display only first name
         }
 
         # Serialize items
@@ -377,6 +419,7 @@ def serialize_order_for_json(order):
             })
 
         return order_data
+
     except Exception as e:
         logger.error(f"Error serializing order {order.id}: {str(e)}")
         raise OrderManagerError(f"Failed to serialize order data: {str(e)}")
@@ -563,7 +606,7 @@ def handle_ajax_request(request):
         ).exclude(
             Q(uniquecode__isnull=True) | Q(uniquecode='')
         )
-
+        #tyty=0721422637
         # Apply permission filtering - ALL authenticated users get all orders
         orders = apply_order_permissions(orders, request)
 

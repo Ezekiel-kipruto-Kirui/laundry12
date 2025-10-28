@@ -3,35 +3,146 @@
 {% block title %}Delete Customer - Laundry Management System{% endblock %}
 
 {% block content %}
-<div class="container">
-    <div class="row justify-content-center">
-        <div class="col-md-6">
-            <div class="card shadow">
-                <div class="card-header bg-danger text-white">
-                    <h4 class="mb-0">Confirm Delete</h4>
-                </div>
-                <div class="card-body">
-                    <p>Are you sure you want to delete the customer <strong>{{ customer.name }}</strong>?</p>
+<div class="min-h-screen bg-gray-50 py-8 px-4 sm:px-6 lg:px-8">
+    <div class="max-w-md mx-auto">
+        <!-- Header -->
+        <div class="text-center mb-8">
+            <div class="inline-flex items-center justify-center w-16 h-16 bg-red-100 rounded-full mb-4">
+                <i class="fas fa-exclamation-triangle text-red-600 text-2xl"></i>
+            </div>
+            <h1 class="text-2xl font-bold text-gray-900 mb-2">Delete Customer</h1>
+            <p class="text-gray-600">Permanently remove this customer from the system</p>
+        </div>
 
-                    {% if customer.orders.exists %}
-                    <div class="alert alert-warning">
-                        <strong>Warning:</strong> This customer has {{ customer.orders.count }} order(s).
-                        You cannot delete customers with existing orders.
-                    </div>
-                    {% endif %}
-
-                    <form method="post">
-                        {% csrf_token %}
-                        <div class="d-grid gap-2">
-                            {% if not customer.orders.exists %}
-                            <button type="submit" class="btn btn-danger">Yes, Delete</button>
-                            {% endif %}
-                            <a href="{% url 'laundry:customer_management' %}" class="btn btn-secondary">Cancel</a>
-                        </div>
-                    </form>
+        <!-- Delete Card -->
+        <div class="bg-white rounded-xl shadow-lg overflow-hidden border border-red-100">
+            <!-- Card Header -->
+            <div class="bg-gradient-to-r from-red-500 to-red-600 px-6 py-4">
+                <div class="flex items-center">
+                    <i class="fas fa-trash-alt text-white text-lg mr-3"></i>
+                    <h2 class="text-lg font-semibold text-white">Confirm Deletion</h2>
                 </div>
             </div>
+
+            <!-- Card Body -->
+            <div class="p-6">
+                <!-- Customer Info -->
+                <div class="flex items-center mb-6 p-4 bg-gray-50 rounded-lg">
+                    <div class="flex-shrink-0 w-12 h-12 bg-red-100 rounded-full flex items-center justify-center">
+                        <i class="fas fa-user text-red-600"></i>
+                    </div>
+                    <div class="ml-4">
+                        <h3 class="text-lg font-semibold text-gray-900">{{ customer.name }}</h3>
+                        <p class="text-gray-600 text-sm">{{ customer.phone }}</p>
+                    </div>
+                </div>
+
+                <!-- Warning Message -->
+                <div class="mb-6">
+                    <p class="text-gray-700 mb-4">
+                        You are about to permanently delete the customer
+                        <span class="font-semibold text-red-600">"{{ customer.name }}"</span>.
+                        This action cannot be undone.
+                    </p>
+
+                    {% if customer.orders.exists %}
+                    <!-- Orders Warning -->
+                    <div class="bg-amber-50 border border-amber-200 rounded-lg p-4 mb-4">
+                        <div class="flex items-start">
+                            <i class="fas fa-exclamation-circle text-amber-500 text-lg mt-0.5 mr-3"></i>
+                            <div>
+                                <h4 class="font-semibold text-amber-800 mb-1">Active Orders Found</h4>
+                                <p class="text-amber-700 text-sm">
+                                    This customer has {{ customer.orders.count }} active order(s).
+                                    You must complete or cancel all orders before deletion.
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                    {% else %}
+                    <!-- No Orders Info -->
+                    <div class="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                        <div class="flex items-start">
+                            <i class="fas fa-info-circle text-blue-500 text-lg mt-0.5 mr-3"></i>
+                            <div>
+                                <h4 class="font-semibold text-blue-800 mb-1">No Active Orders</h4>
+                                <p class="text-blue-700 text-sm">
+                                    This customer has no active orders and can be safely deleted.
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                    {% endif %}
+                </div>
+
+                <!-- Action Buttons -->
+                <form method="post" action="{% url 'laundry:customer_delete' customer.id %}">
+                    {% csrf_token %}
+                    <div class="flex flex-col sm:flex-row gap-3">
+                        {% if not customer.orders.exists %}
+                        <!-- Delete Button -->
+                        <button type="submit"
+                            class="flex-1 inline-flex items-center justify-center px-4 py-3 bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white font-medium rounded-lg transition-all duration-200 shadow-md hover:shadow-lg transform hover:-translate-y-0.5">
+                            <i class="fas fa-trash-alt mr-2"></i>
+                            Delete Customer
+                        </button>
+                        {% endif %}
+
+                        <!-- Cancel Button -->
+                        <a href="{% url 'laundry:customer_management' %}"
+                            class="flex-1 inline-flex items-center justify-center px-4 py-3 border border-gray-300 text-gray-700 font-medium rounded-lg hover:bg-gray-50 transition-all duration-200 shadow-sm hover:shadow-md">
+                            <i class="fas fa-times mr-2"></i>
+                            Cancel
+                        </a>
+                    </div>
+                </form>
+
+                {% if not customer.orders.exists %}
+                <div class="mt-4 text-center">
+                    <p class="text-xs text-gray-500">
+                        <i class="fas fa-shield-alt mr-1"></i>
+                        This action is permanent and cannot be reversed.
+                    </p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Quick Stats -->
+    <!-- Quick Stats -->
+    <div class="mt-6 grid grid-cols-2 gap-4">
+        <div class="bg-white rounded-lg p-4 text-center shadow-sm border">
+            <div class="text-2xl font-bold text-blue-600">{{ total_orders }}</div>
+            <div class="text-xs text-gray-600 mt-1">Total Orders</div>
+        </div>
+        <div class="bg-white rounded-lg p-4 text-center shadow-sm border">
+            <div class="text-2xl font-bold text-green-600">{{ completed_orders }}</div>
+            <div class="text-xs text-gray-600 mt-1">Completed</div>
         </div>
     </div>
+
+    </div>
 </div>
+
+<style>
+    .btn-danger {
+        background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+        border: none;
+        transition: all 0.3s ease;
+    }
+
+    .btn-danger:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(239, 68, 68, 0.3);
+    }
+
+    .btn-secondary {
+        transition: all 0.3s ease;
+    }
+
+    .btn-secondary:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    }
+</style>
 {% endblock %}

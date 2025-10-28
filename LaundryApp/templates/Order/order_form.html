@@ -56,16 +56,17 @@
             <form id="customerForm" class="space-y-5 p-4">
                 {% csrf_token %}
                 <div>
+                    <label class="block text-sm font-medium text-gray-700">Customer Name</label>
+                    <input id="name" name="name" type="text"
+                        class="mt-2 w-full rounded-lg border border-gray-300 bg-gray-50 focus:bg-white focus:border-blue-500 focus:ring-2 focus:ring-blue-200 p-3 transition duration-150" />
+                </div>
+                <div>
                     <label class="block text-sm font-medium text-gray-700">Phone Number</label>
                     <input id="phone" name="phone" type="text" required
                         class="mt-2 w-full rounded-lg border border-gray-300 bg-gray-50 focus:bg-white focus:border-blue-500 focus:ring-2 focus:ring-blue-200 p-3 transition duration-150" />
                 </div>
 
-                <div>
-                    <label class="block text-sm font-medium text-gray-700">Full Name</label>
-                    <input id="name" name="name" type="text"
-                        class="mt-2 w-full rounded-lg border border-gray-300 bg-gray-50 focus:bg-white focus:border-blue-500 focus:ring-2 focus:ring-blue-200 p-3 transition duration-150" />
-                </div>
+               
 
                 <div>
                     <label class="block text-sm font-medium text-gray-700">Address/Estate</label>

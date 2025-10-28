@@ -182,8 +182,14 @@ def customer_delete(request, pk):
         messages.success(request, f'Customer {customer_name} deleted successfully!')
         return redirect('laundry:customer_management')
     
+    # ✅ Add these two computed stats
+    total_orders = customer.orders.count()
+    completed_orders = customer.orders.filter(order_status="Delivered_picked").count()
+
     context = {
         'customer': customer,
+        'total_orders': total_orders,
+        'completed_orders': completed_orders,
     }
     
     return render(request, 'Customer/customer_confirm_delete.html', context)

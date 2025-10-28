@@ -25,7 +25,72 @@ from ..forms import ProfileEditForm, User, UserCreateForm, UserEditForm
 from ..models import Customer, Order
 from ..views import admin_required
 
+from django.contrib.auth.forms import AdminPasswordChangeForm
 
+@login_required
+@admin_required
+def user_edit(request, pk):
+    """Edit user information including profile"""
+    user = get_object_or_404(User, pk=pk)
+
+    if request.method == 'POST':
+        user_form = UserEditForm(request.POST, instance=user, prefix='user')
+        password_form = PasswordChangeForm(user, request.POST, prefix='password')
+        admin_password_form = AdminPasswordChangeForm(user, request.POST, prefix='admin_password')
+
+        # Save user information
+        if 'update_user' in request.POST and user_form.is_valid():
+            try:
+                with transaction.atomic():
+                    user = user_form.save(commit=False)
+
+                    # Handle staff/admin permissions based on user_type
+                    if user.user_type == 'admin':
+                        user.is_staff = True
+                        user.is_superuser = True
+                    elif user.user_type == 'staff':
+                        user.is_staff = True
+                        user.is_superuser = False
+                    else:
+                        user.is_staff = False
+                        user.is_superuser = False
+
+                    user.save()
+
+                messages.success(request, f'User {user.email} updated successfully!')
+                return redirect('laundry:user_management')
+
+            except Exception as e:
+                messages.error(request, f'Error updating user: {str(e)}')
+
+        # Change password (requires old password)
+        elif 'change_password' in request.POST and password_form.is_valid():
+            password_form.save()
+            if request.user == user:
+                update_session_auth_hash(request, user)
+            messages.success(request, 'Password updated successfully!')
+            return redirect('laundry:user_edit', pk=user.pk)
+
+        # Admin password reset (no old password required)
+        elif 'admin_reset_password' in request.POST and admin_password_form.is_valid():
+            admin_password_form.save()
+            messages.success(request, 'Password reset successfully by admin!')
+            return redirect('laundry:user_edit', pk=user.pk)
+
+    else:
+        user_form = UserEditForm(instance=user, prefix='user')
+        password_form = PasswordChangeForm(user, prefix='password')
+        admin_password_form = AdminPasswordChangeForm(user, prefix='admin_password')
+
+    context = {
+        'user_form': user_form,
+        'password_form': password_form,
+        'admin_password_form': admin_password_form,
+        'user': user,
+        'title': f'Edit User - {user.email}'
+    }
+
+    return render(request, 'user/user_edit_form.html', context)
 @login_required
 @admin_required
 def user_add(request):
@@ -94,62 +159,6 @@ def user_add(request):
         "title": "Add New User"
     })
 
-
-@login_required
-@admin_required
-def user_edit(request, pk):
-    """Edit user information including profile"""
-    user = get_object_or_404(User, pk=pk)
-
-    if request.method == 'POST':
-        user_form = UserEditForm(request.POST, instance=user, prefix='user')
-        password_form = PasswordChangeForm(user, request.POST, prefix='password')
-
-        # Save user information
-        if 'update_user' in request.POST and user_form.is_valid():
-            try:
-                with transaction.atomic():
-                    user = user_form.save(commit=False)
-
-                    # Handle staff/admin permissions based on user_type
-                    if user.user_type == 'admin':
-                        user.is_staff = True
-                        user.is_superuser = True
-                    elif user.user_type == 'staff':
-                        user.is_staff = True
-                        user.is_superuser = False
-                    else:
-                        user.is_staff = False
-                        user.is_superuser = False
-
-                    user.save()
-
-                messages.success(request, f'User {user.email} updated successfully!')
-                return redirect('laundry:user_management')
-
-            except Exception as e:
-                messages.error(request, f'Error updating user: {str(e)}')
-
-        # Change password
-        elif 'change_password' in request.POST and password_form.is_valid():
-            password_form.save()
-            if request.user == user:
-                update_session_auth_hash(request, user)
-            messages.success(request, 'Password updated successfully!')
-            return redirect('laundry:user_edit', pk=user.pk)
-
-    else:
-        user_form = UserEditForm(instance=user, prefix='user')
-        password_form = PasswordChangeForm(user, prefix='password')
-
-    context = {
-        'user_form': user_form,
-        'password_form': password_form,
-        'user': user,
-        'title': f'Edit User - {user.email}'
-    }
-
-    return render(request, 'user/user_edit_form.html', context)
 
 
 @login_required

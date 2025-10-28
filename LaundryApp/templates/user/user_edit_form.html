@@ -32,6 +32,11 @@
         text-align: center;
         transition: all 0.3s ease;
     }
+
+    /* New styles for form persistence */
+    .form-persist {
+        transition: all 0.3s ease;
+    }
 </style>
 {% endblock %}
 
@@ -73,7 +78,7 @@
                 </div>
                 {% endif %}
 
-                <form method="post" enctype="multipart/form-data" class="space-y-6">
+                <form method="post" enctype="multipart/form-data" class="space-y-6 form-persist">
                     {% csrf_token %}
 
                     <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -86,14 +91,7 @@
                             </div>
 
                             <div class="space-y-4">
-                                <!-- Username -->
-                                <div>
-                                    <label class="block text-sm font-medium text-gray-700 mb-1">Username</label>
-                                    {{ user_form.username }}
-                                    {% for error in user_form.username.errors %}
-                                    <div class="text-red-500 text-sm mt-1">{{ error }}</div>
-                                    {% endfor %}
-                                </div>
+                            
 
                                 <!-- Email -->
                                 <div>
@@ -131,122 +129,57 @@
                                     {% endfor %}
                                 </div>
 
-                                <!-- App Type -->
-                                <div>
-                                    <label class="block text-sm font-medium text-gray-700 mb-1">App Type</label>
-                                    {{ user_form.app_type }}
-                                    {% for error in user_form.app_type.errors %}
-                                    <div class="text-red-500 text-sm mt-1">{{ error }}</div>
-                                    {% endfor %}
-                                </div>
+                              
 
-                                <!-- Shop (if applicable) -->
-                                {% if user_form.app_type.value == 'laundry' or user_form.app_type.value == 'laundry' %}
-                                <div id="shop-field">
-                                    <label class="block text-sm font-medium text-gray-700 mb-1">Shop</label>
-                                    {{ laundry_form.shop }}
-                                    {% for error in laundry_form.shop.errors %}
-                                    <div class="text-red-500 text-sm mt-1">{{ error }}</div>
-                                    {% endfor %}
-                                </div>
-                                {% endif %}
+                              
                             </div>
                         </div>
 
-                        <!-- Profile Information Section -->
-                        <div class="bg-gradient-to-br from-green-50 to-teal-50 rounded-xl p-6 shadow-md">
-                            <div class="mb-4">
-                                <h2 class="text-lg font-semibold text-gray-800">
-                                    <i class="fas fa-id-card mr-2 text-green-600"></i>Profile Information
-                                </h2>
-                            </div>
-
-                            <div class="space-y-4">
-                                <!-- Phone -->
-                                <div>
-                                    <label class="block text-sm font-medium text-gray-700 mb-1">Phone</label>
-                                    {{ user_form.phone }}
-                                    {% for error in user_form.phone.errors %}
-                                    <div class="text-red-500 text-sm mt-1">{{ error }}</div>
-                                    {% endfor %}
-                                </div>
-
-                                <!-- Address -->
-                                <div>
-                                    <label class="block text-sm font-medium text-gray-700 mb-1">Address</label>
-                                    {{ user_form.address }}
-                                    {% for error in user_form.address.errors %}
-                                    <div class="text-red-500 text-sm mt-1">{{ error }}</div>
-                                    {% endfor %}
-                                </div>
-
-                                <!-- DOB -->
-                                <div>
-                                    <label class="block text-sm font-medium text-gray-700 mb-1">Date of Birth</label>
-                                    {{ user_form.date_of_birth }}
-                                    {% for error in user_form.date_of_birth.errors %}
-                                    <div class="text-red-500 text-sm mt-1">{{ error }}</div>
-                                    {% endfor %}
-                                </div>
-
-                                <!-- Profile Picture -->
-                                <div>
-                                    <label class="block text-sm font-medium text-gray-700 mb-1">Profile Picture</label>
-                                    {% if user.profile_picture %}
-                                    <div class="mb-3 text-center">
-                                        <img src="{{ user.profile_picture.url }}" alt="Profile Picture"
-                                            class="rounded-lg border-2 border-gray-200 mx-auto max-h-32 max-w-32">
-                                        <p class="text-gray-500 text-sm mt-2">Current profile picture</p>
-                                    </div>
-                                    {% endif %}
-                                    {{ user_form.profile_picture }}
-                                    {% for error in user_form.profile_picture.errors %}
-                                    <div class="text-red-500 text-sm mt-1">{{ error }}</div>
-                                    {% endfor %}
-                                </div>
-                            </div>
-                        </div>
+                       
+                       
                     </div>
 
-                    <!-- Password Change Section -->
-                    <div class="bg-gradient-to-br from-yellow-50 to-orange-50 rounded-xl p-6 shadow-md">
+                    
+                    
+
+                    <!-- Admin Password Reset Section (Superusers only) -->
+                    {% if request.user.is_superuser %}
+                    <div
+                        class="bg-gradient-to-br from-red-50 to-pink-50 rounded-xl p-6 shadow-md border border-red-200">
                         <div class="mb-4">
                             <h2 class="text-lg font-semibold text-gray-800">
-                                <i class="fas fa-lock mr-2 text-yellow-600"></i>Change Password
+                                <i class="fas fa-user-shield mr-2 text-red-600"></i>Admin Password Reset
+                                <span class="text-sm font-normal text-red-600 ml-2">(No current password
+                                    required)</span>
                             </h2>
                         </div>
 
-                        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                            <div>
-                                <label class="block text-sm font-medium text-gray-700 mb-1">Current Password</label>
-                                {{ password_form.old_password }}
-                                {% for error in password_form.old_password.errors %}
-                                <div class="text-red-500 text-sm mt-1">{{ error }}</div>
-                                {% endfor %}
-                            </div>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <div>
                                 <label class="block text-sm font-medium text-gray-700 mb-1">New Password</label>
-                                {{ password_form.new_password1 }}
-                                {% for error in password_form.new_password1.errors %}
+                                {{ admin_password_form.password1 }}
+                                {% for error in admin_password_form.password1.errors %}
                                 <div class="text-red-500 text-sm mt-1">{{ error }}</div>
                                 {% endfor %}
                             </div>
                             <div>
                                 <label class="block text-sm font-medium text-gray-700 mb-1">Confirm Password</label>
-                                {{ password_form.new_password2 }}
-                                {% for error in password_form.new_password2.errors %}
+                                {{ admin_password_form.password2 }}
+                                {% for error in admin_password_form.password2.errors %}
                                 <div class="text-red-500 text-sm mt-1">{{ error }}</div>
                                 {% endfor %}
                             </div>
                         </div>
 
                         <div class="text-center mt-4">
-                            <button type="submit" name="change_password"
-                                class="bg-gradient-to-r from-yellow-500 to-orange-500 hover:from-yellow-600 hover:to-orange-600 text-gray-800 px-6 py-2 rounded-lg font-semibold transition duration-200 ease-in-out transform hover:scale-105">
-                                <i class="fas fa-key mr-2"></i> Change Password
+                            <button type="submit" name="admin_reset_password"
+                                class="bg-gradient-to-r from-red-500 to-pink-500 hover:from-red-600 hover:to-pink-600 text-white px-6 py-2 rounded-lg font-semibold transition duration-200 ease-in-out transform hover:scale-105"
+                                onclick="return confirm('Are you sure you want to reset this users password?')">
+                                <i class="fas fa-user-cog mr-2"></i> Reset Password as Admin
                             </button>
                         </div>
                     </div>
+                    {% endif %}
 
                     <!-- Form Submission Buttons -->
                     <div class="text-center space-x-4">
@@ -299,6 +232,39 @@
 
             // Add event listener
             appTypeSelect.addEventListener('change', toggleShopField);
+        }
+
+        // Form persistence - retain form data on submission errors
+        const form = document.querySelector('.form-persist');
+        if (form) {
+            // Store form data before submission
+            form.addEventListener('submit', function () {
+                const formData = new FormData(form);
+                sessionStorage.setItem('formBackup', JSON.stringify(Object.fromEntries(formData)));
+            });
+
+            // Check if we have a failed submission and restore data
+            const savedData = sessionStorage.getItem('formBackup');
+            if (savedData && window.performance && performance.navigation.type === performance.navigation.TYPE_RELOAD) {
+                const formData = JSON.parse(savedData);
+
+                // Restore form values
+                Object.keys(formData).forEach(key => {
+                    const element = form.querySelector(`[name="${key}"]`);
+                    if (element) {
+                        if (element.type === 'checkbox' || element.type === 'radio') {
+                            element.checked = formData[key] === 'on';
+                        } else if (element.type === 'file') {
+                            // Skip file inputs
+                        } else {
+                            element.value = formData[key];
+                        }
+                    }
+                });
+
+                // Clear the backup
+                sessionStorage.removeItem('formBackup');
+            }
         }
     });
 </script>

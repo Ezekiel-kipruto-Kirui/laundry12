@@ -35,7 +35,7 @@
                     <i class="fas fa-search absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"></i>
                 </div>
                 <div class="relative">
-                    
+
                     <button id="exportDropdownBtn"
                         class="inline-flex items-center gap-2 px-4 py-2.5 bg-blue-500 from-cyan-500 to-blue-500 text-white rounded-lg font-medium shadow-md hover:shadow-lg transition-all duration-200">
                         <i class="fas fa-download"></i>
@@ -151,7 +151,7 @@
                             class="px-3 py-1.5 bg-purple-100 text-purple-700 rounded-full text-sm font-medium action-filter">
                             <i class="fas fa-truck mr-1"></i> Mark Delivered
                         </button>
-                        
+
                         <div class="bg-white rounded-full shadow-sm">
                             <select id="shopFilter"
                                 class="rounded-full p-1 bg-blue-100 text-blue-600 outline-none w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:ring-2 focus:ring-purple-500 focus:border-purple-500">
@@ -160,10 +160,10 @@
                                 <option value="Shop B">Shop B</option>
                             </select>
                         </div>
-                       
+
                     </div>
                 </div>
-                
+
             </form>
         </div>
 
@@ -177,6 +177,9 @@
                                 class="w-12 py-4 px-4 text-center font-semibold text-gray-700 text-xs uppercase tracking-wider whitespace-nowrap">
                                 <input type="checkbox" id="selectAllCheckbox"
                                     class="h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500">
+                            </th>
+                            <th class="py-4 px-4 text-left font-semibold text-gray-700 text-xs uppercase tracking-wider whitespace-nowrap">
+                                date
                             </th>
                             <th
                                 class="py-4 px-4 text-left font-semibold text-gray-700 text-xs uppercase tracking-wider whitespace-nowrap">
@@ -200,7 +203,7 @@
                             </th>
                             <th
                                 class="py-4 px-4 text-left font-semibold text-gray-700 text-xs uppercase tracking-wider whitespace-nowrap">
-                                Created by
+                                Served by
                             </th>
                             <th
                                 class="py-4 px-4 text-left font-semibold text-gray-700 text-xs uppercase tracking-wider whitespace-nowrap">
@@ -421,6 +424,10 @@
                             <span>Balance:</span>
                             <span id="receiptBalance">KSh 0.00</span>
                         </div>
+                        <div class="flex justify-between font-bold border-t border-gray-300 mt-2 pt-2">
+                            <span>Ser:</span>
+                            <span id="orderCreator"></span>
+                        </div>
                     </div>
                 </div>
                 <div class="mt-6 flex justify-end gap-3">
@@ -482,387 +489,277 @@
             </div>
         </div>
     </div>
-<script>
-     const createdBy = "{{ created_by|escapejs }}";
-        console.log("Created by:", createdBy);
-    class OrderManager {
-        constructor() {
-            this.currentPage = 1;
-            this.currentFilters = {
-                payment_status: '',
-                search: '',
-                shop: ''
-            };
-            this.selectedOrders = new Set();
-            this.currentOrderForPayment = null;
-            this.init();
-        }
-
-        init() {
-            this.bindEvents();
-            this.loadOrders();
-        }
-
-        bindEvents() {
-            // Search input with debounce
-            let searchTimeout;
-            document.getElementById('searchInput').addEventListener('input', (e) => {
-                clearTimeout(searchTimeout);
-                searchTimeout = setTimeout(() => {
-                    this.currentFilters.search = e.target.value;
+    <script>
+            class OrderManager {
+                constructor() {
                     this.currentPage = 1;
-                    this.loadOrders();
-                }, 500);
-            });
+                    this.currentFilters = {
+                        payment_status: '',
+                        search: '',
+                        shop: ''
+                    };
+                    this.selectedOrders = new Set();
+                    this.currentOrderForPayment = null;
+                    this.init();
+                }
 
-            // Shop filter - only bind if it exists (for superusers)
-            const shopFilter = document.getElementById('shopFilter');
-            if (shopFilter) {
-                shopFilter.addEventListener('change', (e) => {
-                    this.currentFilters.shop = e.target.value;
-                    this.currentPage = 1;
-                    this.loadOrders();
-                });
+            init() {
+                this.bindEvents();
+                this.loadOrders();
             }
 
-            // Payment filters
-            document.querySelectorAll('.payment-filter').forEach(btn => {
-                btn.addEventListener('click', (e) => {
-                    const paymentStatus = e.target.getAttribute('data-payment');
-                    this.currentFilters.payment_status = paymentStatus;
+            bindEvents() {
+                // Search input with debounce
+                let searchTimeout;
+                document.getElementById('searchInput').addEventListener('input', (e) => {
+                    clearTimeout(searchTimeout);
+                    searchTimeout = setTimeout(() => {
+                        this.currentFilters.search = e.target.value;
+                        this.currentPage = 1;
+                        this.loadOrders();
+                    }, 500);
+                });
+
+                // Shop filter - only bind if it exists (for superusers)
+                const shopFilter = document.getElementById('shopFilter');
+                if (shopFilter) {
+                    shopFilter.addEventListener('change', (e) => {
+                        this.currentFilters.shop = e.target.value;
+                        this.currentPage = 1;
+                        this.loadOrders();
+                    });
+                }
+
+                // Payment filters
+                document.querySelectorAll('.payment-filter').forEach(btn => {
+                    btn.addEventListener('click', (e) => {
+                        const paymentStatus = e.target.getAttribute('data-payment');
+                        this.currentFilters.payment_status = paymentStatus;
+                        this.currentPage = 1;
+                        this.updateActiveFilters();
+                        this.loadOrders();
+                    });
+                });
+
+                // Action filters
+                document.querySelectorAll('.action-filter').forEach(btn => {
+                    btn.addEventListener('click', (e) => {
+                        const action = e.target.getAttribute('data-action');
+                        this.handleBulkAction(action);
+                    });
+                });
+
+                // Active orders filter
+                document.querySelector('[data-payment=""]').addEventListener('click', () => {
+                    this.currentFilters.payment_status = '';
                     this.currentPage = 1;
                     this.updateActiveFilters();
                     this.loadOrders();
                 });
-            });
 
-            // Action filters
-            document.querySelectorAll('.action-filter').forEach(btn => {
-                btn.addEventListener('click', (e) => {
-                    const action = e.target.getAttribute('data-action');
-                    this.handleBulkAction(action);
+                // Export dropdown
+                document.getElementById('exportDropdownBtn').addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    document.getElementById('exportDropdown').classList.toggle('hidden');
                 });
-            });
 
-            // Active orders filter
-            document.querySelector('[data-payment=""]').addEventListener('click', () => {
-                this.currentFilters.payment_status = '';
-                this.currentPage = 1;
-                this.updateActiveFilters();
-                this.loadOrders();
-            });
-
-            // Export dropdown
-            document.getElementById('exportDropdownBtn').addEventListener('click', (e) => {
-                e.stopPropagation();
-                document.getElementById('exportDropdown').classList.toggle('hidden');
-            });
-
-            // Export buttons - FIXED: Properly handle export requests
-            document.querySelectorAll('.export-btn').forEach(btn => {
-                btn.addEventListener('click', (e) => {
-                    e.preventDefault();
-                    const format = e.currentTarget.getAttribute('data-format');
-                    this.exportOrders(format);
-                    document.getElementById('exportDropdown').classList.add('hidden');
+                // Export buttons - FIXED: Properly handle export requests
+                document.querySelectorAll('.export-btn').forEach(btn => {
+                    btn.addEventListener('click', (e) => {
+                        e.preventDefault();
+                        const format = e.currentTarget.getAttribute('data-format');
+                        this.exportOrders(format);
+                        document.getElementById('exportDropdown').classList.add('hidden');
+                    });
                 });
-            });
 
-            // Close dropdown when clicking outside
-            document.addEventListener('click', (e) => {
-                if (!e.target.closest('.relative')) {
-                    document.getElementById('exportDropdown').classList.add('hidden');
-                }
-            });
+                // Close dropdown when clicking outside
+                document.addEventListener('click', (e) => {
+                    if (!e.target.closest('.relative')) {
+                        document.getElementById('exportDropdown').classList.add('hidden');
+                    }
+                });
 
-            // Bulk action buttons
-            document.getElementById('bulkCompleteBtn').addEventListener('click', () => {
-                this.bulkUpdateStatus('Completed');
-            });
+                // Bulk action buttons
+                document.getElementById('bulkCompleteBtn').addEventListener('click', () => {
+                    this.bulkUpdateStatus('Completed');
+                });
 
-            document.getElementById('bulkDeliverBtn').addEventListener('click', () => {
-                this.bulkUpdateStatus('Delivered_picked');
-            });
+                document.getElementById('bulkDeliverBtn').addEventListener('click', () => {
+                    this.bulkUpdateStatus('Delivered_picked');
+                });
 
-            document.getElementById('clearSelectionBtn').addEventListener('click', () => {
-                this.clearSelection();
-            });
+                document.getElementById('clearSelectionBtn').addEventListener('click', () => {
+                    this.clearSelection();
+                });
 
-            // Select all checkbox
-            document.getElementById('selectAllCheckbox').addEventListener('change', (e) => {
-                this.toggleSelectAll(e.target.checked);
-            });
+                // Select all checkbox
+                document.getElementById('selectAllCheckbox').addEventListener('change', (e) => {
+                    this.toggleSelectAll(e.target.checked);
+                });
 
-            // Modal events
-            document.getElementById('closeModal').addEventListener('click', () => {
-                this.closeModal();
-            });
-
-            document.getElementById('cancelUpdate').addEventListener('click', () => {
-                this.closeModal();
-            });
-
-            document.getElementById('updateOrderForm').addEventListener('submit', (e) => {
-                e.preventDefault();
-                this.submitUpdateForm();
-            });
-
-            document.getElementById('addItemBtn').addEventListener('click', () => {
-                this.addItemRow();
-            });
-
-            // Receipt modal events
-            document.getElementById('closeReceiptModal').addEventListener('click', () => {
-                this.closeReceiptModal();
-            });
-
-            document.getElementById('cancelPrint').addEventListener('click', () => {
-                this.closeReceiptModal();
-            });
-
-            document.getElementById('printReceiptBtn').addEventListener('click', () => {
-                this.printReceipt();
-            });
-
-            // Payment modal events
-            document.getElementById('closePaymentModal').addEventListener('click', () => {
-                this.closePaymentModal();
-            });
-
-            document.getElementById('cancelPayment').addEventListener('click', () => {
-                this.closePaymentModal();
-            });
-
-            document.getElementById('confirmPaymentComplete').addEventListener('click', () => {
-                this.confirmPaymentComplete();
-            });
-
-            // Close modals when clicking outside
-            document.getElementById('updateOrderModal').addEventListener('click', (e) => {
-                if (e.target.id === 'updateOrderModal') {
+                // Modal events
+                document.getElementById('closeModal').addEventListener('click', () => {
                     this.closeModal();
-                }
-            });
+                });
 
-            document.getElementById('receiptModal').addEventListener('click', (e) => {
-                if (e.target.id === 'receiptModal') {
+                document.getElementById('cancelUpdate').addEventListener('click', () => {
+                    this.closeModal();
+                });
+
+                document.getElementById('updateOrderForm').addEventListener('submit', (e) => {
+                    e.preventDefault();
+                    this.submitUpdateForm();
+                });
+
+                document.getElementById('addItemBtn').addEventListener('click', () => {
+                    this.addItemRow();
+                });
+
+                // Receipt modal events
+                document.getElementById('closeReceiptModal').addEventListener('click', () => {
                     this.closeReceiptModal();
-                }
-            });
+                });
 
-            document.getElementById('paymentCompleteModal').addEventListener('click', (e) => {
-                if (e.target.id === 'paymentCompleteModal') {
+                document.getElementById('cancelPrint').addEventListener('click', () => {
+                    this.closeReceiptModal();
+                });
+
+                document.getElementById('printReceiptBtn').addEventListener('click', () => {
+                    this.printReceipt();
+                });
+
+                // Payment modal events
+                document.getElementById('closePaymentModal').addEventListener('click', () => {
                     this.closePaymentModal();
-                }
-            });
+                });
 
-            // Delegate events for dynamically loaded content
-            document.addEventListener('click', (e) => {
-                // Individual order checkboxes
-                if (e.target.matches('.order-checkbox')) {
-                    this.handleOrderSelection(e.target);
-                }
+                document.getElementById('cancelPayment').addEventListener('click', () => {
+                    this.closePaymentModal();
+                });
 
-                // Edit order buttons
-                if (e.target.closest('.edit-order-btn')) {
-                    const button = e.target.closest('.edit-order-btn');
-                    const orderId = button.getAttribute('data-order-id');
-                    this.openEditModal(orderId);
-                }
+                document.getElementById('confirmPaymentComplete').addEventListener('click', () => {
+                    this.confirmPaymentComplete();
+                });
 
-                // Print receipt buttons
-                if (e.target.closest('.print-receipt-btn')) {
-                    const button = e.target.closest('.print-receipt-btn');
-                    const orderId = button.getAttribute('data-order-id');
-                    this.openReceiptModal(orderId);
-                }
-
-                // Mark payment complete buttons
-                if (e.target.closest('.mark-payment-complete-btn')) {
-                    const button = e.target.closest('.mark-payment-complete-btn');
-                    const orderId = button.getAttribute('data-order-id');
-                    this.openPaymentCompleteModal(orderId);
-                }
-
-                // Update status buttons
-                if (e.target.closest('.update-status-btn')) {
-                    const button = e.target.closest('.update-status-btn');
-                    const orderRow = button.closest('tr[data-order-id]');
-                    const orderId = orderRow.getAttribute('data-order-id');
-                    const status = button.getAttribute('data-status');
-                    this.updateSingleOrderStatus(orderId, status);
-                }
-
-                // Delete order buttons
-                if (e.target.closest('.delete-order-btn')) {
-                    const button = e.target.closest('.delete-order-btn');
-                    const orderId = button.getAttribute('data-order-id');
-                    const orderCode = button.getAttribute('data-order-code');
-                    this.deleteOrder(orderId, orderCode);
-                }
-
-                // Remove item buttons
-                if (e.target.closest('.remove-item')) {
-                    const button = e.target.closest('.remove-item');
-                    button.closest('.item-row').remove();
-                }
-
-                // Pagination buttons
-                if (e.target.closest('.pagination-btn')) {
-                    const button = e.target.closest('.pagination-btn');
-                    this.currentPage = parseInt(button.getAttribute('data-page'));
-                    this.loadOrders();
-                }
-
-                // Close dropdowns when clicking outside
-                if (!e.target.closest('.relative')) {
-                    document.querySelectorAll('.absolute').forEach(menu => {
-                        if (!menu.classList.contains('hidden')) {
-                            menu.classList.add('hidden');
-                        }
-                    });
-                }
-            });
-
-            // Close dropdowns when clicking on dropdown buttons
-            document.addEventListener('click', (e) => {
-                if (e.target.closest('.relative > button')) {
-                    const button = e.target.closest('.relative > button');
-                    const dropdown = button.parentElement;
-                    const menu = dropdown.querySelector('.absolute');
-
-                    // Close all other dropdowns
-                    document.querySelectorAll('.absolute').forEach(otherMenu => {
-                        if (otherMenu !== menu && !otherMenu.classList.contains('hidden')) {
-                            otherMenu.classList.add('hidden');
-                        }
-                    });
-
-                    // Toggle current dropdown
-                    menu.classList.toggle('hidden');
-                }
-            });
-        }
-
-        // NEW: Delete order method using POST request
-        async deleteOrder(orderId, orderCode) {
-            if (!confirm(`Are you sure you want to delete order ${orderCode}? This action cannot be undone.`)) {
-                return;
-            }
-
-            try {
-                const formData = new FormData();
-                formData.append('csrfmiddlewaretoken', this.getCSRFToken());
-
-                const response = await fetch(`/Laundry/order-delete/${orderCode}/`, {
-                    method: 'POST',
-                    body: formData,
-                    headers: {
-                        'X-Requested-With': 'XMLHttpRequest',
-                        'X-CSRFToken': this.getCSRFToken()
+                // Close modals when clicking outside
+                document.getElementById('updateOrderModal').addEventListener('click', (e) => {
+                    if (e.target.id === 'updateOrderModal') {
+                        this.closeModal();
                     }
                 });
 
-                // Check if response is JSON
-                const contentType = response.headers.get('content-type');
-                if (!contentType || !contentType.includes('application/json')) {
-                    const text = await response.text();
-                    throw new Error(`Server returned HTML instead of JSON. Status: ${response.status}`);
-                }
-
-                const data = await response.json();
-
-                if (data.success) {
-                    this.showMessage(`Order ${orderCode} deleted successfully`, 'success');
-                    this.loadOrders(); // Reload the orders list
-                } else {
-                    throw new Error(data.message || 'Failed to delete order');
-                }
-            } catch (error) {
-                console.error('Error deleting order:', error);
-                this.showMessage(error.message || 'Failed to delete order', 'error');
-            }
-        }
-
-        async openPaymentCompleteModal(orderId) {
-            try {
-                const response = await fetch(`/Laundry/get-order-details/${orderId}`, {
-                    headers: {
-                        'X-Requested-With': 'XMLHttpRequest'
+                document.getElementById('receiptModal').addEventListener('click', (e) => {
+                    if (e.target.id === 'receiptModal') {
+                        this.closeReceiptModal();
                     }
                 });
 
-                if (!response.ok) throw new Error('Failed to fetch order details');
-
-                const data = await response.json();
-
-                if (data.success) {
-                    this.currentOrderForPayment = data.order;
-                    this.populatePaymentCompleteModal(data.order);
-                    this.showPaymentModal();
-                } else {
-                    throw new Error(data.message || 'Failed to load order details');
-                }
-            } catch (error) {
-                console.error('Error loading order details:', error);
-                this.showMessage('Failed to load order details', 'error');
-            }
-        }
-
-        populatePaymentCompleteModal(order) {
-            const currentAmountPaid = order.amount_paid || 0;
-            const balance = order.balance || 0;
-            const newTotalPaid = currentAmountPaid + balance;
-
-            document.getElementById('currentAmountPaid').textContent = `KSh ${currentAmountPaid.toLocaleString()}`;
-            document.getElementById('balanceToAdd').textContent = `KSh ${balance.toLocaleString()}`;
-            document.getElementById('newTotalPaid').textContent = `KSh ${newTotalPaid.toLocaleString()}`;
-        }
-
-        async confirmPaymentComplete() {
-            if (!this.currentOrderForPayment) return;
-
-            try {
-                // Get the complete order details first to ensure we have all data
-                const response = await fetch(`/Laundry/get-order-details/${this.currentOrderForPayment.id}`, {
-                    headers: {
-                        'X-Requested-With': 'XMLHttpRequest'
+                document.getElementById('paymentCompleteModal').addEventListener('click', (e) => {
+                    if (e.target.id === 'paymentCompleteModal') {
+                        this.closePaymentModal();
                     }
                 });
 
-                if (!response.ok) throw new Error('Failed to fetch order details');
+                // Delegate events for dynamically loaded content
+                document.addEventListener('click', (e) => {
+                    // Individual order checkboxes
+                    if (e.target.matches('.order-checkbox')) {
+                        this.handleOrderSelection(e.target);
+                    }
 
-                const data = await response.json();
+                    // Edit order buttons
+                    if (e.target.closest('.edit-order-btn')) {
+                        const button = e.target.closest('.edit-order-btn');
+                        const orderId = button.getAttribute('data-order-id');
+                        this.openEditModal(orderId);
+                    }
 
-                if (data.success) {
-                    const order = data.order;
-                    const formData = new FormData();
-                    formData.append('csrfmiddlewaretoken', this.getCSRFToken());
-                    formData.append('order_id', order.id);
+                    // Print receipt buttons
+                    if (e.target.closest('.print-receipt-btn')) {
+                        const button = e.target.closest('.print-receipt-btn');
+                        const orderId = button.getAttribute('data-order-id');
+                        this.openReceiptModal(orderId);
+                    }
 
-                    // Preserve all existing data
-                    formData.append('name', order.customer.name || '');
-                    formData.append('phone', order.customer.phone || '');
-                    formData.append('order_status', order.order_status || 'pending');
-                    formData.append('payment_status', 'completed');
+                    // Mark payment complete buttons
+                    if (e.target.closest('.mark-payment-complete-btn')) {
+                        const button = e.target.closest('.mark-payment-complete-btn');
+                        const orderId = button.getAttribute('data-order-id');
+                        this.openPaymentCompleteModal(orderId);
+                    }
 
-                    // Set amount_paid to total_price to complete the payment
-                    formData.append('amount_paid', order.total_price);
-                    formData.append('total_price', order.total_price);
+                    // Update status buttons
+                    if (e.target.closest('.update-status-btn')) {
+                        const button = e.target.closest('.update-status-btn');
+                        const orderRow = button.closest('tr[data-order-id]');
+                        const orderId = orderRow.getAttribute('data-order-id');
+                        const status = button.getAttribute('data-status');
+                        this.updateSingleOrderStatus(orderId, status);
+                    }
 
-                    // Add all items to preserve them
-                    if (order.items && order.items.length > 0) {
-                        order.items.forEach((item, index) => {
-                            formData.append(`items-${index}-id`, item.id || '');
-                            formData.append(`items-${index}-itemname`, item.itemname || '');
-                            formData.append(`items-${index}-servicetype`, item.servicetype || '');
-                            formData.append(`items-${index}-itemtype`, item.itemtype || '');
-                            formData.append(`items-${index}-unit_price`, item.unit_price || 0);
-                            formData.append(`items-${index}-itemcondition`, item.itemcondition || '');
+                    // Delete order buttons
+                    if (e.target.closest('.delete-order-btn')) {
+                        const button = e.target.closest('.delete-order-btn');
+                        const orderId = button.getAttribute('data-order-id');
+                        const orderCode = button.getAttribute('data-order-code');
+                        this.deleteOrder(orderId, orderCode);
+                    }
+
+                    // Remove item buttons
+                    if (e.target.closest('.remove-item')) {
+                        const button = e.target.closest('.remove-item');
+                        button.closest('.item-row').remove();
+                    }
+
+                    // Pagination buttons
+                    if (e.target.closest('.pagination-btn')) {
+                        const button = e.target.closest('.pagination-btn');
+                        this.currentPage = parseInt(button.getAttribute('data-page'));
+                        this.loadOrders();
+                    }
+
+                    // Close dropdowns when clicking outside
+                    if (!e.target.closest('.relative')) {
+                        document.querySelectorAll('.absolute').forEach(menu => {
+                            if (!menu.classList.contains('hidden')) {
+                                menu.classList.add('hidden');
+                            }
                         });
                     }
+                });
 
-                    const updateResponse = await fetch('/Laundry/update-order/', {
+                // Close dropdowns when clicking on dropdown buttons
+                document.addEventListener('click', (e) => {
+                    if (e.target.closest('.relative > button')) {
+                        const button = e.target.closest('.relative > button');
+                        const dropdown = button.parentElement;
+                        const menu = dropdown.querySelector('.absolute');
+
+                        // Close all other dropdowns
+                        document.querySelectorAll('.absolute').forEach(otherMenu => {
+                            if (otherMenu !== menu && !otherMenu.classList.contains('hidden')) {
+                                otherMenu.classList.add('hidden');
+                            }
+                        });
+
+                        // Toggle current dropdown
+                        menu.classList.toggle('hidden');
+                    }
+                });
+            }
+
+            // NEW: Delete order method using POST request
+            async deleteOrder(orderId, orderCode) {
+                if (!confirm(`Are you sure you want to delete order ${orderCode}? This action cannot be undone.`)) {
+                    return;
+                }
+
+                try {
+                    const formData = new FormData();
+                    formData.append('csrfmiddlewaretoken', this.getCSRFToken());
+
+                    const response = await fetch(`/Laundry/order-delete/${orderCode}/`, {
                         method: 'POST',
                         body: formData,
                         headers: {
@@ -871,112 +768,220 @@
                         }
                     });
 
-                    const updateData = await updateResponse.json();
+                    // Check if response is JSON
+                    const contentType = response.headers.get('content-type');
+                    if (!contentType || !contentType.includes('application/json')) {
+                        const text = await response.text();
+                        throw new Error(`Server returned HTML instead of JSON. Status: ${response.status}`);
+                    }
 
-                    if (updateData.success) {
-                        this.showMessage('Payment marked as complete successfully', 'success');
-                        this.closePaymentModal();
+                    const data = await response.json();
+
+                    if (data.success) {
+                        this.showMessage(`Order ${orderCode} deleted successfully`, 'success');
+                        this.loadOrders(); // Reload the orders list
+                    } else {
+                        throw new Error(data.message || 'Failed to delete order');
+                    }
+                } catch (error) {
+                    console.error('Error deleting order:', error);
+                    this.showMessage(error.message || 'Failed to delete order', 'error');
+                }
+            }
+
+            async openPaymentCompleteModal(orderId) {
+                try {
+                    const response = await fetch(`/Laundry/get-order-details/${orderId}`, {
+                        headers: {
+                            'X-Requested-With': 'XMLHttpRequest'
+                        }
+                    });
+
+                    if (!response.ok) throw new Error('Failed to fetch order details');
+
+                    const data = await response.json();
+
+                    if (data.success) {
+                        this.currentOrderForPayment = data.order;
+                        this.populatePaymentCompleteModal(data.order);
+                        this.showPaymentModal();
+                    } else {
+                        throw new Error(data.message || 'Failed to load order details');
+                    }
+                } catch (error) {
+                    console.error('Error loading order details:', error);
+                    this.showMessage('Failed to load order details', 'error');
+                }
+            }
+
+            populatePaymentCompleteModal(order) {
+                const currentAmountPaid = order.amount_paid || 0;
+                const balance = order.balance || 0;
+                const newTotalPaid = currentAmountPaid + balance;
+
+                document.getElementById('currentAmountPaid').textContent = `KSh ${currentAmountPaid.toLocaleString()}`;
+                document.getElementById('balanceToAdd').textContent = `KSh ${balance.toLocaleString()}`;
+                document.getElementById('newTotalPaid').textContent = `KSh ${newTotalPaid.toLocaleString()}`;
+            }
+
+            async confirmPaymentComplete() {
+                if (!this.currentOrderForPayment) return;
+
+                try {
+                    // Get the complete order details first to ensure we have all data
+                    const response = await fetch(`/Laundry/get-order-details/${this.currentOrderForPayment.id}`, {
+                        headers: {
+                            'X-Requested-With': 'XMLHttpRequest'
+                        }
+                    });
+
+                    if (!response.ok) throw new Error('Failed to fetch order details');
+
+                    const data = await response.json();
+
+                    if (data.success) {
+                        const order = data.order;
+                        const formData = new FormData();
+                        formData.append('csrfmiddlewaretoken', this.getCSRFToken());
+                        formData.append('order_id', order.id);
+
+                        // Preserve all existing data
+                        formData.append('name', order.customer.name || '');
+                        formData.append('phone', order.customer.phone || '');
+                        formData.append('order_status', order.order_status || 'pending');
+                        formData.append('payment_status', 'completed');
+
+                        // Set amount_paid to total_price to complete the payment
+                        formData.append('amount_paid', order.total_price);
+                        formData.append('total_price', order.total_price);
+
+                        // Add all items to preserve them
+                        if (order.items && order.items.length > 0) {
+                            order.items.forEach((item, index) => {
+                                formData.append(`items-${index}-id`, item.id || '');
+                                formData.append(`items-${index}-itemname`, item.itemname || '');
+                                formData.append(`items-${index}-servicetype`, item.servicetype || '');
+                                formData.append(`items-${index}-itemtype`, item.itemtype || '');
+                                formData.append(`items-${index}-unit_price`, item.unit_price || 0);
+                                formData.append(`items-${index}-itemcondition`, item.itemcondition || '');
+                            });
+                        }
+
+                        const updateResponse = await fetch('/Laundry/update-order/', {
+                            method: 'POST',
+                            body: formData,
+                            headers: {
+                                'X-Requested-With': 'XMLHttpRequest',
+                                'X-CSRFToken': this.getCSRFToken()
+                            }
+                        });
+
+                        const updateData = await updateResponse.json();
+
+                        if (updateData.success) {
+                            this.showMessage('Payment marked as complete successfully', 'success');
+                            this.closePaymentModal();
+                            this.loadOrders();
+                        } else {
+                            throw new Error(updateData.message || 'Failed to complete payment');
+                        }
+                    } else {
+                        throw new Error('Failed to load order details for update');
+                    }
+                } catch (error) {
+                    console.error('Error completing payment:', error);
+                    this.showMessage(error.message || 'Failed to complete payment', 'error');
+                }
+            }
+
+            showPaymentModal() {
+                document.getElementById('paymentCompleteModal').classList.remove('hidden');
+            }
+
+            closePaymentModal() {
+                document.getElementById('paymentCompleteModal').classList.add('hidden');
+                this.currentOrderForPayment = null;
+            }
+
+            async openEditModal(orderId) {
+                try {
+                    this.showLoading();
+
+                    const response = await fetch(`/Laundry/get-order-details/${orderId}`, {
+                        headers: {
+                            'X-Requested-With': 'XMLHttpRequest'
+                        }
+                    });
+
+                    if (!response.ok) throw new Error('Failed to fetch order details');
+
+                    const data = await response.json();
+
+                    if (data.success) {
+                        this.populateEditForm(data.order);
+                        this.showModal();
+                    } else {
+                        throw new Error(data.message || 'Failed to load order details');
+                    }
+                } catch (error) {
+                    console.error('Error loading order details:', error);
+                    this.showMessage('Failed to load order details', 'error');
+                } finally {
+                    this.hideLoading();
+                }
+            }
+
+            async submitUpdateForm() {
+                try {
+                    const formData = new FormData(document.getElementById('updateOrderForm'));
+
+                    // Add CSRF token
+                    const csrfToken = this.getCSRFToken();
+                    formData.append('csrfmiddlewaretoken', csrfToken);
+
+                    const response = await fetch('/Laundry/update-order/', {
+                        method: 'POST',
+                        body: formData,
+                        headers: {
+                            'X-Requested-With': 'XMLHttpRequest',
+                            'X-CSRFToken': csrfToken
+                        }
+                    });
+
+                    // Check if response is JSON
+                    const contentType = response.headers.get('content-type');
+                    if (!contentType || !contentType.includes('application/json')) {
+                        const text = await response.text();
+                        throw new Error(`Server returned HTML instead of JSON. Status: ${response.status}`);
+                    }
+
+                    const data = await response.json();
+
+                    if (!response.ok) {
+                        throw new Error(data.message || `HTTP error! status: ${response.status}`);
+                    }
+
+                    if (data.success) {
+                        this.showMessage(data.message, 'success');
+                        this.closeModal();
                         this.loadOrders();
                     } else {
-                        throw new Error(updateData.message || 'Failed to complete payment');
+                        throw new Error(data.message || 'Failed to update order');
                     }
-                } else {
-                    throw new Error('Failed to load order details for update');
+                } catch (error) {
+                    console.error('Error updating order:', error);
+                    this.showMessage(error.message || 'Failed to update order', 'error');
                 }
-            } catch (error) {
-                console.error('Error completing payment:', error);
-                this.showMessage(error.message || 'Failed to complete payment', 'error');
             }
-        }
 
-        showPaymentModal() {
-            document.getElementById('paymentCompleteModal').classList.remove('hidden');
-        }
+            addItemRow(item = {}, index = null) {
+                const itemsContainer = document.getElementById('updateItemsContainer');
+                const currentItemCount = itemsContainer.children.length;
+                const itemIndex = index !== null ? index : currentItemCount;
 
-        closePaymentModal() {
-            document.getElementById('paymentCompleteModal').classList.add('hidden');
-            this.currentOrderForPayment = null;
-        }
-
-        async openEditModal(orderId) {
-            try {
-                this.showLoading();
-
-                const response = await fetch(`/Laundry/get-order-details/${orderId}`, {
-                    headers: {
-                        'X-Requested-With': 'XMLHttpRequest'
-                    }
-                });
-
-                if (!response.ok) throw new Error('Failed to fetch order details');
-
-                const data = await response.json();
-
-                if (data.success) {
-                    this.populateEditForm(data.order);
-                    this.showModal();
-                } else {
-                    throw new Error(data.message || 'Failed to load order details');
-                }
-            } catch (error) {
-                console.error('Error loading order details:', error);
-                this.showMessage('Failed to load order details', 'error');
-            } finally {
-                this.hideLoading();
-            }
-        }
-
-        async submitUpdateForm() {
-            try {
-                const formData = new FormData(document.getElementById('updateOrderForm'));
-
-                // Add CSRF token
-                const csrfToken = this.getCSRFToken();
-                formData.append('csrfmiddlewaretoken', csrfToken);
-
-                const response = await fetch('/Laundry/update-order/', {
-                    method: 'POST',
-                    body: formData,
-                    headers: {
-                        'X-Requested-With': 'XMLHttpRequest',
-                        'X-CSRFToken': csrfToken
-                    }
-                });
-
-                // Check if response is JSON
-                const contentType = response.headers.get('content-type');
-                if (!contentType || !contentType.includes('application/json')) {
-                    const text = await response.text();
-                    throw new Error(`Server returned HTML instead of JSON. Status: ${response.status}`);
-                }
-
-                const data = await response.json();
-
-                if (!response.ok) {
-                    throw new Error(data.message || `HTTP error! status: ${response.status}`);
-                }
-
-                if (data.success) {
-                    this.showMessage(data.message, 'success');
-                    this.closeModal();
-                    this.loadOrders();
-                } else {
-                    throw new Error(data.message || 'Failed to update order');
-                }
-            } catch (error) {
-                console.error('Error updating order:', error);
-                this.showMessage(error.message || 'Failed to update order', 'error');
-            }
-        }
-
-        addItemRow(item = {}, index = null) {
-            const itemsContainer = document.getElementById('updateItemsContainer');
-            const currentItemCount = itemsContainer.children.length;
-            const itemIndex = index !== null ? index : currentItemCount;
-
-            const itemRow = document.createElement('div');
-            itemRow.className = 'grid grid-cols-1 md:grid-cols-4 gap-4 p-4 border-b border-gray-200 last:border-b-0';
-            itemRow.innerHTML = `
+                const itemRow = document.createElement('div');
+                itemRow.className = 'grid grid-cols-1 md:grid-cols-4 gap-4 p-4 border-b border-gray-200 last:border-b-0';
+                itemRow.innerHTML = `
                 <div>
                     <label class="block text-sm font-medium text-gray-700 mb-1">Item Name</label>
                     <input type="text" name="items-${itemIndex}-itemname" 
@@ -1017,252 +1022,253 @@
                     </button>
                 </div>
             `;
-            itemsContainer.appendChild(itemRow);
-        }
-
-        populateEditForm(order) {
-            document.getElementById('updateOrderId').value = order.id;
-            document.getElementById('updateCustomerName').value = order.customer.name || '';
-            document.getElementById('updateCustomerPhone').value = order.customer.phone || '';
-            document.getElementById('updateOrderStatus').value = order.order_status || 'pending';
-            document.getElementById('updatePaymentStatus').value = order.payment_status || 'pending';
-            document.getElementById('updateAmountPaid').value = order.amount_paid || 0;
-            document.getElementById('updateTotalPrice').value = order.total_price || 0;
-
-            document.getElementById('modalTotalAmount').textContent = `KSh ${order.total_price ? order.total_price.toLocaleString() : '0.00'}`;
-            document.getElementById('modalAmountPaid').textContent = `KSh ${order.amount_paid ? order.amount_paid.toLocaleString() : '0.00'}`;
-            document.getElementById('modalBalance').textContent = `KSh ${order.balance ? order.balance.toLocaleString() : '0.00'}`;
-
-            const itemsContainer = document.getElementById('updateItemsContainer');
-            itemsContainer.innerHTML = '';
-
-            if (order.items && order.items.length > 0) {
-                order.items.forEach((item, index) => {
-                    this.addItemRow(item, index);
-                });
-            } else {
-                this.addItemRow();
+                itemsContainer.appendChild(itemRow);
             }
-        }
 
-        showModal() {
-            document.getElementById('updateOrderModal').classList.remove('hidden');
-        }
+            populateEditForm(order) {
+                document.getElementById('updateOrderId').value = order.id;
+                document.getElementById('updateCustomerName').value = order.customer.name || '';
+                document.getElementById('updateCustomerPhone').value = order.customer.phone || '';
+                document.getElementById('updateOrderStatus').value = order.order_status || 'pending';
+                document.getElementById('updatePaymentStatus').value = order.payment_status || 'pending';
+                document.getElementById('updateAmountPaid').value = order.amount_paid || 0;
+                document.getElementById('updateTotalPrice').value = order.total_price || 0;
 
-        closeModal() {
-            document.getElementById('updateOrderModal').classList.add('hidden');
-        }
+                document.getElementById('modalTotalAmount').textContent = `KSh ${order.total_price ? order.total_price.toLocaleString() : '0.00'}`;
+                document.getElementById('modalAmountPaid').textContent = `KSh ${order.amount_paid ? order.amount_paid.toLocaleString() : '0.00'}`;
+                document.getElementById('modalBalance').textContent = `KSh ${order.balance ? order.balance.toLocaleString() : '0.00'}`;
 
-        async openReceiptModal(orderId) {
-            try {
-                const response = await fetch(`/Laundry/get-order-details/${orderId}`, {
-                    headers: {
-                        'X-Requested-With': 'XMLHttpRequest'
-                    }
-                });
+                const itemsContainer = document.getElementById('updateItemsContainer');
+                itemsContainer.innerHTML = '';
 
-                if (!response.ok) throw new Error('Failed to fetch order details');
-
-                const data = await response.json();
-
-                if (data.success) {
-                    this.populateReceipt(data.order);
-                    this.showReceiptModal();
+                if (order.items && order.items.length > 0) {
+                    order.items.forEach((item, index) => {
+                        this.addItemRow(item, index);
+                    });
                 } else {
-                    throw new Error(data.message || 'Failed to load order details');
+                    this.addItemRow();
                 }
-            } catch (error) {
-                console.error('Error loading order details:', error);
-                this.showMessage('Failed to load order details', 'error');
             }
-        }
 
-        populateReceipt(order) {
-            document.getElementById('receiptOrderCode').textContent = order.uniquecode || '-';
-            document.getElementById('receiptDate').textContent = new Date().toLocaleDateString();
-            document.getElementById('receiptCustomerName').textContent = order.customer.name || '-';
-            document.getElementById('receiptCustomerPhone').textContent = order.customer.phone || '-';
-            document.getElementById('receiptTotalAmount').textContent = `KSh ${order.total_price ? order.total_price.toLocaleString() : '0.00'}`;
-            document.getElementById('receiptAmountPaid').textContent = `KSh ${order.amount_paid ? order.amount_paid.toLocaleString() : '0.00'}`;
-            document.getElementById('receiptBalance').textContent = `KSh ${order.balance ? order.balance.toLocaleString() : '0.00'}`;
+            showModal() {
+                document.getElementById('updateOrderModal').classList.remove('hidden');
+            }
 
-            const itemsContainer = document.getElementById('receiptItems');
-            itemsContainer.innerHTML = '';
+            closeModal() {
+                document.getElementById('updateOrderModal').classList.add('hidden');
+            }
 
-            if (order.items && order.items.length > 0) {
-                order.items.forEach(item => {
-                    const itemElement = document.createElement('div');
-                    itemElement.className = 'flex justify-between mb-1';
-                    itemElement.innerHTML = `
+            async openReceiptModal(orderId) {
+                try {
+                    const response = await fetch(`/Laundry/get-order-details/${orderId}`, {
+                        headers: {
+                            'X-Requested-With': 'XMLHttpRequest'
+                        }
+                    });
+
+                    if (!response.ok) throw new Error('Failed to fetch order details');
+
+                    const data = await response.json();
+
+                    if (data.success) {
+                        this.populateReceipt(data.order);
+                        this.showReceiptModal();
+                    } else {
+                        throw new Error(data.message || 'Failed to load order details');
+                    }
+                } catch (error) {
+                    console.error('Error loading order details:', error);
+                    this.showMessage('Failed to load order details', 'error');
+                }
+            }
+
+            populateReceipt(order) {
+                document.getElementById('receiptOrderCode').textContent = order.uniquecode || '-';
+                document.getElementById('receiptDate').textContent = new Date().toLocaleDateString();
+                document.getElementById('receiptCustomerName').textContent = order.customer.name || '-';
+                document.getElementById('receiptCustomerPhone').textContent = order.customer.phone || '-';
+                document.getElementById('receiptTotalAmount').textContent = `KSh ${order.total_price ? order.total_price.toLocaleString() : '0.00'}`;
+                document.getElementById('receiptAmountPaid').textContent = `KSh ${order.amount_paid ? order.amount_paid.toLocaleString() : '0.00'}`;
+                document.getElementById('receiptBalance').textContent = `KSh ${order.balance ? order.balance.toLocaleString() : '0.00'}`;
+                document.getElementById('orderCreator').textContent = ` ${order.created_by || 'User'}`;
+
+                const itemsContainer = document.getElementById('receiptItems');
+                itemsContainer.innerHTML = '';
+
+                if (order.items && order.items.length > 0) {
+                    order.items.forEach(item => {
+                        const itemElement = document.createElement('div');
+                        itemElement.className = 'flex justify-between mb-1';
+                        itemElement.innerHTML = `
                         <span>${item.itemname || 'N/A'} (${item.servicetype || 'N/A'})</span>
                         <span>KSh ${item.unit_price ? item.unit_price.toLocaleString() : '0.00'}</span>
                     `;
-                    itemsContainer.appendChild(itemElement);
-                });
-            } else {
-                itemsContainer.innerHTML = '<p>No items found</p>';
-            }
-        }
-
-        showReceiptModal() {
-            document.getElementById('receiptModal').classList.remove('hidden');
-        }
-
-        closeReceiptModal() {
-            document.getElementById('receiptModal').classList.add('hidden');
-        }
-
-        printReceipt() {
-            const receiptContent = document.getElementById('receiptContent').innerHTML;
-            const originalContent = document.body.innerHTML;
-
-            document.body.innerHTML = receiptContent;
-            window.print();
-            document.body.innerHTML = originalContent;
-            this.closeReceiptModal();
-            this.loadOrders();
-        }
-
-        handleOrderSelection(checkbox) {
-            const orderId = checkbox.getAttribute('data-order-id');
-
-            if (checkbox.checked) {
-                this.selectedOrders.add(orderId);
-            } else {
-                this.selectedOrders.delete(orderId);
+                        itemsContainer.appendChild(itemElement);
+                    });
+                } else {
+                    itemsContainer.innerHTML = '<p>No items found</p>';
+                }
             }
 
-            this.updateBulkActionsUI();
-        }
+            showReceiptModal() {
+                document.getElementById('receiptModal').classList.remove('hidden');
+            }
 
-        toggleSelectAll(selectAll) {
-            const checkboxes = document.querySelectorAll('.order-checkbox');
-            checkboxes.forEach(checkbox => {
-                checkbox.checked = selectAll;
+            closeReceiptModal() {
+                document.getElementById('receiptModal').classList.add('hidden');
+            }
+
+            printReceipt() {
+                const receiptContent = document.getElementById('receiptContent').innerHTML;
+                const originalContent = document.body.innerHTML;
+
+                document.body.innerHTML = receiptContent;
+                window.print();
+                document.body.innerHTML = originalContent;
+                this.closeReceiptModal();
+                this.loadOrders();
+            }
+
+            handleOrderSelection(checkbox) {
                 const orderId = checkbox.getAttribute('data-order-id');
 
-                if (selectAll) {
+                if (checkbox.checked) {
                     this.selectedOrders.add(orderId);
                 } else {
                     this.selectedOrders.delete(orderId);
                 }
-            });
 
-            this.updateBulkActionsUI();
-        }
-
-        clearSelection() {
-            this.selectedOrders.clear();
-            document.querySelectorAll('.order-checkbox').forEach(checkbox => {
-                checkbox.checked = false;
-            });
-            document.getElementById('selectAllCheckbox').checked = false;
-            this.updateBulkActionsUI();
-        }
-
-        updateBulkActionsUI() {
-            const selectedCount = this.selectedOrders.size;
-            const bulkContainer = document.getElementById('bulkActionsContainer');
-            const selectedCountElement = document.getElementById('selectedCount');
-
-            selectedCountElement.textContent = `${selectedCount} order${selectedCount !== 1 ? 's' : ''} selected`;
-
-            if (selectedCount > 0) {
-                bulkContainer.classList.remove('hidden');
-            } else {
-                bulkContainer.classList.add('hidden');
+                this.updateBulkActionsUI();
             }
 
-            const totalCheckboxes = document.querySelectorAll('.order-checkbox').length;
-            document.getElementById('selectAllCheckbox').checked = selectedCount > 0 && selectedCount === totalCheckboxes;
-            document.getElementById('selectAllCheckbox').indeterminate = selectedCount > 0 && selectedCount < totalCheckboxes;
-        }
+            toggleSelectAll(selectAll) {
+                const checkboxes = document.querySelectorAll('.order-checkbox');
+                checkboxes.forEach(checkbox => {
+                    checkbox.checked = selectAll;
+                    const orderId = checkbox.getAttribute('data-order-id');
 
-        updateActiveFilters() {
-            document.querySelectorAll('.payment-filter, [data-payment=""]').forEach(btn => {
-                btn.classList.remove('bg-blue-100', 'text-blue-700', 'shadow-sm');
-                btn.classList.add('bg-gray-100', 'text-gray-700');
-            });
-
-            const activeBtn = document.querySelector(`[data-payment="${this.currentFilters.payment_status}"]`);
-            if (activeBtn) {
-                activeBtn.classList.remove('bg-gray-100', 'text-gray-700');
-                activeBtn.classList.add('bg-blue-100', 'text-blue-700', 'shadow-sm');
-            }
-        }
-
-        // FIXED: Export orders method - properly builds URL with current filters
-        exportOrders(format) {
-            // Build export URL with current filters
-            const params = new URLSearchParams();
-
-            // Add all current filters
-            Object.entries(this.currentFilters).forEach(([key, value]) => {
-                if (value) {
-                    params.append(key, value);
-                }
-            });
-
-            // Add current page for context (though export should export all filtered data)
-            params.append('page', this.currentPage);
-
-            // Add export format parameter - this is crucial
-            params.append('export', format);
-
-            // Build the full URL
-            const exportUrl = `${window.location.pathname}?${params.toString()}`;
-
-            console.log('Export URL:', exportUrl); // For debugging
-
-            // Redirect to export URL - this will trigger the Django view's export handling
-            window.location.href = exportUrl;
-        }
-
-        async loadOrders() {
-            this.showLoading();
-
-            const params = new URLSearchParams({
-                ...this.currentFilters,
-                page: this.currentPage
-            });
-
-            try {
-                const response = await fetch(`?${params}`, {
-                    headers: {
-                        'X-Requested-With': 'XMLHttpRequest'
+                    if (selectAll) {
+                        this.selectedOrders.add(orderId);
+                    } else {
+                        this.selectedOrders.delete(orderId);
                     }
                 });
 
-                if (!response.ok) throw new Error('Network response was not ok');
-
-                const data = await response.json();
-
-                if (data.success) {
-                    this.renderOrders(data.orders);
-                    this.renderStats(data.stats);
-                    this.renderPagination(data.pagination);
-                } else {
-                    throw new Error(data.message || 'Failed to load orders');
-                }
-            } catch (error) {
-                console.error('Error loading orders:', error);
-                this.showError('Failed to load orders. Please try again.');
-            } finally {
-                this.hideLoading();
+                this.updateBulkActionsUI();
             }
-        }
 
-        truncateText(text, maxLength) {
-            if (!text) return 'N/A';
-            if (text.length <= maxLength) return text;
-            return text.substring(0, maxLength) + '...';
-        }
+            clearSelection() {
+                this.selectedOrders.clear();
+                document.querySelectorAll('.order-checkbox').forEach(checkbox => {
+                    checkbox.checked = false;
+                });
+                document.getElementById('selectAllCheckbox').checked = false;
+                this.updateBulkActionsUI();
+            }
 
-        renderOrders(orders) {
-            const tbody = document.getElementById('ordersTableBody');
+            updateBulkActionsUI() {
+                const selectedCount = this.selectedOrders.size;
+                const bulkContainer = document.getElementById('bulkActionsContainer');
+                const selectedCountElement = document.getElementById('selectedCount');
 
-            if (!orders || orders.length === 0) {
-                tbody.innerHTML = `
+                selectedCountElement.textContent = `${selectedCount} order${selectedCount !== 1 ? 's' : ''} selected`;
+
+                if (selectedCount > 0) {
+                    bulkContainer.classList.remove('hidden');
+                } else {
+                    bulkContainer.classList.add('hidden');
+                }
+
+                const totalCheckboxes = document.querySelectorAll('.order-checkbox').length;
+                document.getElementById('selectAllCheckbox').checked = selectedCount > 0 && selectedCount === totalCheckboxes;
+                document.getElementById('selectAllCheckbox').indeterminate = selectedCount > 0 && selectedCount < totalCheckboxes;
+            }
+
+            updateActiveFilters() {
+                document.querySelectorAll('.payment-filter, [data-payment=""]').forEach(btn => {
+                    btn.classList.remove('bg-blue-100', 'text-blue-700', 'shadow-sm');
+                    btn.classList.add('bg-gray-100', 'text-gray-700');
+                });
+
+                const activeBtn = document.querySelector(`[data-payment="${this.currentFilters.payment_status}"]`);
+                if (activeBtn) {
+                    activeBtn.classList.remove('bg-gray-100', 'text-gray-700');
+                    activeBtn.classList.add('bg-blue-100', 'text-blue-700', 'shadow-sm');
+                }
+            }
+
+            // FIXED: Export orders method - properly builds URL with current filters
+            exportOrders(format) {
+                // Build export URL with current filters
+                const params = new URLSearchParams();
+
+                // Add all current filters
+                Object.entries(this.currentFilters).forEach(([key, value]) => {
+                    if (value) {
+                        params.append(key, value);
+                    }
+                });
+
+                // Add current page for context (though export should export all filtered data)
+                params.append('page', this.currentPage);
+
+                // Add export format parameter - this is crucial
+                params.append('export', format);
+
+                // Build the full URL
+                const exportUrl = `${window.location.pathname}?${params.toString()}`;
+
+                console.log('Export URL:', exportUrl); // For debugging
+
+                // Redirect to export URL - this will trigger the Django view's export handling
+                window.location.href = exportUrl;
+            }
+
+            async loadOrders() {
+                this.showLoading();
+
+                const params = new URLSearchParams({
+                    ...this.currentFilters,
+                    page: this.currentPage
+                });
+
+                try {
+                    const response = await fetch(`?${params}`, {
+                        headers: {
+                            'X-Requested-With': 'XMLHttpRequest'
+                        }
+                    });
+
+                    if (!response.ok) throw new Error('Network response was not ok');
+
+                    const data = await response.json();
+
+                    if (data.success) {
+                        this.renderOrders(data.orders);
+                        this.renderStats(data.stats);
+                        this.renderPagination(data.pagination);
+                    } else {
+                        throw new Error(data.message || 'Failed to load orders');
+                    }
+                } catch (error) {
+                    console.error('Error loading orders:', error);
+                    this.showError('Failed to load orders. Please try again.');
+                } finally {
+                    this.hideLoading();
+                }
+            }
+
+            truncateText(text, maxLength) {
+                if (!text) return 'N/A';
+                if (text.length <= maxLength) return text;
+                return text.substring(0, maxLength) + '...';
+            }
+
+            renderOrders(orders) {
+                const tbody = document.getElementById('ordersTableBody');
+
+                if (!orders || orders.length === 0) {
+                    tbody.innerHTML = `
                    <tr>
     <td colspan="14" class="px-6 py-12 text-left">
         <div class="inline-flex items-center justify-start rounded-full bg-gray-100 p-4 mb-3">
@@ -1284,27 +1290,32 @@
     </td>
 </tr>
                 `;
-                return;
+                    return;
+                }
+
+                tbody.innerHTML = orders.map(order => this.renderOrderRow(order)).join('');
+                this.updateBulkActionsUI();
             }
 
-            tbody.innerHTML = orders.map(order => this.renderOrderRow(order)).join('');
-            this.updateBulkActionsUI();
-        }
+            renderOrderRow(order) {
+                const firstItem = order.items[0] || {};
+                const hasMultipleItems = order.items.length > 1;
+                const isSelected = this.selectedOrders.has(order.id.toString());
+                const isSuperuser = document.getElementById('shopFilter') !== null;
 
-        renderOrderRow(order) {
-            const firstItem = order.items[0] || {};
-            const hasMultipleItems = order.items.length > 1;
-            const isSelected = this.selectedOrders.has(order.id.toString());
-            const isSuperuser = document.getElementById('shopFilter') !== null;
-           
-            
-            return `
+                // Handle created_by field - show "Unknown" if null or empty
+                const servedBy = order.created_by && order.created_by.trim() !== '' ? order.created_by : 'Unknown';
+
+                return `
     <tr class="hover:bg-gray-50 transition-colors duration-150 border-b border-gray-100" data-order-id="${order.id}">
         <td class="w-12 text-center py-4 px-4">
             <input type="checkbox" class="order-checkbox h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500" 
                    data-order-id="${order.id}" ${isSelected ? 'checked' : ''}>
         </td>
         <td class="py-4 px-4 text-left">
+            <div class="font-medium text-gray-900 text-xs">${order.created_at}</div>
+        </td>
+         <td class="py-4 px-4 text-left">
             <div class="font-medium text-gray-900 text-xs">${order.uniquecode}</div>
         </td>
         <td class="py-4 px-4 text-left">
@@ -1362,11 +1373,12 @@
                 `}
             </div>
         </td>
+        
+        <!-- Served by Column - FIXED: Properly handle null/empty values -->
         <td class="py-4 px-4 text-left">
-                    <div class="font-semibold text-blue-900 text-xs"> ${createdBy}</div>
-                </td>
-        <!-- Condition Column -->
-      
+            <div class="font-semibold text-blue-900 text-xs">${order.created_by}</div>
+        </td>
+        
         <!-- Payment Columns -->
         <td class="py-4 px-4 text-left">
             <div class="font-semibold text-blue-900 text-xs">KSh ${order.amount_paid.toLocaleString()}</div>
@@ -1398,17 +1410,19 @@
                 ` : ''}
 
                 <!-- Edit Button -->
+                {% if user.is_superuser %}
                 <button type="button" class="edit-order-btn p-2 text-amber-600 hover:bg-amber-100 rounded-lg transition-colors duration-200"
                     data-order-id="${order.id}" title="Edit Order">
                     <i class="fas fa-edit text-sm"></i>
                 </button>
+                {% endif %}
 
                 <!-- Print Receipt Button -->
                 <button type="button" class="print-receipt-btn p-2 text-blue-600 hover:bg-blue-100 rounded-lg transition-colors duration-200"
                     data-order-id="${order.id}" title="Print Receipt">
                     <i class="fas fa-print text-sm"></i>
                 </button>
-
+{% if user.is_superuser %}
                 <!-- More Actions Dropdown -->
                 <div class="relative">
                     <button type="button" class="p-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors duration-200"
@@ -1441,116 +1455,117 @@
                         </button>
                     </div>
                 </div>
+                {% endif %}
             </div>
         </td>
     </tr>
 `;
-        }
-
-        async bulkUpdateStatus(status) {
-            if (this.selectedOrders.size === 0) {
-                this.showMessage('Please select at least one order', 'warning');
-                return;
             }
 
-            const statusText = status.replace('_', ' ');
-            if (!confirm(`Are you sure you want to mark ${this.selectedOrders.size} order${this.selectedOrders.size !== 1 ? 's' : ''} as ${statusText}?`)) {
-                return;
-            }
+            async bulkUpdateStatus(status) {
+                if (this.selectedOrders.size === 0) {
+                    this.showMessage('Please select at least one order', 'warning');
+                    return;
+                }
 
-            try {
-                const promises = Array.from(this.selectedOrders).map(orderId =>
-                    this.updateOrderStatus(orderId, status)
-                );
+                const statusText = status.replace('_', ' ');
+                if (!confirm(`Are you sure you want to mark ${this.selectedOrders.size} order${this.selectedOrders.size !== 1 ? 's' : ''} as ${statusText}?`)) {
+                    return;
+                }
 
-                const results = await Promise.allSettled(promises);
+                try {
+                    const promises = Array.from(this.selectedOrders).map(orderId =>
+                        this.updateOrderStatus(orderId, status)
+                    );
 
-                let successCount = 0;
-                let errorCount = 0;
+                    const results = await Promise.allSettled(promises);
 
-                results.forEach((result, index) => {
-                    if (result.status === 'fulfilled' && result.value.success) {
-                        successCount++;
-                    } else {
-                        errorCount++;
+                    let successCount = 0;
+                    let errorCount = 0;
+
+                    results.forEach((result, index) => {
+                        if (result.status === 'fulfilled' && result.value.success) {
+                            successCount++;
+                        } else {
+                            errorCount++;
+                        }
+                    });
+
+                    if (successCount > 0) {
+                        this.showMessage(`Successfully updated ${successCount} order${successCount !== 1 ? 's' : ''}`, 'success');
                     }
-                });
+                    if (errorCount > 0) {
+                        this.showMessage(`Failed to update ${errorCount} order${errorCount !== 1 ? 's' : ''}`, 'error');
+                    }
 
-                if (successCount > 0) {
-                    this.showMessage(`Successfully updated ${successCount} order${successCount !== 1 ? 's' : ''}`, 'success');
+                    this.clearSelection();
+                    this.loadOrders();
+
+                } catch (error) {
+                    console.error('Error in bulk update:', error);
+                    this.showMessage('Failed to update orders', 'error');
                 }
-                if (errorCount > 0) {
-                    this.showMessage(`Failed to update ${errorCount} order${errorCount !== 1 ? 's' : ''}`, 'error');
-                }
-
-                this.clearSelection();
-                this.loadOrders();
-
-            } catch (error) {
-                console.error('Error in bulk update:', error);
-                this.showMessage('Failed to update orders', 'error');
             }
-        }
 
-        getConditionColor(condition) {
-            const colors = {
-                'new': 'text-green-600',
-                'Old': 'text-yellow-600',
-                'Torn': 'text-red-600'
-            };
-            return colors[condition] || 'text-gray-800';
-        }
+            getConditionColor(condition) {
+                const colors = {
+                    'new': 'text-green-600',
+                    'Old': 'text-yellow-600',
+                    'Torn': 'text-red-600'
+                };
+                return colors[condition] || 'text-gray-800';
+            }
 
-        renderOrderStatus(status) {
-            const statusConfig = {
-                'Completed': { color: 'green', icon: 'check-circle', label: 'Completed' },
-                'pending': { color: 'yellow', icon: 'clock', label: 'Pending' },
-                'processing': { color: 'blue', icon: 'cog', label: 'Processing' },
-                'Delivered_picked': { color: 'purple', icon: 'truck', label: 'Delivered' }
-            };
+            renderOrderStatus(status) {
+                const statusConfig = {
+                    'Completed': { color: 'green', icon: 'check-circle', label: 'Completed' },
+                    'pending': { color: 'yellow', icon: 'clock', label: 'Pending' },
+                    'processing': { color: 'blue', icon: 'cog', label: 'Processing' },
+                    'Delivered_picked': { color: 'purple', icon: 'truck', label: 'Delivered' }
+                };
 
-            const config = statusConfig[status] || { color: 'gray', icon: 'question-circle', label: status };
+                const config = statusConfig[status] || { color: 'gray', icon: 'question-circle', label: status };
 
-            return `
+                return `
                 <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium text-${config.color}-800 bg-${config.color}-100">
                     <i class="fas fa-${config.icon} mr-1"></i> ${config.label}
                 </span>
             `;
-        }
+            }
 
-        renderPaymentStatus(status) {
-            const statusConfig = {
-                'completed': { color: 'green', icon: 'check', label: 'Paid' },
-                'partial': { color: 'yellow', icon: 'exclamation-triangle', label: 'Partial' },
-                'pending': { color: 'red', icon: 'clock', label: 'Pending' }
-            };
+            renderPaymentStatus(status) {
+                const statusConfig = {
+                    'completed': { color: 'green', icon: 'check', label: 'Paid' },
+                    'partial': { color: 'yellow', icon: 'exclamation-triangle', label: 'Partial' },
+                    'pending': { color: 'red', icon: 'clock', label: 'Pending' }
+                };
 
-            const config = statusConfig[status] || { color: 'gray', icon: 'question-circle', label: status };
+                const config = statusConfig[status] || { color: 'gray', icon: 'question-circle', label: status };
 
-            return `
+                return `
                 <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium text-${config.color}-800 bg-${config.color}-100">
                     <i class="fas fa-${config.icon} mr-1"></i> ${config.label}
                 </span>
             `;
-        }
-
-        renderStats(stats) {
-            if (stats) {
-                document.getElementById('totalOrders').textContent = stats.total_orders || 0;
-                document.getElementById('pendingOrders').textContent = stats.pending_orders || 0;
-                document.getElementById('completedOrders').textContent = stats.completed_orders || 0;
-            }
-        }
-
-        renderPagination(pagination) {
-            const container = document.getElementById('paginationContainer');
-
-            if (!pagination || !pagination.has_other_pages) {
-                container.innerHTML = '';
-                return;
             }
 
-            let paginationHTML = `
+            renderStats(stats) {
+                if (stats) {
+                    document.getElementById('totalOrders').textContent = stats.total_orders || 0;
+                    document.getElementById('pendingOrders').textContent = stats.pending_orders || 0;
+                    document.getElementById('completedOrders').textContent = stats.completed_orders || 0;
+                }
+            }
+
+            renderPagination(pagination) {
+                const container = document.getElementById('paginationContainer');
+
+                if (!pagination || !pagination.has_other_pages) {
+                    container.innerHTML = '';
+                    return;
+                }
+
+                let paginationHTML = `
                 <div class="flex flex-col sm:flex-row items-center justify-between gap-4">
                     <div class="text-sm text-gray-700">
                         Showing ${pagination.start_index} to ${pagination.end_index} of ${pagination.count} entries
@@ -1558,136 +1573,136 @@
                     <div class="flex space-x-2">
             `;
 
-            if (pagination.has_previous) {
-                paginationHTML += `
+                if (pagination.has_previous) {
+                    paginationHTML += `
                     <button type="button" class="pagination-btn px-3 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors duration-200"
                         data-page="${pagination.number - 1}">
                         Previous
                     </button>
                 `;
-            }
+                }
 
-            const startPage = Math.max(1, pagination.number - 2);
-            const endPage = Math.min(pagination.num_pages, pagination.number + 2);
+                const startPage = Math.max(1, pagination.number - 2);
+                const endPage = Math.min(pagination.num_pages, pagination.number + 2);
 
-            for (let i = startPage; i <= endPage; i++) {
-                if (i === pagination.number) {
-                    paginationHTML += `
+                for (let i = startPage; i <= endPage; i++) {
+                    if (i === pagination.number) {
+                        paginationHTML += `
                         <span class="px-3 py-2 border border-blue-500 bg-blue-100 text-blue-700 rounded-lg text-sm font-medium">
                             ${i}
                         </span>
                     `;
-                } else {
-                    paginationHTML += `
+                    } else {
+                        paginationHTML += `
                         <button type="button" class="pagination-btn px-3 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors duration-200"
                             data-page="${i}">
                             ${i}
                         </button>
                     `;
+                    }
                 }
-            }
 
-            if (pagination.has_next) {
-                paginationHTML += `
+                if (pagination.has_next) {
+                    paginationHTML += `
                     <button type="button" class="pagination-btn px-3 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors duration-200"
                         data-page="${pagination.number + 1}">
                         Next
                     </button>
                 `;
-            }
+                }
 
-            paginationHTML += `
+                paginationHTML += `
                     </div>
                 </div>
             `;
 
-            container.innerHTML = paginationHTML;
-        }
-
-        async updateSingleOrderStatus(orderId, status) {
-            if (!confirm(`Are you sure you want to mark this order as ${status.replace('_', ' ')}?`)) {
-                return;
+                container.innerHTML = paginationHTML;
             }
 
-            try {
-                const response = await this.updateOrderStatus(orderId, status);
-                if (response.success) {
-                    this.showMessage(response.message, 'success');
-                    this.loadOrders();
-                } else {
-                    throw new Error(response.message);
+            async updateSingleOrderStatus(orderId, status) {
+                if (!confirm(`Are you sure you want to mark this order as ${status.replace('_', ' ')}?`)) {
+                    return;
                 }
-            } catch (error) {
-                console.error('Error updating order status:', error);
-                this.showMessage('Failed to update order status', 'error');
-            }
-        }
 
-        async handleBulkAction(action) {
-            this.showMessage('Please select orders using checkboxes for bulk actions', 'info');
-        }
-
-        async updateOrderStatus(orderId, status) {
-            const formData = new FormData();
-            formData.append('csrfmiddlewaretoken', this.getCSRFToken());
-
-            const response = await fetch(`/Laundry/update-order-status/${orderId}/${status}/`, {
-                method: 'POST',
-                body: formData,
-                headers: {
-                    'X-Requested-With': 'XMLHttpRequest'
+                try {
+                    const response = await this.updateOrderStatus(orderId, status);
+                    if (response.success) {
+                        this.showMessage(response.message, 'success');
+                        this.loadOrders();
+                    } else {
+                        throw new Error(response.message);
+                    }
+                } catch (error) {
+                    console.error('Error updating order status:', error);
+                    this.showMessage('Failed to update order status', 'error');
                 }
-            });
-
-            if (!response.ok) {
-                throw new Error('Failed to update order status');
             }
 
-            return await response.json();
-        }
+            async handleBulkAction(action) {
+                this.showMessage('Please select orders using checkboxes for bulk actions', 'info');
+            }
 
-        showLoading() {
-            document.getElementById('loadingSpinner').classList.remove('hidden');
-            document.getElementById('ordersTableBody').innerHTML = '';
-        }
+            async updateOrderStatus(orderId, status) {
+                const formData = new FormData();
+                formData.append('csrfmiddlewaretoken', this.getCSRFToken());
 
-        hideLoading() {
-            document.getElementById('loadingSpinner').classList.add('hidden');
-        }
+                const response = await fetch(`/Laundry/update-order-status/${orderId}/${status}/`, {
+                    method: 'POST',
+                    body: formData,
+                    headers: {
+                        'X-Requested-With': 'XMLHttpRequest'
+                    }
+                });
 
-        showError(message) {
-            this.showMessage(message, 'error');
-        }
+                if (!response.ok) {
+                    throw new Error('Failed to update order status');
+                }
 
-        showMessage(message, type) {
-            const toast = document.createElement('div');
-            toast.className = `fixed top-4 right-4 p-4 rounded-lg shadow-lg z-50 ${type === 'success' ? 'bg-green-500' :
-                type === 'error' ? 'bg-red-500' :
-                    type === 'warning' ? 'bg-yellow-500' : 'bg-blue-500'
-                } text-white`;
-            toast.innerHTML = `
+                return await response.json();
+            }
+
+            showLoading() {
+                document.getElementById('loadingSpinner').classList.remove('hidden');
+                document.getElementById('ordersTableBody').innerHTML = '';
+            }
+
+            hideLoading() {
+                document.getElementById('loadingSpinner').classList.add('hidden');
+            }
+
+            showError(message) {
+                this.showMessage(message, 'error');
+            }
+
+            showMessage(message, type) {
+                const toast = document.createElement('div');
+                toast.className = `fixed top-4 right-4 p-4 rounded-lg shadow-lg z-50 ${type === 'success' ? 'bg-green-500' :
+                    type === 'error' ? 'bg-red-500' :
+                        type === 'warning' ? 'bg-yellow-500' : 'bg-blue-500'
+                    } text-white`;
+                toast.innerHTML = `
                 <div class="flex items-center">
                     <i class="fas fa-${type === 'success' ? 'check' : type === 'error' ? 'exclamation-triangle' : 'info-circle'} mr-2"></i>
                     <span>${message}</span>
                 </div>
             `;
-            document.body.appendChild(toast);
+                document.body.appendChild(toast);
 
-            setTimeout(() => {
-                toast.remove();
-            }, 5000);
+                setTimeout(() => {
+                    toast.remove();
+                }, 5000);
+            }
+
+            getCSRFToken() {
+                return document.querySelector('[name=csrfmiddlewaretoken]').value;
+            }
         }
 
-        getCSRFToken() {
-            return document.querySelector('[name=csrfmiddlewaretoken]').value;
-        }
-    }
-
-    // Initialize when DOM is loaded
-    document.addEventListener('DOMContentLoaded', function () {
-        window.orderManager = new OrderManager();
-    });
-</script>
+            // Initialize when DOM is loaded
+            document.addEventListener('DOMContentLoaded', function () {
+                window.orderManager = new OrderManager();
+            });
+        </script>
 </body>
 
 </html>

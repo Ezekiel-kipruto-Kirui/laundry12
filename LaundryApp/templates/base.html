@@ -360,12 +360,7 @@
                     <i class="fas fa-users w-4 text-center"></i>
                     <span class="sidebar-text text-sm">Customers</span>
                 </a>
-                <a href="{% url 'laundry:expense_list' %}"
-                    class="flex items-center space-x-3 px-3 py-2 lg:px-4 lg:py-3 text-gray-300 hover:bg-gray-700 hover:text-white rounded-lg transition-colors group"
-                    title="Expenses">
-                    <i class="fas fa-money-bill-wave w-5 text-center"></i>
-                    <span class="sidebar-text">Expenses</span>
-                </a>
+                
             </div>
         </div>
         {% elif not user.is_superuser and active_shop_name == "Hotel" %}
@@ -403,12 +398,7 @@
                     <i class="fas fa-receipt w-4 text-center"></i>
                     <span class="sidebar-text text-sm">Orders</span>
                 </a>
-                <a href="{% url 'hotel:expense_list' %}"
-                    class="flex items-center space-x-3 px-3 py-2 lg:px-4 lg:py-3 text-gray-300 hover:bg-gray-700 hover:text-white rounded-lg transition-colors group"
-                    title="Expenses">
-                    <i class="fas fa-money-bill-wave w-5 text-center"></i>
-                    <span class="sidebar-text">Expenses</span>
-                </a>
+                
             </div>
         </div>
 

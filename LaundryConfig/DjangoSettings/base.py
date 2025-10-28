@@ -96,6 +96,7 @@ MIDDLEWARE = [
     'LaundryApp.middleware.ActiveShopMiddleware',
     
 ]
+
 ACCOUNT_ACTIVATION_DAYS = 0  # One-week activation window
 REGISTRATION_OPEN = True
 TAILWIND_APP_NAME = 'theme'
