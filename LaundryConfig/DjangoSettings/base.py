@@ -37,9 +37,9 @@ DEBUG = env.bool('DJANGO_DEBUG', default=False)  # Set to False for production
 
 # This allows your Render URL to be a valid hos*t
 ALLOWED_HOSTS = [
-    'https://elite-laundry0010.onrender.com',
-    'https://cleanpage.shop',
-    'https://www.cleanpage.shop',
+    'elite-laundry0010.onrender.com',
+    'cleanpage.shop',
+    'www.cleanpage.shop',
 ]
 
 CSRF_TRUSTED_ORIGINS = [
