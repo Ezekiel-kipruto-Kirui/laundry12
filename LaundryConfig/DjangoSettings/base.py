@@ -46,7 +46,7 @@ CSRF_TRUSTED_ORIGINS = [
     'https://elite-laundry0010.onrender.com',
     'https://cleanpage.shop',
     'https://www.cleanpage.shop'
-
+]
 
 
 # NPM_BIN_PATH = os.environ.get("NPM_BIN_PATH", None)
