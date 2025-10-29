@@ -33,8 +33,19 @@ SECRET_KEY = env('SECRET_KEY')
 DEBUG = env.bool('DJANGO_DEBUG', default=False)  # Set to False for production
 
 # This allows your Render URL to be a valid hos*t
-ALLOWED_HOSTS = ['*']
 
+ALLOWED_HOSTS = ['www.cleanpage.shop','cleanpage.shop','elite-laundry0010.onrender.com']
+CSRF_TRUSTED_ORIGINS = [
+    'https://www.cleanpage.shop',
+    'https://cleanpage.shop',
+    'https://elite-laundry0010.onrender.com'
+]
+DATABASES = {
+    'default': dj_database_url.config(
+        default=os.getenv('DATABASE_URL'),
+        conn_max_age=600,
+    )
+}
 
 
 # NPM_BIN_PATH = os.environ.get("NPM_BIN_PATH", None)
@@ -148,18 +159,19 @@ WSGI_APPLICATION = 'LaundryConfig.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/5.2/ref/settings/#databases
 
-DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
-    }
-}
 # DATABASES = {
-#     'default': dj_database_url.config(
-#         default=os.getenv('DATABASE_URL'),
-#         conn_max_age=600,
-#     )
+#     'default': {
+#         'ENGINE': 'django.db.backends.sqlite3',
+#         'NAME': BASE_DIR / 'db.sqlite3',
+#     }
 # }
+
+DATABASES = {
+    'default': dj_database_url.config(
+        default=os.getenv('DATABASE_URL'),
+        conn_max_age=600,
+    )
+}
 # Password validation
 # https://docs.djangoproject.com/en/5.2/ref/settings/#auth-password-validators
 
