@@ -14,7 +14,7 @@ from django.utils.timezone import now
 from django.http import JsonResponse
 
 # Local imports
-from .models import Order, OrderItem, ExpenseRecord
+from ..models import Order, OrderItem, ExpenseRecord
 from HotelApp.models import HotelOrder, HotelExpenseRecord, HotelOrderItem
 
 # Setup logger

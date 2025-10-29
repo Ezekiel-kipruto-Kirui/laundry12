@@ -25,9 +25,6 @@ from decouple import config
 
 # SECURITY WARNING: keep the secret key used in production secret!
 SECRET_KEY = env('SECRET_KEY')
-# TWILIO_ACCOUNT_SID = env("TWILIO_ACCOUNT_SID")
-# TWILIO_AUTH_TOKEN = env("TWILIO_AUTH_TOKEN")
-# TWILIO_PHONE_NUMBER = env("TWILIO_PHONE_NUMBER")
 
 
 
@@ -38,17 +35,6 @@ DEBUG = env.bool('DJANGO_DEBUG', default=False)  # Set to False for production
 # This allows your Render URL to be a valid hos*t
 ALLOWED_HOSTS = ['*']
 
-CSRF_TRUSTED_ORIGINS = [
-    'https://CeanpageLaundry.onrender.com',
-    'https://CeanpageLaundry.onrender.com',
-]
-
-
-SECURE_SSL_REDIRECT = False
-SESSION_COOKIE_SECURE = False
-CSRF_COOKIE_SECURE = False
-
-
 
 
 # NPM_BIN_PATH = os.environ.get("NPM_BIN_PATH", None)
@@ -57,7 +43,7 @@ CSRF_COOKIE_SECURE = False
 INSTALLED_APPS = [
     # IMPORTANT: Add whitenoise to INSTALLED_APPS for it to be recognized
     # by collectstatic and for its static file storage engine to work.
-    'whitenoise.runserver_nostatic', # For development
+    'whitenoise.runserver_nostatic',
     'multiselectfield', 
     'rest_framework',
     "unfold",
@@ -162,27 +148,18 @@ WSGI_APPLICATION = 'LaundryConfig.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/5.2/ref/settings/#databases
 
-# DATABASES = {
-#     'default': {
-#         'ENGINE': 'django.db.backends.sqlite3',
-#         'NAME': BASE_DIR / 'db.sqlite3',
-#     }
-# }
-
-
-
-
-# AFRICAS_TALKING_USERNAME = env("AFRICAS_TALKING_USERNAME")
-# AFRICAS_TALK_API_KEY = env("AFRICAS_TALK_API_KEY")
-
 DATABASES = {
-    'default': dj_database_url.config(
-        default=os.getenv('DATABASE_URL'),
-        conn_max_age=600,
-    )
+    'default': {
+        'ENGINE': 'django.db.backends.sqlite3',
+        'NAME': BASE_DIR / 'db.sqlite3',
+    }
 }
-
-
+# DATABASES = {
+#     'default': dj_database_url.config(
+#         default=os.getenv('DATABASE_URL'),
+#         conn_max_age=600,
+#     )
+# }
 # Password validation
 # https://docs.djangoproject.com/en/5.2/ref/settings/#auth-password-validators
 

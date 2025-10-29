@@ -14,238 +14,245 @@
 </head>
 
 <body class="bg-gray-50 min-h-screen p-6">
-    <div class="max-w-4xl mx-auto bg-white/90 backdrop-blur-xl rounded-2xl shadow-lg p-8 border border-gray-100 mt-10">
-        <!-- Progress Steps -->
-        <div class="flex justify-center mb-8">
-            <div class="flex items-center space-x-4">
-                <div class="flex items-center">
-                    <div id="step1-indicator"
-                        class="w-8 h-8 rounded-full bg-blue-600 text-white flex items-center justify-center font-semibold">
-                        1</div>
-                    <span class="ml-2 text-sm font-medium text-blue-600">Customer</span>
-                </div>
-                <div class="w-12 h-1 bg-gray-300"></div>
-                <div class="flex items-center">
-                    <div id="step2-indicator"
-                        class="w-8 h-8 rounded-full bg-gray-300 text-gray-600 flex items-center justify-center font-semibold">
-                        2</div>
-                    <span class="ml-2 text-sm font-medium text-gray-500">Order Details</span>
-                </div>
-                <div class="w-12 h-1 bg-gray-300"></div>
-                <div class="flex items-center">
-                    <div id="step3-indicator"
-                        class="w-8 h-8 rounded-full bg-gray-300 text-gray-600 flex items-center justify-center font-semibold">
-                        3</div>
-                    <span class="ml-2 text-sm font-medium text-gray-500">Items</span>
-                </div>
-                <div class="w-12 h-1 bg-gray-300"></div>
-                <div class="flex items-center">
-                    <div id="step4-indicator"
-                        class="w-8 h-8 rounded-full bg-gray-300 text-gray-600 flex items-center justify-center font-semibold">
-                        4</div>
-                    <span class="ml-2 text-sm font-medium text-gray-500">Payment</span>
-                </div>
+<div
+    class="max-w-4xl mx-auto bg-white/90 backdrop-blur-xl rounded-2xl shadow-lg p-4 sm:p-6 lg:p-8 border border-gray-100 mt-4 sm:mt-6 lg:mt-10">
+    <!-- Progress Steps - Improved for mobile -->
+    <div class="flex justify-center mb-6 sm:mb-8">
+        <div class="flex items-center space-x-2 sm:space-x-4 max-w-full overflow-x-auto px-2 py-2">
+            <!-- Step 1 -->
+            <div class="flex items-center flex-shrink-0">
+                <div id="step1-indicator"
+                    class="w-6 h-6 sm:w-8 sm:h-8 rounded-full bg-blue-600 text-white flex items-center justify-center font-semibold text-xs sm:text-sm">
+                    1</div>
+                <span class="ml-1 sm:ml-2 text-xs sm:text-sm font-medium text-blue-600 hidden xs:inline">Customer</span>
             </div>
-        </div>
+            <div class="w-6 sm:w-8 h-1 bg-gray-300 flex-shrink-0"></div>
 
-        <h1 class="text-3xl font-bold text-gray-800 mb-6 text-center">Customer Information</h1>
-
-        <!-- Step 1: Customer -->
-        <div id="step-customer" class="">
-
-            <form id="customerForm" class="space-y-5 p-4">
-                {% csrf_token %}
-                <div>
-                    <label class="block text-sm font-medium text-gray-700">Customer Name</label>
-                    <input id="name" name="name" type="text"
-                        class="mt-2 w-full rounded-lg border border-gray-300 bg-gray-50 focus:bg-white focus:border-blue-500 focus:ring-2 focus:ring-blue-200 p-3 transition duration-150" />
-                </div>
-                <div>
-                    <label class="block text-sm font-medium text-gray-700">Phone Number</label>
-                    <input id="phone" name="phone" type="text" required
-                        class="mt-2 w-full rounded-lg border border-gray-300 bg-gray-50 focus:bg-white focus:border-blue-500 focus:ring-2 focus:ring-blue-200 p-3 transition duration-150" />
-                </div>
-
-               
-
-                <div>
-                    <label class="block text-sm font-medium text-gray-700">Address/Estate</label>
-                    <input id="address" name="address" type="text"
-                        class="mt-2 w-full rounded-lg border border-gray-300 bg-gray-50 focus:bg-white focus:border-blue-500 focus:ring-2 focus:ring-blue-200 p-3 transition duration-150" />
-                </div>
-
-                <div class="flex justify-end mt-6">
-                    <button id="customerNext" type="submit"
-                        class="px-6 py-2.5 rounded-lg bg-blue-600 text-white font-medium hover:bg-blue-700 hover:shadow transition duration-200">
-                        Next →
-                    </button>
-                </div>
-            </form>
-        </div>
-
-        <!-- Step 2: Order Details -->
-        <div id="step-order-details" class="hidden">
-            <h2 class="text-lg font-semibold text-gray-700 mb-3">Order Details</h2>
-
-            <form id="orderDetailsForm" class="space-y-6 p-4">
-                {% csrf_token %}
-                <input type="hidden" id="customer_id" name="customer_id" />
-
-                <div class="grid grid-cols-1 gap-6">
-                    {% if not active_shop_name %}
-                    <div class="activeshop">
-                        <label class="block text-sm font-medium text-gray-700">Shop</label>
-                        <select id="shop" name="shop" required
-                            class="mt-2 w-full rounded-lg border border-gray-300 bg-gray-50 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 p-3">
-                            <option value="">-- Select Shop --</option>
-                            <option value="Shop A">Shop A</option>
-                            <option value="Shop B">Shop B</option>
-                        </select>
-                    </div>
-                    {% else %}
-                    <input type="hidden" id="shop" name="shop" value="{{ active_shop_name }}">
-                    {% endif %}
-
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700">Delivery/Picked Date</label>
-                        <input id="delivery_date" name="delivery_date" type="date" required
-                            class="mt-2 w-full rounded-lg border border-gray-300 bg-gray-50 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 p-3" />
-                    </div>
-                </div>
-
-                <div>
-                    <label class="block text-sm font-medium text-gray-700">Delivery/Pick Address </label>
-                    <textarea id="addressdetails" name="addressdetails" rows="2"
-                        class="mt-2 w-full rounded-lg border border-gray-300 bg-gray-50 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 p-3"></textarea>
-                </div>
-
-                <div class="flex justify-between mt-6">
-                    <button type="button" id="backToCustomer"
-                        class="px-6 py-2.5 rounded-lg bg-gray-300 text-gray-700 font-medium hover:bg-gray-400 transition duration-200">
-                        ← Back
-                    </button>
-                    <button type="submit" id="orderDetailsNext"
-                        class="px-6 py-2.5 rounded-lg bg-blue-600 text-white font-medium hover:bg-blue-700 hover:shadow transition duration-200">
-                        Next →
-                    </button>
-                </div>
-            </form>
-        </div>
-
-        <!-- Step 3: Items -->
-        <div id="step-items" class="hidden">
-            <h2 class="text-lg font-semibold text-gray-700 mb-3">Order Items</h2>
-
-            <div class="space-y-6">
-                <div class="flex items-center justify-between mb-2">
-                    <h3 class="text-md font-semibold text-gray-700">Add Items to Order</h3>
-                    <button id="addItemBtn" type="button"
-                        class="text-sm bg-green-600 hover:bg-green-700 text-white px-3 py-1.5 rounded-md shadow-sm transition duration-150">
-                        + Add Item
-                    </button>
-                </div>
-                <div id="itemsContainer" class="space-y-4 p-4"></div>
-
-                <div class="flex justify-between mt-6">
-                    <button type="button" id="backToOrderDetails"
-                        class="px-6 py-2.5 rounded-lg bg-gray-300 text-gray-700 font-medium hover:bg-gray-400 transition duration-200">
-                        ← Back
-                    </button>
-                    <button type="button" id="itemsNext"
-                        class="px-6 py-2.5 rounded-lg bg-blue-600 text-white font-medium hover:bg-blue-700 hover:shadow transition duration-200">
-                        Next →
-                    </button>
-                </div>
+            <!-- Step 2 -->
+            <div class="flex items-center flex-shrink-0">
+                <div id="step2-indicator"
+                    class="w-6 h-6 sm:w-8 sm:h-8 rounded-full bg-gray-300 text-gray-600 flex items-center justify-center font-semibold text-xs sm:text-sm">
+                    2</div>
+                <span class="ml-1 sm:ml-2 text-xs sm:text-sm font-medium text-gray-500 hidden xs:inline">Order
+                    Details</span>
             </div>
-        </div>
+            <div class="w-6 sm:w-8 h-1 bg-gray-300 flex-shrink-0"></div>
 
-        <!-- Step 4: Payment -->
-        <div id="step-payment" class="hidden">
-            <h2 class="text-lg font-semibold text-gray-700 mb-3">Payment Information</h2>
-
-            <form id="paymentForm" class="space-y-6 p-4">
-                {% csrf_token %}
-
-                <div class="grid grid-cols-2 gap-6">
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700">Payment Type</label>
-                        <select id="payment_type" name="payment_type" required
-                            class="mt-2 w-full rounded-lg border border-gray-300 bg-gray-50 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 p-3">
-                            <option value="">-- Select Payment Type --</option>
-                            <option value="cash">Cash</option>
-                            <option value="mpesa">M-Pesa</option>
-                            <option value="card">Credit/Debit Card</option>
-                            <option value="bank_transfer">Bank Transfer</option>
-                            <option value="other">Other</option>
-                        </select>
-                    </div>
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700">Amount Paid</label>
-                        <input id="amount_paid" name="amount_paid" type="number" step="0.01" min="0" value="0"
-                            class="mt-2 w-full rounded-lg border border-gray-300 bg-gray-50 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 p-3" />
-                    </div>
-                </div>
-
-                <!-- Totals -->
-                <div class="grid grid-cols-2 gap-4 mt-6">
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700">Total Price</label>
-                        <input id="total_price" name="total_price" readonly
-                            class="mt-2 w-full rounded-lg border border-gray-200 bg-gray-100 p-3 text-gray-700 font-semibold" />
-                    </div>
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700">Balance</label>
-                        <input id="balance" name="balance" readonly
-                            class="mt-2 w-full rounded-lg border border-gray-200 bg-gray-100 p-3 text-gray-700 font-semibold" />
-                    </div>
-                </div>
-
-                <div class="flex justify-between mt-6">
-                    <button type="button" id="backToItems"
-                        class="px-6 py-2.5 rounded-lg bg-gray-300 text-gray-700 font-medium hover:bg-gray-400 transition duration-200">
-                        ← Back
-                    </button>
-                    <button type="submit" id="submitOrderBtn"
-                        class="bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-2.5 rounded-lg font-medium shadow transition duration-200">
-                        Create Order
-                    </button>
-                </div>
-            </form>
-        </div>
-
-        <!-- Modal: existing customer found -->
-        <div id="customerModal"
-            class="fixed inset-0 hidden bg-black/40 backdrop-blur-sm items-center justify-center transition-all duration-200">
-            <div class="bg-white rounded-xl shadow-lg p-6 w-full max-w-md mx-auto ">
-                <div>
-                    <h3 class="text-xl font-semibold text-gray-800 mb-3">Customer Found</h3>
-                    <p class="text-sm text-gray-600 mb-4">A customer with this phone already exists. Select to use
-                        existing
-                        or
-                        create new.</p>
-
-                    <div id="foundCustomerInfo"
-                        class="space-y-1 text-sm text-gray-800 border rounded-lg p-3 bg-gray-50">
-                    </div>
-                </div>
-
-                <div class="p-4 grid grid-cols-2 gap-4 m-4">
-                    <button id="useExistingBtn"
-                        class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md transition">Use
-                        This
-                        Customer</button>
-                    <button id="createNewBtn"
-                        class="bg-gray-200 hover:bg-gray-300 px-4 py-2 rounded-md transition">Create
-                        New</button>
-                </div>
+            <!-- Step 3 -->
+            <div class="flex items-center flex-shrink-0">
+                <div id="step3-indicator"
+                    class="w-6 h-6 sm:w-8 sm:h-8 rounded-full bg-gray-300 text-gray-600 flex items-center justify-center font-semibold text-xs sm:text-sm">
+                    3</div>
+                <span class="ml-1 sm:ml-2 text-xs sm:text-sm font-medium text-gray-500 hidden xs:inline">Items</span>
             </div>
-        </div>
+            <div class="w-6 sm:w-8 h-1 bg-gray-300 flex-shrink-0"></div>
 
-        <!-- Notifications -->
-        <div id="toast"
-            class="fixed bottom-6 right-6 hidden bg-gray-900 text-white px-4 py-2 rounded-lg shadow-lg text-sm">
+            <!-- Step 4 -->
+            <div class="flex items-center flex-shrink-0">
+                <div id="step4-indicator"
+                    class="w-6 h-6 sm:w-8 sm:h-8 rounded-full bg-gray-300 text-gray-600 flex items-center justify-center font-semibold text-xs sm:text-sm">
+                    4</div>
+                <span class="ml-1 sm:ml-2 text-xs sm:text-sm font-medium text-gray-500 hidden xs:inline">Payment</span>
+            </div>
         </div>
     </div>
+
+    <h1 class="text-xl sm:text-2xl lg:text-3xl font-bold text-gray-800 mb-4 sm:mb-6 text-center">Customer Information
+    </h1>
+
+    <!-- Step 1: Customer -->
+    <div id="step-customer" class="">
+        <form id="customerForm" class="space-y-4 sm:space-y-5 p-2 sm:p-4">
+            {% csrf_token %}
+            <div>
+                <label class="block text-sm font-medium text-gray-700">Customer Name</label>
+                <input id="name" name="name" type="text"
+                    class="mt-1 sm:mt-2 w-full rounded-lg border border-gray-300 bg-gray-50 focus:bg-white focus:border-blue-500 focus:ring-2 focus:ring-blue-200 p-2 sm:p-3 transition duration-150 text-sm sm:text-base" />
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-gray-700">Phone Number</label>
+                <input id="phone" name="phone" type="text" required
+                    class="mt-1 sm:mt-2 w-full rounded-lg border border-gray-300 bg-gray-50 focus:bg-white focus:border-blue-500 focus:ring-2 focus:ring-blue-200 p-2 sm:p-3 transition duration-150 text-sm sm:text-base" />
+            </div>
+            <div class="flex justify-end mt-4 sm:mt-6">
+                <button id="customerNext" type="submit"
+                    class="w-full sm:w-auto px-4 sm:px-6 py-2.5 rounded-lg bg-blue-600 text-white font-medium hover:bg-blue-700 hover:shadow transition duration-200 text-sm sm:text-base">
+                    Next →
+                </button>
+            </div>
+        </form>
+    </div>
+
+    <!-- Step 2: Order Details -->
+    <div id="step-order-details" class="hidden">
+        <h2 class="text-lg font-semibold text-gray-700 mb-3">Order Details</h2>
+
+        <form id="orderDetailsForm" class="space-y-4 sm:space-y-6 p-2 sm:p-4">
+            {% csrf_token %}
+            <input type="hidden" id="customer_id" name="customer_id" />
+
+            <div class="grid grid-cols-1 gap-4 sm:gap-6">
+                {% if not active_shop_name %}
+                <div class="activeshop">
+                    <label class="block text-sm font-medium text-gray-700">Shop</label>
+                    <select id="shop" name="shop" required
+                        class="mt-1 sm:mt-2 w-full rounded-lg border border-gray-300 bg-gray-50 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 p-2 sm:p-3 text-sm sm:text-base">
+                        <option value="">-- Select Shop --</option>
+                        <option value="Shop A">Shop A</option>
+                        <option value="Shop B">Shop B</option>
+                    </select>
+                </div>
+                {% else %}
+                <input type="hidden" id="shop" name="shop" value="{{ active_shop_name }}">
+                {% endif %}
+
+                <div>
+                    <label class="block text-sm font-medium text-gray-700">Delivery/Picked Date</label>
+                    <input id="delivery_date" name="delivery_date" type="date" required
+                        class="mt-1 sm:mt-2 w-full rounded-lg border border-gray-300 bg-gray-50 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 p-2 sm:p-3 text-sm sm:text-base" />
+                </div>
+            </div>
+
+            <div>
+                <label class="block text-sm font-medium text-gray-700">Delivery/Pick Address</label>
+                <textarea id="addressdetails" name="addressdetails" rows="2"
+                    class="mt-1 sm:mt-2 w-full rounded-lg border border-gray-300 bg-gray-50 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 p-2 sm:p-3 text-sm sm:text-base"></textarea>
+            </div>
+
+            <div class="flex flex-col sm:flex-row justify-between gap-3 mt-4 sm:mt-6">
+                <button type="button" id="backToCustomer"
+                    class="order-2 sm:order-1 px-4 sm:px-6 py-2.5 rounded-lg bg-gray-300 text-gray-700 font-medium hover:bg-gray-400 transition duration-200 text-sm sm:text-base">
+                    ← Back
+                </button>
+                <button type="submit" id="orderDetailsNext"
+                    class="order-1 sm:order-2 px-4 sm:px-6 py-2.5 rounded-lg bg-blue-600 text-white font-medium hover:bg-blue-700 hover:shadow transition duration-200 text-sm sm:text-base">
+                    Next →
+                </button>
+            </div>
+        </form>
+    </div>
+
+    <!-- Step 3: Items -->
+    <div id="step-items" class="hidden">
+        <h2 class="text-lg font-semibold text-gray-700 mb-3">Order Items</h2>
+
+        <div class="space-y-4 sm:space-y-6">
+            <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-2">
+                <h3 class="text-md font-semibold text-gray-700">Add Items to Order</h3>
+                <button id="addItemBtn" type="button"
+                    class="w-full sm:w-auto text-sm bg-green-600 hover:bg-green-700 text-white px-3 py-2 sm:py-1.5 rounded-md shadow-sm transition duration-150">
+                    + Add Item
+                </button>
+            </div>
+            <div id="itemsContainer" class="space-y-3 sm:space-y-4 p-2 sm:p-4"></div>
+
+            <div class="flex flex-col sm:flex-row justify-between gap-3 mt-4 sm:mt-6">
+                <button type="button" id="backToOrderDetails"
+                    class="order-2 sm:order-1 px-4 sm:px-6 py-2.5 rounded-lg bg-gray-300 text-gray-700 font-medium hover:bg-gray-400 transition duration-200 text-sm sm:text-base">
+                    ← Back
+                </button>
+                <button type="button" id="itemsNext"
+                    class="order-1 sm:order-2 px-4 sm:px-6 py-2.5 rounded-lg bg-blue-600 text-white font-medium hover:bg-blue-700 hover:shadow transition duration-200 text-sm sm:text-base">
+                    Next →
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Step 4: Payment -->
+    <div id="step-payment" class="hidden">
+        <h2 class="text-lg font-semibold text-gray-700 mb-3">Payment Information</h2>
+
+        <form id="paymentForm" class="space-y-4 sm:space-y-6 p-2 sm:p-4">
+            {% csrf_token %}
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700">Payment Type</label>
+                    <select id="payment_type" name="payment_type" required
+                        class="mt-1 sm:mt-2 w-full rounded-lg border border-gray-300 bg-gray-50 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 p-2 sm:p-3 text-sm sm:text-base">
+                        <option value="">-- Select Payment Type --</option>
+                        <option value="cash">Cash</option>
+                        <option value="mpesa">M-Pesa</option>
+                        <option value="card">Credit/Debit Card</option>
+                        <option value="bank_transfer">Bank Transfer</option>
+                        <option value="other">Other</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700">Amount Paid</label>
+                    <input id="amount_paid" name="amount_paid" type="number" step="0.01" min="0" value="0"
+                        class="mt-1 sm:mt-2 w-full rounded-lg border border-gray-300 bg-gray-50 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 p-2 sm:p-3 text-sm sm:text-base" />
+                </div>
+            </div>
+
+            <!-- Totals -->
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 mt-4 sm:mt-6">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700">Total Price</label>
+                    <input id="total_price" name="total_price" readonly
+                        class="mt-1 sm:mt-2 w-full rounded-lg border border-gray-200 bg-gray-100 p-2 sm:p-3 text-gray-700 font-semibold text-sm sm:text-base" />
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700">Balance</label>
+                    <input id="balance" name="balance" readonly
+                        class="mt-1 sm:mt-2 w-full rounded-lg border border-gray-200 bg-gray-100 p-2 sm:p-3 text-gray-700 font-semibold text-sm sm:text-base" />
+                </div>
+            </div>
+
+            <div class="flex flex-col sm:flex-row justify-between gap-3 mt-4 sm:mt-6">
+                <button type="button" id="backToItems"
+                    class="order-2 sm:order-1 px-4 sm:px-6 py-2.5 rounded-lg bg-gray-300 text-gray-700 font-medium hover:bg-gray-400 transition duration-200 text-sm sm:text-base">
+                    ← Back
+                </button>
+                <button type="submit" id="submitOrderBtn"
+                    class="order-1 sm:order-2 bg-indigo-600 hover:bg-indigo-700 text-white px-4 sm:px-6 py-2.5 rounded-lg font-medium shadow transition duration-200 text-sm sm:text-base">
+                    Create Order
+                </button>
+            </div>
+        </form>
+    </div>
+
+    <!-- Modal: existing customer found -->
+    <div id="customerModal"
+        class="fixed inset-0 hidden bg-black/40 backdrop-blur-sm items-center justify-center transition-all duration-200 p-4">
+        <div class="bg-white rounded-xl shadow-lg p-4 sm:p-6 w-full max-w-md mx-auto">
+            <div>
+                <h3 class="text-lg sm:text-xl font-semibold text-gray-800 mb-3">Customer Found</h3>
+                <p class="text-sm text-gray-600 mb-4">A customer with this phone already exists. Select to use existing
+                    or create new.</p>
+
+                <div id="foundCustomerInfo" class="space-y-1 text-sm text-gray-800 border rounded-lg p-3 bg-gray-50">
+                </div>
+            </div>
+
+            <div class="p-4 grid grid-cols-1 sm:grid-cols-2 gap-3 mt-4">
+                <button id="useExistingBtn"
+                    class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md transition text-sm sm:text-base">
+                    Use This Customer
+                </button>
+                <button id="createNewBtn"
+                    class="bg-gray-200 hover:bg-gray-300 px-4 py-2 rounded-md transition text-sm sm:text-base">
+                    Create New
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Notifications -->
+    <div id="toast"
+        class="fixed bottom-4 left-4 right-4 sm:bottom-6 sm:right-6 sm:left-auto hidden bg-gray-900 text-white px-4 py-3 rounded-lg shadow-lg text-sm max-w-xs sm:max-w-sm mx-auto sm:mx-0">
+    </div>
+</div>
+
+<style>
+    /* Custom breakpoint for extra small screens */
+    @media (min-width: 475px) {
+        .xs\:inline {
+            display: inline !important;
+        }
+    }
+</style>
 
     <script>
         // CSRF helper
@@ -339,7 +346,7 @@
 
             const rawphone = document.getElementById('phone').value.trim();
             const name = document.getElementById('name').value.trim();
-            const address = document.getElementById('address').value.trim();
+            
 
             let phone = rawphone;
             if (!rawphone) {
@@ -364,7 +371,7 @@
                         'Content-Type': 'application/json',
                         'X-CSRFToken': csrftoken
                     },
-                    body: JSON.stringify({ phone, name, address })
+                    body: JSON.stringify({ phone, name})
                 });
 
                 const data = await resp.json();
@@ -379,7 +386,7 @@
                     foundCustomerInfo.innerHTML = `
                         <div><strong>${data.customer.name}</strong></div>
                         <div>${data.customer.phone}</div>
-                        <div class="text-sm text-gray-600">${data.customer.address || ''}</div>
+                       
                     `;
                     customerModal.classList.remove('hidden');
                     customerModal.classList.add('flex');
@@ -467,8 +474,8 @@
             const itemRows = itemsContainer.querySelectorAll('.item-row');
             itemRows.forEach(row => {
                 const qty = parseFloat(row.querySelector('.item-quantity').value) || 0;
-                const unit = parseFloat(row.querySelector('.item-unit_price').value) || 0;
-                const lineTotal = (qty * unit);
+                let unit = parseFloat(row.querySelector('.item-unit_price').value) || 0;
+                const lineTotal = unit;
                 row.querySelector('.item-line-total').textContent = lineTotal.toFixed(2);
                 total += lineTotal;
             });
@@ -487,7 +494,7 @@
             ];
 
             const itemTypeOptions = ['Clothing', 'Bedding', 'Household items', 'Footwares'];
-            const itemConditionOptions = ['new', 'Old', 'Torn'];
+            const itemConditionOptions = ['New', 'Old', 'Torn'];
 
             const wrapper = document.createElement('div');
             wrapper.className = 'item-row border rounded p-3 bg-gray-50';
@@ -641,8 +648,8 @@
                 const itemname = row.querySelector('.item-itemname').value;
                 const quantity = parseInt(row.querySelector('.item-quantity').value) || 1;
                 const itemcondition = row.querySelector('.item-itemcondition').value;
-                const unit_price = parseFloat(row.querySelector('.item-unit_price').value) || 0;
-                const total_item_price = (quantity * unit_price).toFixed(2);
+                let unit_price = parseFloat(row.querySelector('.item-unit_price').value) || 0;
+                const total_item_price = (unit_price).toFixed(2);
 
                 if (!selectedServices.length) {
                     showToast('Select at least one service type for each item');

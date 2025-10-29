@@ -34,6 +34,12 @@ class ActiveShopMiddleware:
 
         # ✅ If user is on select_shop but already has an active shop → redirect to dashboard
         if request.path == reverse('select_shop') and active_shop:
+            if active_shop == 'Shop A':
+                return redirect('laundry:Laundrydashboard')
+            elif active_shop == 'Shop B':
+                return redirect('laundry:Laundrydashboard')
+            else:
+                return redirect('hotel:order_list')
             return redirect('dashboard')  # or your main landing page
 
         return self.get_response(request)

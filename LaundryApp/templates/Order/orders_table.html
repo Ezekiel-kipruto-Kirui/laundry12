@@ -91,8 +91,9 @@
                     </div>
                     <p class="text-sm text-gray-500 font-medium">Active Orders</p>
                     <h3 class="text-3xl font-bold text-gray-800 mt-1" id="totalOrders">0</h3>
-                    <p class="text-xs text-gray-500 mt-2">Excluding delivered orders</p>
+                    
                 </div>
+               
             </div>
 
             <div class="bg-white p-5 rounded-xl shadow-sm border border-gray-100 border-l-4 border-l-amber-500">
@@ -128,6 +129,14 @@
                         class="px-4 py-2 bg-blue-100 text-blue-700 shadow-sm rounded-lg text-sm font-medium flex items-center active-filter">
                         Active Orders
                     </button>
+                    <div class="bg-white rounded-full shadow-sm">
+                        <select id="shopFilter"
+                            class="rounded-full p-1 bg-blue-100 text-blue-600 outline-none w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:ring-2 focus:ring-purple-500 focus:border-purple-500">
+                            <option value="">All Shops</option>
+                            <option value="Shop A">Shop A</option>
+                            <option value="Shop B">Shop B</option>
+                        </select>
+                    </div>
 
                     <!-- Payment Status Filters -->
                     <div class="flex flex-wrap items-center gap-2">
@@ -142,7 +151,6 @@
 
                     <!-- Action Filters -->
                     <div class="flex flex-wrap items-center gap-2">
-                        <span class="text-sm text-gray-500 font-medium">Actions:</span>
                         <button type="button" data-action="mark-completed"
                             class="px-3 py-1.5 bg-green-100 text-green-700 rounded-full text-sm font-medium action-filter">
                             <i class="fas fa-check-circle mr-1"></i> Mark Completed
@@ -151,15 +159,6 @@
                             class="px-3 py-1.5 bg-purple-100 text-purple-700 rounded-full text-sm font-medium action-filter">
                             <i class="fas fa-truck mr-1"></i> Mark Delivered
                         </button>
-
-                        <div class="bg-white rounded-full shadow-sm">
-                            <select id="shopFilter"
-                                class="rounded-full p-1 bg-blue-100 text-blue-600 outline-none w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:ring-2 focus:ring-purple-500 focus:border-purple-500">
-                                <option value="">All Shops</option>
-                                <option value="Shop A">Shop A</option>
-                                <option value="Shop B">Shop B</option>
-                            </select>
-                        </div>
 
                     </div>
                 </div>
@@ -293,7 +292,6 @@
                             <select id="updateOrderStatus" name="order_status"
                                 class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
                                 <option value="pending">Pending</option>
-                                <option value="processing">Processing</option>
                                 <option value="Completed">Completed</option>
                                 <option value="Delivered_picked">Delivered</option>
                             </select>
@@ -1024,31 +1022,66 @@
             `;
                 itemsContainer.appendChild(itemRow);
             }
-
+            
             populateEditForm(order) {
-                document.getElementById('updateOrderId').value = order.id;
-                document.getElementById('updateCustomerName').value = order.customer.name || '';
-                document.getElementById('updateCustomerPhone').value = order.customer.phone || '';
-                document.getElementById('updateOrderStatus').value = order.order_status || 'pending';
-                document.getElementById('updatePaymentStatus').value = order.payment_status || 'pending';
-                document.getElementById('updateAmountPaid').value = order.amount_paid || 0;
-                document.getElementById('updateTotalPrice').value = order.total_price || 0;
+                    const isAdmin = JSON.parse('{{ request.user.is_superuser|yesno:"true,false" }}');
 
-                document.getElementById('modalTotalAmount').textContent = `KSh ${order.total_price ? order.total_price.toLocaleString() : '0.00'}`;
-                document.getElementById('modalAmountPaid').textContent = `KSh ${order.amount_paid ? order.amount_paid.toLocaleString() : '0.00'}`;
-                document.getElementById('modalBalance').textContent = `KSh ${order.balance ? order.balance.toLocaleString() : '0.00'}`;
+                    // Set base values
+                    document.getElementById('updateOrderId').value = order.id;
+                    document.getElementById('updateCustomerName').value = order.customer.name || '';
+                    document.getElementById('updateCustomerPhone').value = order.customer.phone || '';
+                    document.getElementById('updateOrderStatus').value = order.order_status || 'pending';
+                    document.getElementById('updatePaymentStatus').value = order.payment_status || 'pending';
+                    document.getElementById('updateAmountPaid').value = order.amount_paid || 0;
 
-                const itemsContainer = document.getElementById('updateItemsContainer');
-                itemsContainer.innerHTML = '';
+                    // Handle totals
+                    const totalPriceField = document.getElementById('updateTotalPrice');
+                    const totalItemPriceLabel = document.getElementById('modalTotalAmount');
+                    const amountPaidLabel = document.getElementById('modalAmountPaid');
+                    const balanceLabel = document.getElementById('modalBalance');
 
-                if (order.items && order.items.length > 0) {
-                    order.items.forEach((item, index) => {
-                        this.addItemRow(item, index);
-                    });
-                } else {
-                    this.addItemRow();
+                    totalPriceField.value = order.total_price || 0;
+                    totalItemPriceLabel.textContent = `KSh ${order.total_price ? order.total_price.toLocaleString() : '0.00'}`;
+                    amountPaidLabel.textContent = `KSh ${order.amount_paid ? order.amount_paid.toLocaleString() : '0.00'}`;
+                    balanceLabel.textContent = `KSh ${order.balance ? order.balance.toLocaleString() : '0.00'}`;
+
+                    // Disable total price editing for all users
+                    totalPriceField.readOnly = true;
+
+                    // Clear and repopulate items
+                    const itemsContainer = document.getElementById('updateItemsContainer');
+                    itemsContainer.innerHTML = '';
+
+                    if (order.items && order.items.length > 0) {
+                        order.items.forEach((item, index) => {
+                            this.addItemRow(item, index);
+
+                            // Disable price fields per item after row creation
+                            const priceField = document.querySelector(`#updateItemsContainer .item-row:nth-child(${index + 1}) input[name="price"]`);
+                            if (priceField) {
+                                priceField.readOnly = true;
+                            }
+                        });
+                    } else {
+                        this.addItemRow();
+
+                        // Disable price for new empty row
+                        const priceField = document.querySelector(`#updateItemsContainer .item-row:last-child input[name="price"]`);
+                        if (priceField) {
+                            priceField.readOnly = true;
+                        }
+                    }
+
+                    // Optionally, if non-admins shouldn’t edit *any* item fields:
+                    if (!isAdmin) {
+                        const allInputs = itemsContainer.querySelectorAll('input, select, textarea');
+                        allInputs.forEach(input => {
+                            if (input.name === 'price' || input.name === 'total' || input.name === 'amount' || input.id === 'updateTotalPrice') {
+                                input.readOnly = true;
+                            }
+                        });
+                    }
                 }
-            }
 
             showModal() {
                 document.getElementById('updateOrderModal').classList.remove('hidden');
@@ -1307,23 +1340,23 @@
                 const servedBy = order.created_by && order.created_by.trim() !== '' ? order.created_by : 'Unknown';
 
                 return `
-    <tr class="hover:bg-gray-50 transition-colors duration-150 border-b border-gray-100" data-order-id="${order.id}">
-        <td class="w-12 text-center py-4 px-4">
+    <tr class=" hover:bg-gray-50 transition-colors duration-150 border-b border-gray-100" data-order-id="${order.id}">
+        <td class="px-6 w-auto w-12 text-center py-4 px-4">
             <input type="checkbox" class="order-checkbox h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500" 
                    data-order-id="${order.id}" ${isSelected ? 'checked' : ''}>
         </td>
-        <td class="py-4 px-4 text-left">
+        <td class=" text-left">
             <div class="font-medium text-gray-900 text-xs">${order.created_at}</div>
         </td>
-         <td class="py-4 px-4 text-left">
+         <td class="px-6 w-auto text-left">
             <div class="font-medium text-gray-900 text-xs">${order.uniquecode}</div>
         </td>
-        <td class="py-4 px-4 text-left">
+        <td class="px-6 w-auto text-left">
             <div class="text-xs text-gray-800">${order.customer.name}</div>
         </td>
 
         <!-- Service Type Column -->
-        <td class="py-4 px-4 text-left">
+        <td class="px-6 w-auto text-left">
             <div class="relative group inline-block">
                 <span class="text-xs text-gray-800">${firstItem.servicetype || 'N/A'}</span>
                 ${hasMultipleItems ? `
@@ -1339,7 +1372,7 @@
         </td>
 
         <!-- Item Type Column -->
-        <td class="py-4 px-4 text-left">
+        <td class="px-6 w-auto text-left">
             <div class="relative group inline-block">
                 <span class="text-xs text-gray-800">${firstItem.itemtype || 'N/A'}</span>
                 ${hasMultipleItems ? `
@@ -1355,7 +1388,7 @@
         </td>
 
         <!-- Items Column -->
-        <td class="py-4 px-4 text-left">
+        <td class="px-6 w-auto text-left">
             <div class="relative group inline-block">
                 ${hasMultipleItems ? `
                     <span class="text-xs text-gray-800">${this.truncateText(firstItem.itemname || 'N/A', 30)}</span>
@@ -1375,18 +1408,18 @@
         </td>
         
         <!-- Served by Column - FIXED: Properly handle null/empty values -->
-        <td class="py-4 px-4 text-left">
+        <td class="px-6 w-auto text-left">
             <div class="font-semibold text-blue-900 text-xs">${order.created_by}</div>
         </td>
         
         <!-- Payment Columns -->
-        <td class="py-4 px-4 text-left">
+        <td class="px-6 w-auto text-left">
             <div class="font-semibold text-blue-900 text-xs">KSh ${order.amount_paid.toLocaleString()}</div>
         </td>
-        <td class="py-4 px-4 text-left">
+        <td class="px-6 w-auto text-left">
             <div class="font-semibold text-blue-900 text-xs">KSh ${order.balance.toLocaleString()}</div>
         </td>
-        <td class="py-4 px-4 text-left">
+        <td class="px-6 w-auto text-left">
             <div class="font-semibold text-blue-900 text-xs">KSh ${order.total_price.toLocaleString()}</div>
         </td>
 
@@ -1394,12 +1427,12 @@
         <td class="py-4 px-4 text-left">
             ${this.renderOrderStatus(order.order_status)}
         </td>
-        <td class="py-4 px-4 text-left">
+        <td class="px-6 w-auto text-left">
             ${this.renderPaymentStatus(order.payment_status)}
         </td>
 
         <!-- Actions Column -->
-        <td class="py-4 px-4 text-left">
+        <td class="px-6 w-auto text-left">
             <div class="flex items-center justify-start space-x-2">
                 <!-- Payment Complete Button - Always visible if payment is not completed -->
                 ${order.payment_status !== 'completed' ? `
@@ -1410,19 +1443,19 @@
                 ` : ''}
 
                 <!-- Edit Button -->
-                {% if user.is_superuser %}
+               
                 <button type="button" class="edit-order-btn p-2 text-amber-600 hover:bg-amber-100 rounded-lg transition-colors duration-200"
                     data-order-id="${order.id}" title="Edit Order">
                     <i class="fas fa-edit text-sm"></i>
                 </button>
-                {% endif %}
+                
 
                 <!-- Print Receipt Button -->
                 <button type="button" class="print-receipt-btn p-2 text-blue-600 hover:bg-blue-100 rounded-lg transition-colors duration-200"
                     data-order-id="${order.id}" title="Print Receipt">
                     <i class="fas fa-print text-sm"></i>
                 </button>
-{% if user.is_superuser %}
+
                 <!-- More Actions Dropdown -->
                 <div class="relative">
                     <button type="button" class="p-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors duration-200"
@@ -1447,15 +1480,16 @@
                         ` : ''}
                         
                         <div class="border-t border-gray-100 my-1"></div>
-                        
+                        {% if user.is_superuser %}
                         <!-- Delete Order Button - UPDATED: Uses POST request -->
                         <button type="button" class="w-full text-left px-4 py-2 text-sm text-red-700 hover:bg-red-50 flex items-center delete-order-btn"
                             data-order-id="${order.id}" data-order-code="${order.uniquecode}">
                             <i class="fas fa-trash mr-2"></i> Delete Order
                         </button>
+                        {% endif %}
                     </div>
                 </div>
-                {% endif %}
+                
             </div>
         </td>
     </tr>

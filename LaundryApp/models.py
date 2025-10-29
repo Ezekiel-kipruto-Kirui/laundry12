@@ -89,13 +89,14 @@ def save_user_profile(sender, instance, **kwargs):
 class Customer(models.Model):
     name = models.CharField(max_length=200, db_index=True)
     phone = PhoneNumberField(region="KE", unique=True, db_index=True)
-    address = models.CharField(max_length=255, default='', blank=True)
+    address = models.CharField(max_length=255, default='',  null=True, blank=True)
     created_by = models.ForeignKey(
     UserProfile,
     # settings.AUTH_USER_MODEL,   # <--- THIS is the fix
         on_delete=models.CASCADE,
         null=True
     )
+    
     def __str__(self):
         return f"{self.name} ({self.phone})"
 
@@ -179,10 +180,11 @@ class Order(models.Model):
             # Set payment status
             if self.amount_paid == 0:
                 self.payment_status = 'pending'
+            elif self.balance > 0 and self.balance < self.total_price:
+                self.payment_status = 'partial'
             elif self.balance == 0:
                 self.payment_status = 'completed'
-            elif 0 < self.balance < self.total_price:
-                self.payment_status = 'partial'
+            
 
             if self.pk:
                 try:
@@ -233,7 +235,7 @@ class OrderItem(models.Model):
     itemname = models.TextField()
     quantity = models.PositiveIntegerField(default=1)
     ITEM_CONDITION_CHOICES = (
-        ('new', 'New'),
+        ('New', 'New'),
         ('Old', 'Old'),
         ('Torn', 'Torn'),
     )

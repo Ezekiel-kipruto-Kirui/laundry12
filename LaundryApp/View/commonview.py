@@ -2,7 +2,7 @@ from django.shortcuts import redirect,render
 from django.contrib.auth.decorators import login_required
 from datetime import datetime
 from django.db.models import  Sum
-from .models import shoptype
+from ..models import shoptype
 
 
 

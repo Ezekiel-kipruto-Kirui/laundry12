@@ -30,6 +30,8 @@ from django.contrib.auth import get_user_model
 from django.db.models.functions import Coalesce
 from django.utils.timezone import now
 
+from LaundryApp.resource import OrderResource
+
 # Local imports
 from .models import (
     Customer, 
@@ -48,14 +50,13 @@ from .forms import (
     ExpenseFieldForm,
     ExpenseRecordForm,
 )
-from HotelApp.models import HotelExpenseRecord
-from .resource import OrderResource
-from .analytics import DashboardAnalytics
+
+from .View.analytics import DashboardAnalytics
 # laundry/LaundryApp/views.py
 from rest_framework import status, generics
 from rest_framework.response import Response
 from rest_framework.decorators import api_view
-from .models import Customer, Order
+
 from .serializers import CustomerSerializer, OrderSerializer
 # tyty=0721422637
 from rest_framework.decorators import api_view, permission_classes
@@ -122,7 +123,7 @@ DEFAULT_PAGE_SIZE = 15
 MAX_PAGE_SIZE = 100
 EXPORT_FILENAME_PREFIX = "orders_export"
 ALLOWED_EXPORT_FORMATS = ['csv', 'xlsx']
-VALID_ORDER_STATUSES = ['pending', 'processing', 'Completed', 'Delivered_picked']
+VALID_ORDER_STATUSES = ['pending', 'Completed', 'Delivered_picked']
 VALID_PAYMENT_STATUSES = ['pending', 'partial', 'completed']
 
 # Shop constants
@@ -998,7 +999,7 @@ def update_payment_status(request, order_code):
         if amount_paid < 0:
             raise InvalidDataError('Amount paid cannot be negative.')
 
-        # Ensure amount_paid does not exceed total
+        #Ensure amount_paid does not exceed total
         if amount_paid > order.total_price:
             amount_paid = order.total_price
 

@@ -16,7 +16,7 @@ Including another URLconf
 """
 from django.contrib import admin
 from django.urls import path,include
-from LaundryApp.commonview import redirect_after_login,select_shop
+from LaundryApp.View.commonview import redirect_after_login,select_shop
 from django.shortcuts import redirect
 
 urlpatterns = [
