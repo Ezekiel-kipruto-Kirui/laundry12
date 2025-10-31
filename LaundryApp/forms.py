@@ -157,11 +157,11 @@ class CustomerForm(forms.ModelForm):
     """Form for customer creation and editing"""
     class Meta:
         model = Customer
-        fields = ['name', 'phone', 'address']
+        fields = ['name', 'phone']
         widgets = {
             'name': forms.TextInput(attrs={'class': 'form-control'}),
             'phone': forms.TextInput(attrs={'class': 'form-control'}),
-            'address': forms.TextInput(attrs={'class': 'form-control'}),
+            
         }
 
     def clean_phone(self):
