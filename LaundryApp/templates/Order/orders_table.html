@@ -13,55 +13,57 @@
 </head>
 
 <body class="min-h-screen bg-gray-50 font-sans">
-    <div class="max-w-full mx-auto p-4 lg:p-6">
+    <div class="max-w-full mx-auto ">
         <!-- Header -->
-        <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
-            <div>
-                <div class="flex items-center gap-3 mb-3">
-                    <a href="{% url 'laundry:Laundrydashboard' %}"
-                        class="inline-flex items-center px-4 py-2 bg-white rounded-lg shadow-sm border border-gray-200 text-gray-700 hover:text-blue-600 hover:shadow-md transition-all duration-200">
-                        <i class="fas fa-home mr-2"></i>
-                        <span class="text-sm font-medium">Dashboard Home</span>
+    <div class="flex flex-wrap items-center justify-between gap-4 mb-6">
+        <!-- Left: Dashboard Home -->
+        <div class="flex-shrink-0">
+            <a href="{% url 'laundry:Laundrydashboard' %}"
+                class="inline-flex items-center px-4 py-2 bg-white rounded-lg shadow-sm border border-gray-200 text-gray-700 hover:text-blue-600 hover:shadow-md transition-all duration-200">
+                <i class="fas fa-home mr-2 text-blue-500"></i>
+                <span class="text-sm font-medium">Dashboard Home</span>
+            </a>
+        </div>
+    
+        <!-- Middle: Search Bar (Takes Most Space) -->
+        <div class="flex-grow max-w-3xl relative">
+            <input type="text" name="search" id="searchInput" placeholder="Search orders..."
+                class="pl-10 pr-4 py-2.5 border border-gray-300 rounded-lg w-full focus:ring-2 focus:ring-blue-500 focus:border-blue-500 shadow-sm transition-all duration-200 placeholder-gray-400 text-sm">
+            <i class="fas fa-search absolute left-3 top-1/2 bottom-1/3 transform -translate-y-1/2 text-gray-400"></i>
+        </div>
+    
+        <!-- Right: Export and New Order Buttons -->
+        <div class="flex items-center gap-3 flex-shrink-0">
+            <!-- Export Dropdown -->
+            <div class="relative">
+                <button id="exportDropdownBtn"
+                    class="inline-flex items-center gap-2 px-4 py-2.5 bg-gradient-to-r from-blue-500 to-cyan-500 text-white rounded-lg font-medium shadow-md hover:shadow-lg transition-all duration-200">
+                    <i class="fas fa-download"></i>
+                    <span>Export</span>
+                    <i class="fas fa-chevron-down text-xs"></i>
+                </button>
+                <div id="exportDropdown"
+                    class="absolute right-0 mt-1 hidden bg-white rounded-lg shadow-lg py-2 z-20 w-48 border border-gray-100">
+                    <a href="#" data-format="csv"
+                        class="flex items-center gap-2 px-4 py-2 text-gray-700 hover:bg-gray-100 transition-colors duration-150 export-btn">
+                        <i class="fas fa-file-csv text-green-600"></i> CSV Format
+                    </a>
+                    <a href="#" data-format="xlsx"
+                        class="flex items-center gap-2 px-4 py-2 text-gray-700 hover:bg-gray-100 transition-colors duration-150 export-btn">
+                        <i class="fas fa-file-excel text-green-600"></i> Excel Format
                     </a>
                 </div>
-                <h1 class="text-2xl font-bold text-gray-900">Orders Management</h1>
-                <p class="text-gray-600 mt-1">Manage and track all laundry orders</p>
             </div>
-            <div class="flex flex-wrap gap-3">
-                <!-- Export Button -->
-                <div class="relative w-full md:w-auto">
-                    <input type="text" name="search" id="searchInput" placeholder="Search orders..."
-                        class="pl-10 pr-4 py-2.5 border border-gray-200 rounded-lg w-full md:w-64 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 shadow-sm transition-all duration-200">
-                    <i class="fas fa-search absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"></i>
-                </div>
-                <div class="relative">
-
-                    <button id="exportDropdownBtn"
-                        class="inline-flex items-center gap-2 px-4 py-2.5 bg-blue-500 from-cyan-500 to-blue-500 text-white rounded-lg font-medium shadow-md hover:shadow-lg transition-all duration-200">
-                        <i class="fas fa-download"></i>
-                        <span>Export</span>
-                        <i class="fas fa-chevron-down text-xs"></i>
-                    </button>
-                    <div id="exportDropdown"
-                        class="absolute right-0 mt-1 hidden bg-white rounded-lg shadow-lg py-2 z-20 w-48">
-                        <a class="flex items-center gap-2 px-4 py-2 text-gray-700 hover:bg-gray-100 transition-colors duration-150 export-btn"
-                            href="#" data-format="csv">
-                            <i class="fas fa-file-csv text-green-600"></i> CSV Format
-                        </a>
-                        <a class="flex items-center gap-2 px-4 py-2 text-gray-700 hover:bg-gray-100 transition-colors duration-150 export-btn"
-                            href="#" data-format="xlsx">
-                            <i class="fas fa-file-excel text-green-600"></i> Excel Format
-                        </a>
-                    </div>
-                </div>
-
-                <a href="{% url 'laundry:createorder' %}"
-                    class="inline-flex items-center gap-2 px-4 py-2.5 bg-blue-500 from-pink-500 to-rose-500 text-white rounded-lg font-medium shadow-md hover:shadow-lg transition-all duration-200">
-                    <i class="fas fa-plus-circle"></i>
-                    <span>New Order</span>
-                </a>
-            </div>
+    
+            <!-- New Order Button -->
+            <a href="{% url 'laundry:createorder' %}"
+                class="inline-flex items-center gap-2 px-4 py-2.5 bg-gradient-to-r from-blue-600 to-indigo-500 text-white rounded-lg font-medium shadow-md hover:shadow-lg transition-all duration-200">
+                <i class="fas fa-plus-circle"></i>
+                <span>New Order</span>
+            </a>
         </div>
+    </div>
+
 
         <!-- Bulk Actions Container -->
         <div id="bulkActionsContainer" class="hidden bg-gray-50 border border-gray-200 rounded-lg p-3 mb-4">
@@ -84,39 +86,46 @@
 
         <!-- Stats Overview -->
         <div class="grid grid-cols-1 md:grid-cols-3 gap-5 mb-6" id="statsContainer">
-            <div class="bg-white p-5 rounded-xl shadow-sm border border-gray-100 border-l-4 border-l-blue-500">
-                <div class="flex flex-col items-center text-center w-full">
-                    <div class="p-3 bg-blue-100 rounded-xl mb-3">
-                        <i class="fas fa-clipboard-check text-blue-600 text-xl"></i>
+        <div class="bg-white rounded-2xl shadow-sm border border-gray-200 p-6">
+            <div class="flex items-center">
+                    <div class="p-3 bg-blue-100 rounded-xl m-2">
+                        <i class="fas fa-clipboard-check text-blue-100 text-xl"></i>
                     </div>
-                    <p class="text-sm text-gray-500 font-medium">Active Orders</p>
-                    <h3 class="text-3xl font-bold text-gray-800 mt-1" id="totalOrders">0</h3>
-                    
-                </div>
-               
-            </div>
-
-            <div class="bg-white p-5 rounded-xl shadow-sm border border-gray-100 border-l-4 border-l-amber-500">
-                <div class="flex flex-col items-center text-center w-full">
-                    <div class="p-3 bg-amber-100 rounded-xl mb-3">
-                        <i class="fas fa-clock text-amber-600 text-xl"></i>
-                    </div>
-                    <p class="text-sm text-gray-500 font-medium">Pending Orders</p>
-                    <h3 class="text-3xl font-bold text-gray-800 mt-1" id="pendingOrders">0</h3>
-                    <p class="text-xs text-gray-500 mt-2">Require attention</p>
+                    <div>
+                        <h3 class="text-3xl font-bold text-gray-800 mt-1" id="totalOrders">0</h3>
+                        <p class="text-sm text-gray-500 font-medium">Active Orders</p>
+                        </div>
                 </div>
             </div>
 
-            <div class="bg-white p-5 rounded-xl shadow-sm border border-gray-100 border-l-4 border-l-green-500">
-                <div class="flex flex-col items-center text-center w-full">
-                    <div class="p-3 bg-green-100 rounded-xl mb-3">
+<div class="bg-white rounded-2xl shadow-sm border border-gray-200 p-6">
+    <div class="flex items-center">
+        <div class="p-3 bg-amber-100 rounded-xl m-2">
+            <i class="fas fa-clock text-amber-600 text-xl"></i>
+        </div>
+        <div>
+        
+            <h3 class="text-3xl font-bold text-gray-800 mt-1" id="pendingOrders">0</h3>
+            <p class="text-sm text-gray-500 font-medium">Pending Orders</p>
+            </div>
+            </div>
+            </div>
+
+<div class="bg-white rounded-2xl shadow-sm border border-gray-200 p-6">
+    <div class="flex items-center">
+        <div class="p-3 bg-green-100 rounded-xl m-2">
                         <i class="fas fa-check-circle text-green-600 text-xl"></i>
                     </div>
-                    <p class="text-sm text-gray-500 font-medium">Completed</p>
-                    <h3 class="text-3xl font-bold text-gray-800 mt-1" id="completedOrders">0</h3>
-                    <p class="text-xs text-gray-500 mt-2">Ready for delivery</p>
-                </div>
-            </div>
+                    <div>
+                    
+                    
+                        <h3 class="text-3xl font-bold text-gray-800 mt-1" id="completedOrders">0</h3>
+                        <p class="text-sm text-gray-500 font-medium">Completed</p>
+                        
+                        </div>
+                        </div>
+                        </div>
+
         </div>
 
         <!-- Filters -->
@@ -374,73 +383,80 @@
     </div>
 
     <!-- Receipt Modal -->
-    <div id="receiptModal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-        <div class="bg-white rounded-xl shadow-xl w-full max-w-md">
-            <div class="p-6 border-b border-gray-200">
-                <button type="button" id="closeReceiptModal"
-                    class="absolute top-6 right-6 text-gray-400 hover:text-gray-600">
-                    <i class="fas fa-times text-xl"></i>
+<div id="receiptModal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+    <div class="bg-white rounded-lg shadow-lg w-full max-w-sm text-xs"> <!-- smaller width + font -->
+        <div class="p-3 border-b border-gray-200 relative">
+            <button type="button" id="closeReceiptModal"
+                class="absolute top-3 right-3 text-gray-400 hover:text-gray-600">
+                <i class="fas fa-times text-sm"></i>
+            </button>
+        </div>
+<div class="p-4">
+    <div id="receiptContent" class="bg-white p-4 border border-gray-300">
+        <!-- Header -->
+        <div class="text-center mb-2">
+            <h3 class="text-sm font-bold leading-tight">CLEAN PAGE LAUNDRY</h3>
+            <p class="text-[10px] text-gray-600">Clean clothes, happy hearts — thank you for coming!</p>
+        </div>
+<!-- Order Info -->
+<div class="border-t border-b border-gray-300 py-2 mb-2">
+    <div class="flex justify-between mb-1">
+        <span class="font-medium">Order Code:</span>
+        <span id="receiptOrderCode">-</span>
+    </div>
+                    <div class="flex justify-between mb-1">
+                        <span class="font-medium">Date:</span>
+                        <span id="receiptDate">-</span>
+                    </div>
+                    </div>
+<!-- Customer Info -->
+<div class="mb-2">
+    <h4 class="font-medium mb-1">Customer Details:</h4>
+    <p id="receiptCustomerName" class="text-[11px]">-</p>
+    <p id="receiptCustomerPhone" class="text-[11px]">-</p>
+</div>
+<!-- Order Summary -->
+<div class="mb-2">
+    <h4 class="font-medium mb-1">Order Summary:</h4>
+    <div id="receiptItems" class="text-[11px] leading-snug space-y-1">
+        <!-- Items will be added here -->
+    </div>
+</div>
+<!-- Totals -->
+<div class="border-t border-gray-300 pt-2 space-y-1">
+    <div class="flex justify-between font-medium">
+        <span>Total Amount:</span>
+        <span id="receiptTotalAmount">KSh 0.00</span>
+    </div>
+    <div class="flex justify-between">
+        <span>Amount Paid:</span>
+        <span id="receiptAmountPaid">KSh 0.00</span>
+    </div>
+                    <div class="flex justify-between font-bold border-t border-gray-300 pt-1">
+                        <span>Balance:</span>
+                        <span id="receiptBalance">KSh 0.00</span>
+                    </div>
+                    <div class="flex justify-between font-bold border-t border-gray-300 pt-1">
+                        <span>Served By:</span>
+                        <span id="orderCreator"></span>
+                    </div>
+                    </div>
+                    </div>
+<!-- Buttons -->
+<div class="mt-4 flex justify-end gap-2">
+    <button type="button" id="cancelPrint"
+                    class="px-3 py-1.5 border border-gray-300 rounded text-gray-700 hover:bg-gray-50 text-[11px]">
+                    Cancel
                 </button>
-            </div>
-            <div class="p-6">
-                <div id="receiptContent" class="bg-white p-6 border border-gray-300">
-                    <div class="text-center mb-4">
-                        <h3 class="text-lg font-bold">CLEAN PAGE LAUNDRY</h3>
-                        <p class="text-sm text-gray-600">Clean clothes, happy hearts — thank you for coming!</p>
-                    </div>
-                    <div class="border-t border-b border-gray-300 py-3 mb-3">
-                        <div class="flex justify-between mb-2">
-                            <span class="font-medium">Order Code:</span>
-                            <span id="receiptOrderCode">-</span>
-                        </div>
-                        <div class="flex justify-between mb-2">
-                            <span class="font-medium">Date:</span>
-                            <span id="receiptDate">-</span>
-                        </div>
-                    </div>
-                    <div class="mb-4">
-                        <h4 class="font-medium mb-2">Customer Details:</h4>
-                        <p id="receiptCustomerName" class="text-sm">-</p>
-                        <p id="receiptCustomerPhone" class="text-sm">-</p>
-                    </div>
-                    <div class="mb-4">
-                        <h4 class="font-medium mb-2">Order Summary:</h4>
-                        <div id="receiptItems" class="text-sm">
-                            <!-- Items will be added here -->
-                        </div>
-                    </div>
-                    <div class="border-t border-gray-300 pt-3">
-                        <div class="flex justify-between font-medium">
-                            <span>Total Amount:</span>
-                            <span id="receiptTotalAmount">KSh 0.00</span>
-                        </div>
-                        <div class="flex justify-between">
-                            <span>Amount Paid:</span>
-                            <span id="receiptAmountPaid">KSh 0.00</span>
-                        </div>
-                        <div class="flex justify-between font-bold border-t border-gray-300 mt-2 pt-2">
-                            <span>Balance:</span>
-                            <span id="receiptBalance">KSh 0.00</span>
-                        </div>
-                        <div class="flex justify-between font-bold border-t border-gray-300 mt-2 pt-2">
-                            <span>Ser:</span>
-                            <span id="orderCreator"></span>
-                        </div>
-                    </div>
-                </div>
-                <div class="mt-6 flex justify-end gap-3">
-                    <button type="button" id="cancelPrint"
-                        class="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors">
-                        Cancel
-                    </button>
-                    <button type="button" id="printReceiptBtn"
-                        class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
-                        <i class="fas fa-print mr-2"></i> Print Receipt
-                    </button>
-                </div>
+                <button type="button" id="printReceiptBtn"
+                    class="px-3 py-1.5 bg-blue-600 text-white rounded hover:bg-blue-700 text-[11px]">
+                    <i class="fas fa-print mr-1 text-[10px]"></i> Print
+                </button>
             </div>
         </div>
     </div>
+</div>
+
 
     <!-- Payment Complete Modal -->
     <div id="paymentCompleteModal"
@@ -976,7 +992,7 @@
                 const itemsContainer = document.getElementById('updateItemsContainer');
                 const currentItemCount = itemsContainer.children.length;
                 const itemIndex = index !== null ? index : currentItemCount;
-
+                
                 const itemRow = document.createElement('div');
                 itemRow.className = 'grid grid-cols-1 md:grid-cols-4 gap-4 p-4 border-b border-gray-200 last:border-b-0';
                 itemRow.innerHTML = `
@@ -1004,6 +1020,7 @@
                            placeholder="e.g., Shirt" 
                            required>
                 </div>
+                
                 <div class="flex items-end">
                     <div class="flex-1 mr-2">
                         <label class="block text-sm font-medium text-gray-700 mb-1">Price</label>
@@ -1015,10 +1032,12 @@
                                placeholder="0.00" 
                                required>
                     </div>
+                    
                     <button type="button" class="px-3 py-2 bg-red-500 text-white rounded-md hover:bg-red-600 transition-colors remove-item">
                         <i class="fas fa-trash"></i>
                     </button>
                 </div>
+                
             `;
                 itemsContainer.appendChild(itemRow);
             }
@@ -1039,7 +1058,7 @@
                     const totalItemPriceLabel = document.getElementById('modalTotalAmount');
                     const amountPaidLabel = document.getElementById('modalAmountPaid');
                     const balanceLabel = document.getElementById('modalBalance');
-
+                    
                     totalPriceField.value = order.total_price || 0;
                     totalItemPriceLabel.textContent = `KSh ${order.total_price ? order.total_price.toLocaleString() : '0.00'}`;
                     amountPaidLabel.textContent = `KSh ${order.amount_paid ? order.amount_paid.toLocaleString() : '0.00'}`;
@@ -1073,14 +1092,7 @@
                     }
 
                     // Optionally, if non-admins shouldn’t edit *any* item fields:
-                    if (!isAdmin) {
-                        const allInputs = itemsContainer.querySelectorAll('input, select, textarea');
-                        allInputs.forEach(input => {
-                            if (input.name === 'price' || input.name === 'total' || input.name === 'amount' || input.id === 'updateTotalPrice') {
-                                input.readOnly = true;
-                            }
-                        });
-                    }
+                    
                 }
 
             showModal() {

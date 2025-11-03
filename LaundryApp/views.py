@@ -72,7 +72,7 @@ User = get_user_model()
 def check_or_create_customer(request):
     phone = request.data.get('phone')
     name = request.data.get('name')
-    address = request.data.get('address')
+    
 
     if not phone:
         return Response({"error": "Phone is required"}, status=status.HTTP_400_BAD_REQUEST)
@@ -92,7 +92,7 @@ def check_or_create_customer(request):
     serializer = CustomerSerializer(data={
         "name": name,
         "phone": phone,
-        "address": address,
+       
     })
 
     if serializer.is_valid():
@@ -277,8 +277,7 @@ def get_base_order_queryset():
         .only(
             'id', 'uniquecode', 'order_status', 'payment_status', 'payment_type',
             'shop', 'delivery_date', 'amount_paid', 'balance', 'total_price',
-            'created_at', 'customer__name', 'customer__phone', 'customer__address',
-            'addressdetails', 'created_by'
+            'created_at', 'customer__name', 'customer__phone','addressdetails', 'created_by'
         )
     )
 
@@ -393,7 +392,7 @@ def serialize_order_for_json(order):
             'customer': {
                 'name': order.customer.name,
                 'phone': customer_phone,
-                'address': order.customer.address or '',
+                
             },
             'created_by': created_by,
             'items': [],
