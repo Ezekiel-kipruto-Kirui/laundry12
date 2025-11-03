@@ -14,7 +14,7 @@ from django.urls import reverse_lazy
 from django.utils.translation import gettext_lazy as _
 import os
 from LaundryConfig.env import BASE_DIR, env
-import dj_database_url
+
 from decouple import config
 
 # import dj_database_url
