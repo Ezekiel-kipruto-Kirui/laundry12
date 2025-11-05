@@ -125,6 +125,7 @@ class Order(models.Model):
         ('card', 'Credit/Debit Card'),
         ('bank_transfer', 'Bank Transfer'),
         ('other', 'Other'),
+        ('None', 'None'),
         
     )
     payment_type = models.CharField(max_length=50, choices=PAYMENT_TYPE_CHOICES,
@@ -159,7 +160,25 @@ class Order(models.Model):
     total_price = models.DecimalField(max_digits=12, decimal_places=2, default=0, editable=False)
     balance = models.DecimalField(max_digits=12, decimal_places=2, default=0)
     created_at = models.DateTimeField(auto_now_add=True, db_index=True)
-    created_by = models.ForeignKey(UserProfile, on_delete=models.SET_NULL, null=True, blank=True)
+    #created_by = models.ForeignKey(UserProfile, on_delete=models.SET_NULL, null=True, blank=True)
+    
+    created_by = models.ForeignKey(
+    UserProfile,
+    on_delete=models.SET_NULL,
+    null=True,
+    blank=True,
+    related_name='orders_created'
+    )
+    updated_at = models.DateTimeField(auto_now=True, db_index=True)
+
+    updated_by = models.ForeignKey(
+        UserProfile,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='orders_updated'
+    )
+
     
     previous_order_status = models.CharField(max_length=50, blank=True, null=True)
 

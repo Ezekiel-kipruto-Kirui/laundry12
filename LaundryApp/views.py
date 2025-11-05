@@ -698,7 +698,6 @@ def handle_ajax_request(request):
         }, status=500)
 
 
-
 @login_required
 @shop_required
 @require_POST
@@ -707,40 +706,62 @@ def update_order_status_ajax(request, order_id, status):
     """Update order status via AJAX with CSRF protection"""
     try:
         validate_order_status(status)
-        
         order = Order.objects.get(id=order_id)
-        
-        # Check if user has permission to update this order - ALL authenticated users can update
+
+        # Check if user has permission to update this order
         if not check_order_permission(request, order):
             raise PermissionDeniedError("You don't have permission to update this order.")
-        
+
+        # Keep record of previous status
+        previous_status = order.order_status
+
+        # ✅ Restrict "Delivered_picked" if payment not complete
+        if status == "Delivered_picked" and order.payment_status != "completed":
+            return JsonResponse({
+                'success': False,
+                'message': f"Cannot mark the order Delivered or Picked. Payment is {order.payment_status.upper()}."
+            }, status=400)
+
+        # ✅ If allowed, update status
         order.order_status = status
+
+        # ✅ Capture user who updated the order
+        if status == "Delivered_picked":
+            # Link to the logged-in user’s profile if it exists
+            order.updated_by = getattr(request.user, "userprofile", None)
+
+        # Save changes
         order.save()
-        
-        logger.info(f"Order {order.uniquecode} status updated to {status} by user {request.user.id}")
-        
+
+        logger.info(
+            f"Order {order.uniquecode} status changed from {previous_status} to {status} "
+            f"by user {request.user.username} (ID: {request.user.id})"
+        )
+
         return JsonResponse({
             'success': True,
-            'message': f'Order status updated to {status}'
+            'message': f"Order status updated to {status}."
         })
-        
+
     except Order.DoesNotExist:
         logger.warning(f"Order not found: {order_id}")
         return JsonResponse({
             'success': False,
-            'message': 'Order not found'
+            'message': 'Order not found.'
         }, status=404)
+
     except (PermissionDeniedError, InvalidDataError) as e:
         logger.warning(f"Permission or validation error: {str(e)}")
         return JsonResponse({
             'success': False,
             'message': str(e)
         }, status=403)
+
     except Exception as e:
         logger.error(f"Error updating order status: {str(e)}")
         return JsonResponse({
             'success': False,
-            'message': 'An error occurred while updating the order'
+            'message': 'An error occurred while updating the order.'
         }, status=500)
 
 @login_required
@@ -1177,31 +1198,89 @@ def get_laundry_profit_and_hotel(request):
         dashboard_data = analytics.get_dashboard_data(
             request=request,
             selected_year=current_year,
-            selected_month=current_month,  # Get current month data
+            selected_month=current_month,
             from_date=None,
             to_date=None,
             payment_status=None,
             shop=None
         )
         
-        # Extract data from dashboard_data with fallbacks
+        # DEBUG: Log the raw dashboard data to identify discrepancies
+        logger.info(f"Raw dashboard data: {dashboard_data}")
+        
+        # Extract data from dashboard_data with better validation
         order_stats = dashboard_data.get('order_stats', {})
         expense_stats = dashboard_data.get('expense_stats', {})
         hotel_stats = dashboard_data.get('hotel_stats', {})
         business_growth = dashboard_data.get('business_growth', {})
         
-        laundry_revenue = order_stats.get('total_revenue', 0)
-        laundry_expenses = expense_stats.get('total_expenses', 0)
+        # DEBUG: Log individual stats
+        logger.info(f"Order stats: {order_stats}")
+        logger.info(f"Expense stats: {expense_stats}")
+        logger.info(f"Hotel stats: {hotel_stats}")
+        logger.info(f"Business growth: {business_growth}")
+        
+        # Calculate laundry metrics with proper type conversion
+        laundry_revenue = float(order_stats.get('total_revenue', 0) or 0)
+        laundry_expenses = float(expense_stats.get('total_expenses', 0) or 0)
         laundry_profit = laundry_revenue - laundry_expenses
         
-        hotel_revenue = hotel_stats.get('total_revenue', 0)
-        hotel_expenses = hotel_stats.get('total_expenses', 0)
-        hotel_profit = hotel_stats.get('net_profit', 0)
+        # Calculate hotel metrics with proper type conversion
+        hotel_revenue = float(hotel_stats.get('total_revenue', 0) or 0)
+        hotel_expenses = float(hotel_stats.get('total_expenses', 0) or 0)
+        hotel_profit = float(hotel_stats.get('net_profit', 0) or 0)
         
-        total_revenue = business_growth.get('total_revenue', laundry_revenue + hotel_revenue)
-        total_profit = business_growth.get('net_profit', laundry_profit + hotel_profit)
+        # Calculate totals - prefer direct values from business_growth if available
+        total_revenue_from_growth = float(business_growth.get('total_revenue', 0) or 0)
+        total_profit_from_growth = float(business_growth.get('net_profit', 0) or 0)
         
-        # Prepare context
+        # Use business_growth values if they seem correct, otherwise calculate manually
+        if total_revenue_from_growth > 0:
+            total_revenue = total_revenue_from_growth
+            total_profit = total_profit_from_growth
+        else:
+            total_revenue = laundry_revenue + hotel_revenue
+            total_profit = laundry_profit + hotel_profit
+        
+        # DEBUG: Log calculated values
+        logger.info(f"Calculated - Laundry Revenue: {laundry_revenue}, Hotel Revenue: {hotel_revenue}, Total: {total_revenue}")
+        logger.info(f"From Business Growth - Total Revenue: {total_revenue_from_growth}")
+        
+        # Alternative approach: Query the database directly if discrepancies persist
+        try:
+            from django.db.models import Sum
+            from your_app.models import Order, HotelBooking  # Replace with your actual models
+            
+            # Get direct database values for current month
+            direct_laundry_revenue = Order.objects.filter(
+                created_at__year=current_year,
+                created_at__month=current_month
+            ).aggregate(total=Sum('total_amount'))['total'] or 0
+            
+            direct_hotel_revenue = HotelBooking.objects.filter(
+                check_in__year=current_year,
+                check_in__month=current_month
+            ).aggregate(total=Sum('total_amount'))['total'] or 0
+            
+            direct_total_revenue = float(direct_laundry_revenue) + float(direct_hotel_revenue)
+            
+            logger.info(f"Direct DB query - Laundry: {direct_laundry_revenue}, Hotel: {direct_hotel_revenue}, Total: {direct_total_revenue}")
+            
+            # If direct query shows different results, use those values
+            if abs(direct_total_revenue - total_revenue) > 100:  # Significant difference
+                logger.warning(f"Revenue discrepancy detected: Dashboard={total_revenue}, Direct DB={direct_total_revenue}")
+                total_revenue = direct_total_revenue
+                laundry_revenue = float(direct_laundry_revenue)
+                hotel_revenue = float(direct_hotel_revenue)
+                # Recalculate profits with direct values
+                laundry_profit = laundry_revenue - laundry_expenses
+                hotel_profit = hotel_revenue - hotel_expenses
+                total_profit = laundry_profit + hotel_profit
+                
+        except Exception as db_error:
+            logger.warning(f"Direct database query failed: {db_error}")
+        
+        # Prepare context with formatted values
         context = {
             'total_revenue': float(total_revenue),
             'laundry_revenue': float(laundry_revenue),
@@ -1217,10 +1296,13 @@ def get_laundry_profit_and_hotel(request):
             'dashboard_title': f"{current_month_name} {current_year} Dashboard"
         }
         
+        # Final debug log
+        logger.info(f"Final context data: {context}")
+        
         return render(request, 'Generaldashboard.html', context)
         
     except Exception as e:
-        logger.error(f"Error in get_laundry_profit_and_hotel: {e}")
+        logger.error(f"Error in get_laundry_profit_and_hotel: {str(e)}", exc_info=True)
         
         # Convert month number to month name for error case too
         month_names = {
@@ -1237,9 +1319,9 @@ def get_laundry_profit_and_hotel(request):
             'current_year': current_date.year,
             'current_month': current_date.month,
             'current_month_name': current_month_name,
-            'dashboard_title': f"{current_month_name} {current_date.year} Dashboard"
+            'dashboard_title': f"{current_month_name} {current_date.year} Dashboard",
+            'error_message': f"Error loading dashboard data: {str(e)}"
         })
-
 @login_required
 @csrf_protect
 def logout_view(request):

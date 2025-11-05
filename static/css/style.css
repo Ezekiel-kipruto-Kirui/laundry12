@@ -1,4 +1,43 @@
 /* Add to your CSS file */
+/* Custom scrollbar for select */
+select {
+    scrollbar-width: thin;
+    scrollbar-color: #cbd5e1 #f1f5f9;
+}
+
+select::-webkit-scrollbar {
+    width: 6px;
+}
+
+select::-webkit-scrollbar-track {
+    background: #f1f5f9;
+    border-radius: 3px;
+}
+
+select::-webkit-scrollbar-thumb {
+    background: #cbd5e1;
+    border-radius: 3px;
+}
+
+select::-webkit-scrollbar-thumb:hover {
+    background: #94a3b8;
+}
+
+/* Smooth transitions */
+.payment-summary-item {
+    transition: all 0.3s ease;
+}
+
+.payment-summary-item:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+/* Focus states */
+select:focus {
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
 .horizontal-bar-chart {
     background: linear-gradient(90deg, #3B82F6 var(--percentage), #E5E7EB var(--percentage));
     height: 8px;
