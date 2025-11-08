@@ -731,6 +731,7 @@ class DashboardAnalytics:
 
             # Calculate total business revenue (laundry + hotel)
             total_laundry_revenue = order_stats['total_revenue']
+            print(total_laundry_revenue)
             total_hotel_revenue = hotel_stats['total_revenue']
             total_business_revenue = total_laundry_revenue + total_hotel_revenue
             

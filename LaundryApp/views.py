@@ -1225,7 +1225,7 @@ def get_laundry_profit_and_hotel(request):
         )
         
         # DEBUG: Log the raw dashboard data to identify discrepancies
-        
+        # print("Dashboard Data:", dashboard_data)
         
         # Extract data from dashboard_data with better validation
         order_stats = dashboard_data.get('order_stats', {})
@@ -1234,20 +1234,30 @@ def get_laundry_profit_and_hotel(request):
         business_growth = dashboard_data.get('business_growth', {})
         
         # DEBUG: Log individual stats
-        # logger.info(f"Order stats: {order_stats}")
-        # logger.info(f"Expense stats: {expense_stats}")
-        # logger.info(f"Hotel stats: {hotel_stats}")
-        # logger.info(f"Business growth: {business_growth}")
+        # print(f"Order stats: {order_stats}")
+        # print(f"Expense stats: {expense_stats}")
+        # print(f"Hotel stats: {hotel_stats}")
+        # print(f"Business growth: {business_growth}")
         
-        # Calculate laundry metrics with proper type conversion
+        # CORRECTED: Get laundry revenue directly from order_stats
+        # The DashboardAnalytics._calculate_laundry_revenue method calculates revenue from order items
+        # and stores it in order_stats['total_revenue']
         laundry_revenue = float(order_stats.get('total_revenue', 0) or 0)
         laundry_expenses = float(expense_stats.get('total_expenses', 0) or 0)
         laundry_profit = laundry_revenue - laundry_expenses
+        
+        # print(f"Laundry Revenue: {laundry_revenue}")
+        # print(f"Laundry Expenses: {laundry_expenses}")
+        # print(f"Laundry Profit: {laundry_profit}")
         
         # Calculate hotel metrics with proper type conversion
         hotel_revenue = float(hotel_stats.get('total_revenue', 0) or 0)
         hotel_expenses = float(hotel_stats.get('total_expenses', 0) or 0)
         hotel_profit = float(hotel_stats.get('net_profit', 0) or 0)
+        
+        # print(f"Hotel Revenue: {hotel_revenue}")
+        # print(f"Hotel Expenses: {hotel_expenses}")
+        # print(f"Hotel Profit: {hotel_profit}")
         
         # Calculate totals - prefer direct values from business_growth if available
         total_revenue_from_growth = float(business_growth.get('total_revenue', 0) or 0)
@@ -1261,41 +1271,34 @@ def get_laundry_profit_and_hotel(request):
             total_revenue = laundry_revenue + hotel_revenue
             total_profit = laundry_profit + hotel_profit
         
+        # print(f"Total Revenue: {total_revenue}")
+        # print(f"Total Profit: {total_profit}")
         
-        
-        # # Alternative approach: Query the database directly if discrepancies persist
-        # try:
-        #     from django.db.models import Sum
-        #     from LaundryApp.models import Order  # Replace with your actual models
+        # Alternative approach: Query the database directly if discrepancies persist
+        try:
+            from django.db.models import Sum
+             # Import your actual models
             
-        #     # Get direct database values for current month
-        #     direct_laundry_revenue = Order.objects.filter(
-        #         created_at__year=current_year,
-        #         created_at__month=current_month
-        #     ).aggregate(total=Sum('total_amount'))['total'] or 0
+            # Get direct database values for current month - using OrderItem.total_item_price
+            direct_laundry_revenue = OrderItem.objects.filter(
+                order__delivery_date__year=current_year,
+                order__delivery_date__month=current_month,
+                order__order_status__in=['pending', 'Completed', 'Delivered_picked']
+            ).aggregate(total=Sum('total_item_price'))['total'] or 0
             
-        #     # direct_hotel_revenue = HotelBooking.objects.filter(
-        #     #     check_in__year=current_year,
-        #     #     check_in__month=current_month
-        #     # ).aggregate(total=Sum('total_amount'))['total'] or 0
+            # print(f"Direct DB Laundry Revenue: {direct_laundry_revenue}")
             
-        #     direct_total_revenue = float(direct_laundry_revenue) + float(direct_hotel_revenue)
-            
-        #     logger.info(f"Direct DB query - Laundry: {direct_laundry_revenue}, Hotel: {direct_hotel_revenue}, Total: {direct_total_revenue}")
-            
-        #     # If direct query shows different results, use those values
-        #     if abs(direct_total_revenue - total_revenue) > 100:  # Significant difference
-        #         logger.warning(f"Revenue discrepancy detected: Dashboard={total_revenue}, Direct DB={direct_total_revenue}")
-        #         total_revenue = direct_total_revenue
-        #         laundry_revenue = float(direct_laundry_revenue)
-        #         hotel_revenue = float(direct_hotel_revenue)
-        #         # Recalculate profits with direct values
-        #         laundry_profit = laundry_revenue - laundry_expenses
-        #         hotel_profit = hotel_revenue - hotel_expenses
-        #         total_profit = laundry_profit + hotel_profit
+            # If direct query shows different results, use those values
+            if abs(float(direct_laundry_revenue) - laundry_revenue) > 1:  # Significant difference
+                # print(f"Revenue discrepancy detected: Dashboard={laundry_revenue}, Direct DB={direct_laundry_revenue}")
+                laundry_revenue = float(direct_laundry_revenue)
+                # Recalculate profits with direct values
+                laundry_profit = laundry_revenue - laundry_expenses
+                total_revenue = laundry_revenue + hotel_revenue
+                total_profit = laundry_profit + hotel_profit
                 
-        # except Exception as db_error:
-        #     logger.warning(f"Direct database query failed: {db_error}")
+        except Exception as db_error:
+             print(f"Direct database query failed: {db_error}")
         
         # Prepare context with formatted values
         context = {
@@ -1314,12 +1317,12 @@ def get_laundry_profit_and_hotel(request):
         }
         
         # Final debug log
-        # logger.info(f"Final context data: {context}")
+        print(f"Final context data: {context}")
         
         return render(request, 'Generaldashboard.html', context)
         
     except Exception as e:
-        logger.error(f"Error in get_laundry_profit_and_hotel: {str(e)}", exc_info=True)
+        print(f"Error in get_laundry_profit_and_hotel: {str(e)}", exc_info=True)
         
         # Convert month number to month name for error case too
         month_names = {
