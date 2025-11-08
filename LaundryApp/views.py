@@ -401,6 +401,7 @@ def serialize_order_for_json(order):
             'total_price': float(order.total_price or 0),
             'order_status': order.order_status,
             'payment_status': order.payment_status,
+            'payment_type':order.payment_type,
             'shop': order.shop,
             'created_at': order.created_at.strftime('%Y-%m-%d %H:%M') if order.created_at else '',
              # ✅ Display only first name
@@ -850,6 +851,16 @@ def order_edit(request):
             validate_payment_status(payment_status)
             order.payment_status = payment_status
         
+        # Update payment type
+        payment_type = request.POST.get('payment_type')
+        if payment_type:
+            # Validate payment type
+            valid_payment_types = dict(Order.PAYMENT_TYPE_CHOICES)
+            if payment_type in valid_payment_types:
+                order.payment_type = payment_type
+            else:
+                raise InvalidDataError(f"Invalid payment type: {payment_type}")
+        
         # Update amount paid and recalculate balance
         amount_paid = request.POST.get('amount_paid')
         if amount_paid is not None:
@@ -913,6 +924,15 @@ def order_edit(request):
         )
         order.total_price = total_price
         order.balance = total_price - (order.amount_paid or Decimal('0.00'))
+        
+        # Auto-update payment status based on amount paid
+        if order.amount_paid == 0:
+            order.payment_status = 'pending'
+        elif order.balance > 0 and order.balance < order.total_price:
+            order.payment_status = 'partial'
+        elif order.balance == 0:
+            order.payment_status = 'completed'
+        
         order.save()
         
         logger.info(f"Order {order.uniquecode} updated successfully by user {request.user.id}")
@@ -941,7 +961,6 @@ def order_edit(request):
             'success': False,
             'message': "An error occurred while updating the order."
         }, status=500)
-
 @login_required
 @shop_required
 @require_POST
@@ -1206,7 +1225,7 @@ def get_laundry_profit_and_hotel(request):
         )
         
         # DEBUG: Log the raw dashboard data to identify discrepancies
-        logger.info(f"Raw dashboard data: {dashboard_data}")
+        
         
         # Extract data from dashboard_data with better validation
         order_stats = dashboard_data.get('order_stats', {})
@@ -1215,10 +1234,10 @@ def get_laundry_profit_and_hotel(request):
         business_growth = dashboard_data.get('business_growth', {})
         
         # DEBUG: Log individual stats
-        logger.info(f"Order stats: {order_stats}")
-        logger.info(f"Expense stats: {expense_stats}")
-        logger.info(f"Hotel stats: {hotel_stats}")
-        logger.info(f"Business growth: {business_growth}")
+        # logger.info(f"Order stats: {order_stats}")
+        # logger.info(f"Expense stats: {expense_stats}")
+        # logger.info(f"Hotel stats: {hotel_stats}")
+        # logger.info(f"Business growth: {business_growth}")
         
         # Calculate laundry metrics with proper type conversion
         laundry_revenue = float(order_stats.get('total_revenue', 0) or 0)
@@ -1242,43 +1261,41 @@ def get_laundry_profit_and_hotel(request):
             total_revenue = laundry_revenue + hotel_revenue
             total_profit = laundry_profit + hotel_profit
         
-        # DEBUG: Log calculated values
-        logger.info(f"Calculated - Laundry Revenue: {laundry_revenue}, Hotel Revenue: {hotel_revenue}, Total: {total_revenue}")
-        logger.info(f"From Business Growth - Total Revenue: {total_revenue_from_growth}")
         
-        # Alternative approach: Query the database directly if discrepancies persist
-        try:
-            from django.db.models import Sum
-            from your_app.models import Order, HotelBooking  # Replace with your actual models
+        
+        # # Alternative approach: Query the database directly if discrepancies persist
+        # try:
+        #     from django.db.models import Sum
+        #     from LaundryApp.models import Order  # Replace with your actual models
             
-            # Get direct database values for current month
-            direct_laundry_revenue = Order.objects.filter(
-                created_at__year=current_year,
-                created_at__month=current_month
-            ).aggregate(total=Sum('total_amount'))['total'] or 0
+        #     # Get direct database values for current month
+        #     direct_laundry_revenue = Order.objects.filter(
+        #         created_at__year=current_year,
+        #         created_at__month=current_month
+        #     ).aggregate(total=Sum('total_amount'))['total'] or 0
             
-            direct_hotel_revenue = HotelBooking.objects.filter(
-                check_in__year=current_year,
-                check_in__month=current_month
-            ).aggregate(total=Sum('total_amount'))['total'] or 0
+        #     # direct_hotel_revenue = HotelBooking.objects.filter(
+        #     #     check_in__year=current_year,
+        #     #     check_in__month=current_month
+        #     # ).aggregate(total=Sum('total_amount'))['total'] or 0
             
-            direct_total_revenue = float(direct_laundry_revenue) + float(direct_hotel_revenue)
+        #     direct_total_revenue = float(direct_laundry_revenue) + float(direct_hotel_revenue)
             
-            logger.info(f"Direct DB query - Laundry: {direct_laundry_revenue}, Hotel: {direct_hotel_revenue}, Total: {direct_total_revenue}")
+        #     logger.info(f"Direct DB query - Laundry: {direct_laundry_revenue}, Hotel: {direct_hotel_revenue}, Total: {direct_total_revenue}")
             
-            # If direct query shows different results, use those values
-            if abs(direct_total_revenue - total_revenue) > 100:  # Significant difference
-                logger.warning(f"Revenue discrepancy detected: Dashboard={total_revenue}, Direct DB={direct_total_revenue}")
-                total_revenue = direct_total_revenue
-                laundry_revenue = float(direct_laundry_revenue)
-                hotel_revenue = float(direct_hotel_revenue)
-                # Recalculate profits with direct values
-                laundry_profit = laundry_revenue - laundry_expenses
-                hotel_profit = hotel_revenue - hotel_expenses
-                total_profit = laundry_profit + hotel_profit
+        #     # If direct query shows different results, use those values
+        #     if abs(direct_total_revenue - total_revenue) > 100:  # Significant difference
+        #         logger.warning(f"Revenue discrepancy detected: Dashboard={total_revenue}, Direct DB={direct_total_revenue}")
+        #         total_revenue = direct_total_revenue
+        #         laundry_revenue = float(direct_laundry_revenue)
+        #         hotel_revenue = float(direct_hotel_revenue)
+        #         # Recalculate profits with direct values
+        #         laundry_profit = laundry_revenue - laundry_expenses
+        #         hotel_profit = hotel_revenue - hotel_expenses
+        #         total_profit = laundry_profit + hotel_profit
                 
-        except Exception as db_error:
-            logger.warning(f"Direct database query failed: {db_error}")
+        # except Exception as db_error:
+        #     logger.warning(f"Direct database query failed: {db_error}")
         
         # Prepare context with formatted values
         context = {
@@ -1297,7 +1314,7 @@ def get_laundry_profit_and_hotel(request):
         }
         
         # Final debug log
-        logger.info(f"Final context data: {context}")
+        # logger.info(f"Final context data: {context}")
         
         return render(request, 'Generaldashboard.html', context)
         

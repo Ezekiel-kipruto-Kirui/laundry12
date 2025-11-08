@@ -203,7 +203,8 @@ class Order(models.Model):
                 self.payment_status = 'partial'
             elif self.balance == 0:
                 self.payment_status = 'completed'
-            
+            if self.payment_status == 'pending':
+                self.payment_type = 'None'
 
             if self.pk:
                 try:

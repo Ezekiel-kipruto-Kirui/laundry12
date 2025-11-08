@@ -1,0 +1,1987 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block content %}
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Laundry Orders Management</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="{% static 'css/style.css' %}">
+</head>
+
+<body class="min-h-screen bg-gray-50 font-sans">
+    <div class="max-w-full mx-auto ">
+        <!-- Header -->
+        <div class="flex flex-wrap items-center justify-between gap-4 mb-6">
+            <!-- Left: Dashboard Home -->
+            <div class="flex-shrink-0">
+                <a href="{% url 'laundry:Laundrydashboard' %}"
+                    class="inline-flex items-center px-4 py-2 bg-white rounded-lg shadow-sm border border-gray-200 text-gray-700 hover:text-blue-600 hover:shadow-md transition-all duration-200">
+                    <i class="fas fa-home mr-2 text-blue-500"></i>
+                    <span class="text-sm font-medium">Dashboard Home</span>
+                </a>
+            </div>
+
+            <!-- Middle: Search Bar (Takes Most Space) -->
+            <div class="flex-grow max-w-3xl relative">
+                <input type="text" name="search" id="searchInput" placeholder="Search orders..."
+                    class="pl-10 pr-4 py-2.5 border border-gray-300 rounded-lg w-full focus:ring-2 focus:ring-blue-500 focus:border-blue-500 shadow-sm transition-all duration-200 placeholder-gray-400 text-sm">
+                <i
+                    class="fas fa-search absolute left-3 top-1/2 bottom-1/3 transform -translate-y-1/2 text-gray-400"></i>
+            </div>
+
+            <!-- Right: Export and New Order Buttons -->
+            <div class="flex items-center gap-3 flex-shrink-0">
+                <!-- Export Dropdown -->
+                <div class="relative">
+                    <button id="exportDropdownBtn"
+                        class="inline-flex items-center gap-2 px-4 py-2.5 bg-blue-500 text-white rounded-lg font-medium shadow-md hover:shadow-lg transition-all duration-200">
+                        <i class="fas fa-download"></i>
+                        <span>Export</span>
+                        <i class="fas fa-chevron-down text-xs"></i>
+                    </button>
+                    <div id="exportDropdown"
+                        class="absolute right-0 mt-1 hidden bg-white rounded-lg shadow-lg py-2 z-20 w-48 border border-gray-100">
+                        <a href="#" data-format="csv"
+                            class="flex items-center gap-2 px-4 py-2 text-gray-700 hover:bg-gray-100 transition-colors duration-150 export-btn">
+                            <i class="fas fa-file-csv text-green-600"></i> CSV Format
+                        </a>
+                        <a href="#" data-format="xlsx"
+                            class="flex items-center gap-2 px-4 py-2 text-gray-700 hover:bg-gray-100 transition-colors duration-150 export-btn">
+                            <i class="fas fa-file-excel text-green-600"></i> Excel Format
+                        </a>
+                    </div>
+                </div>
+
+                <!-- New Order Button -->
+                <a href="{% url 'laundry:createorder' %}"
+                    class="inline-flex items-center gap-2 px-4 py-2.5 bg-blue-500 text-white rounded-lg font-medium shadow-md hover:shadow-lg transition-all duration-200">
+                    <i class="fas fa-plus-circle"></i>
+                    <span>New Order</span>
+                </a>
+            </div>
+        </div>
+
+        <!-- Bulk Actions Container -->
+        <div id="bulkActionsContainer" class="hidden bg-gray-50 border border-gray-200 rounded-lg p-3 mb-4">
+            <div class="flex flex-wrap items-center gap-4">
+                <span id="selectedCount" class="text-sm font-medium text-gray-700">0 orders selected</span>
+                <button id="bulkCompleteBtn"
+                    class="px-4 py-2 bg-green-500 text-white rounded-lg text-sm font-medium hover:bg-green-600 transition-colors">
+                    <i class="fas fa-check-circle mr-2"></i>Mark Selected as Completed
+                </button>
+                <button id="bulkDeliverBtn"
+                    class="px-4 py-2 bg-purple-500 text-white rounded-lg text-sm font-medium hover:bg-purple-600 transition-colors">
+                    <i class="fas fa-truck mr-2"></i>Mark Selected as Delivered
+                </button>
+                <button id="clearSelectionBtn"
+                    class="px-4 py-2 bg-gray-500 text-white rounded-lg text-sm font-medium hover:bg-gray-600 transition-colors">
+                    <i class="fas fa-times mr-2"></i>Clear Selection
+                </button>
+            </div>
+        </div>
+
+        <!-- Stats Overview -->
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-5 mb-6" id="statsContainer">
+            <div class="bg-white rounded-2xl shadow-sm border border-gray-200 p-6">
+                <div class="flex items-center">
+                    <div class="p-3 bg-blue-100 rounded-xl m-2">
+                        <i class="fas fa-clipboard-check text-blue-600 text-xl"></i>
+                    </div>
+                    <div>
+                        <h3 class="text-3xl font-bold text-gray-800 mt-1" id="totalOrders">0</h3>
+                        <p class="text-sm text-gray-500 font-medium">Active Orders</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="bg-white rounded-2xl shadow-sm border border-gray-200 p-6">
+                <div class="flex items-center">
+                    <div class="p-3 bg-amber-100 rounded-xl m-2">
+                        <i class="fas fa-clock text-amber-600 text-xl"></i>
+                    </div>
+                    <div>
+                        <h3 class="text-3xl font-bold text-gray-800 mt-1" id="pendingOrders">0</h3>
+                        <p class="text-sm text-gray-500 font-medium">Pending Orders</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="bg-white rounded-2xl shadow-sm border border-gray-200 p-6">
+                <div class="flex items-center">
+                    <div class="p-3 bg-green-100 rounded-xl m-2">
+                        <i class="fas fa-check-circle text-green-600 text-xl"></i>
+                    </div>
+                    <div>
+                        <h3 class="text-3xl font-bold text-gray-800 mt-1" id="completedOrders">0</h3>
+                        <p class="text-sm text-gray-500 font-medium">Completed</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Filters -->
+        <div class="bg-white p-5 rounded-xl shadow-sm border border-gray-100 mb-6">
+            <form id="filterForm"
+                class="flex flex-col md:flex-row justify-between w-full items-start md:items-center gap-4">
+                <div class="flex flex-wrap gap-3">
+                    <!-- All Orders Filter -->
+                    <button type="button" data-payment=""
+                        class="px-4 py-2 bg-blue-100 text-blue-700 shadow-sm rounded-lg text-sm font-medium flex items-center active-filter">
+                        Active Orders
+                    </button>
+                    <div class="bg-white rounded-full shadow-sm">
+                        <select id="shopFilter"
+                            class="rounded-full p-1 bg-blue-100 text-blue-600 outline-none w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:ring-2 focus:ring-purple-500 focus:border-purple-500">
+                            <option value="">All Shops</option>
+                            <option value="Shop A">Shop A</option>
+                            <option value="Shop B">Shop B</option>
+                        </select>
+                    </div>
+
+                    <!-- Payment Status Filters -->
+                    <div class="flex flex-wrap items-center gap-2">
+                        <span class="text-sm text-gray-500 font-medium">Payment:</span>
+                        {% for payment_value, payment_label in payment_status_choices %}
+                        <button type="button" data-payment="{{ payment_value }}"
+                            class="px-3 py-1.5 bg-gray-100 text-gray-700 rounded-full text-sm font-medium payment-filter">
+                            {{ payment_label }}
+                        </button>
+                        {% endfor %}
+                    </div>
+
+                    <!-- Action Filters -->
+                    <div class="flex flex-wrap items-center gap-2">
+                        <button type="button" data-action="mark-completed"
+                            class="px-3 py-1.5 bg-green-100 text-green-700 rounded-full text-sm font-medium action-filter">
+                            <i class="fas fa-check-circle mr-1"></i> Mark Completed
+                        </button>
+                        <button type="button" data-action="mark-delivered"
+                            class="px-3 py-1.5 bg-purple-100 text-purple-700 rounded-full text-sm font-medium action-filter">
+                            <i class="fas fa-truck mr-1"></i> Mark Delivered
+                        </button>
+                    </div>
+                </div>
+            </form>
+        </div>
+
+        <!-- Orders Table -->
+        <div class="bg-white rounded-xl overflow-hidden shadow-lg">
+            <div class="overflow-x-auto">
+                <table class="w-full min-w-max">
+                    <thead>
+                        <tr class="bg-gray-50 border-b border-gray-200">
+                            <th
+                                class="w-12 py-4 px-4 text-center font-semibold text-gray-700 text-xs uppercase tracking-wider whitespace-nowrap">
+                                <input type="checkbox" id="selectAllCheckbox"
+                                    class="h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500">
+                            </th>
+                            <th
+                                class="py-4 px-4 text-left font-semibold text-gray-700 text-xs uppercase tracking-wider whitespace-nowrap">
+                                date
+                            </th>
+                            <th
+                                class="py-4 px-4 text-left font-semibold text-gray-700 text-xs uppercase tracking-wider whitespace-nowrap">
+                                Order Code
+                            </th>
+                            <th
+                                class="py-4 px-4 text-left font-semibold text-gray-700 text-xs uppercase tracking-wider whitespace-nowrap">
+                                Customer
+                            </th>
+                            <th
+                                class="py-4 px-4 text-left font-semibold text-gray-700 text-xs uppercase tracking-wider whitespace-nowrap">
+                                Service
+                            </th>
+                            <th
+                                class="py-4 px-4 text-left font-semibold text-gray-700 text-xs uppercase tracking-wider whitespace-nowrap">
+                                Item Type
+                            </th>
+                            <th
+                                class="py-4 px-4 text-left font-semibold text-gray-700 text-xs uppercase tracking-wider whitespace-nowrap">
+                                Items
+                            </th>
+                            <th
+                                class="py-4 px-4 text-left font-semibold text-gray-700 text-xs uppercase tracking-wider whitespace-nowrap">
+                                Served by
+                            </th>
+                            <th
+                                class="py-4 px-4 text-left font-semibold text-gray-700 text-xs uppercase tracking-wider whitespace-nowrap">
+                                Amount Paid
+                            </th>
+                            <th
+                                class="py-4 px-4 text-left font-semibold text-gray-700 text-xs uppercase tracking-wider whitespace-nowrap">
+                                Balance
+                            </th>
+                            <th
+                                class="py-4 px-4 text-left font-semibold text-gray-700 text-xs uppercase tracking-wider whitespace-nowrap">
+                                Total Billed
+                            </th>
+                            <th
+                                class="py-4 px-4 text-left font-semibold text-gray-700 text-xs uppercase tracking-wider whitespace-nowrap">
+                                Order Status
+                            </th>
+                            <th
+                                class="py-4 px-4 text-left font-semibold text-gray-700 text-xs uppercase tracking-wider whitespace-nowrap">
+                                Payment Status
+                            </th>
+                            <th
+                                class="py-4 px-4 text-left font-semibold text-gray-700 text-xs uppercase tracking-wider whitespace-nowrap">
+                                Actions
+                            </th>
+                        </tr>
+                    </thead>
+                    <tbody id="ordersTableBody" class="divide-y divide-gray-200">
+                        <!-- Orders will be loaded here via AJAX -->
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Loading Spinner -->
+            <div id="loadingSpinner" class="hidden text-center p-8">
+                <div class="inline-flex items-center">
+                    <i class="fas fa-spinner fa-spin text-2xl text-blue-500 mr-3"></i>
+                    <span class="text-gray-600">Loading orders...</span>
+                </div>
+            </div>
+
+            <!-- Pagination -->
+            <div id="paginationContainer" class="px-6 py-4 border-t border-gray-200">
+                <!-- Pagination will be loaded here via AJAX -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Update Order Modal -->
+    <div id="updateOrderModal"
+        class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        <div class="bg-white rounded-xl shadow-xl w-full max-w-4xl max-h-[90vh] overflow-y-auto">
+            <div class="p-6 border-b border-gray-200">
+                <h2 class="text-xl font-bold text-gray-900">Update Order</h2>
+                <button type="button" id="closeModal" class="absolute top-6 right-6 text-gray-400 hover:text-gray-600">
+                    <i class="fas fa-times text-xl"></i>
+                </button>
+            </div>
+            <form id="updateOrderForm">
+                <div class="p-6">
+                    <input type="hidden" id="updateOrderId" name="order_id">
+                    <input type="hidden" name="csrfmiddlewaretoken" value="{{ csrf_token }}">
+
+                    <!-- Customer Information -->
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1"
+                                for="updateCustomerName">Customer Name</label>
+                            <input type="text" id="updateCustomerName" name="name"
+                                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                required>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1" for="updateCustomerPhone">Phone
+                                Number</label>
+                            <input type="text" id="updateCustomerPhone" name="phone"
+                                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                required>
+                        </div>
+                    </div>
+
+                    <!-- Order Information -->
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1" for="updateOrderStatus">Order
+                                Status</label>
+                            <select id="updateOrderStatus" name="order_status"
+                                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                <option value="pending">Pending</option>
+                                <option value="Completed">Completed</option>
+                                <option value="Delivered_picked">Delivered</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1"
+                                for="updatePaymentStatus">Payment Status</label>
+                            <select id="updatePaymentStatus" name="payment_status"
+                                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                <option value="pending">Pending</option>
+                                <option value="partial">Partial</option>
+                                <option value="completed">Completed</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- Payment Information -->
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1" for="updateAmountPaid">Amount
+                                Paid</label>
+                            <input type="number" id="updateAmountPaid" name="amount_paid"
+                                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                step="0.01" min="0">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1" for="updateTotalPrice">Total
+                                Price</label>
+                            <input type="number" id="updateTotalPrice" name="total_price"
+                                class="w-full px-3 py-2 border border-gray-300 rounded-md bg-gray-100" step="0.01"
+                                min="0" readonly>
+                        </div>
+                    </div>
+
+                    <!-- Balance Information -->
+                    <div class="mb-6">
+                        <div class="bg-blue-50 p-4 rounded-lg">
+                            <h3 class="font-medium text-blue-800 mb-2">Payment Summary</h3>
+                            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                <div>
+                                    <p class="text-sm text-blue-700">Total Amount:</p>
+                                    <p class="text-lg font-bold text-blue-900" id="modalTotalAmount">KSh 0.00</p>
+                                </div>
+                                <div>
+                                    <p class="text-sm text-blue-700">Amount Paid:</p>
+                                    <p class="text-lg font-bold text-blue-900" id="modalAmountPaid">KSh 0.00</p>
+                                </div>
+                                <div>
+                                    <p class="text-sm text-blue-700">Balance:</p>
+                                    <p class="text-lg font-bold text-blue-900" id="modalBalance">KSh 0.00</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Order Items -->
+                    <div class="mb-6">
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Order Items</label>
+                        <div id="updateItemsContainer" class="border border-gray-300 rounded-md overflow-hidden">
+                            <!-- Items will be dynamically added here -->
+                        </div>
+                        <button type="button" id="addItemBtn"
+                            class="mt-3 inline-flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors">
+                            <i class="fas fa-plus"></i> Add Item
+                        </button>
+                    </div>
+                </div>
+                <div class="p-6 border-t border-gray-200 flex justify-end gap-3">
+                    <button type="button" id="cancelUpdate"
+                        class="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors">
+                        Cancel
+                    </button>
+                    <button type="submit"
+                        class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
+                        Update Order
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Receipt Modal -->
+    <div id="receiptModal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        <div class="bg-white rounded-lg shadow-lg w-full max-w-sm text-xs">
+            <div class="p-3 border-b border-gray-200 relative">
+                <button type="button" id="closeReceiptModal"
+                    class="absolute top-3 right-3 text-gray-400 hover:text-gray-600">
+                    <i class="fas fa-times text-sm"></i>
+                </button>
+            </div>
+            <div class="p-4">
+                <div id="receiptContent" class="bg-white p-4 border border-gray-300">
+                    <!-- Header -->
+                    <div class="text-center mb-2">
+                        <h3 class="text-sm font-bold leading-tight">CLEAN PAGE LAUNDRY</h3>
+                        <p class="text-[10px] text-gray-600">Clean clothes, happy hearts — thank you for coming!</p>
+                    </div>
+                    <!-- Order Info -->
+                    <div class="border-t border-b border-gray-300 py-2 mb-2">
+                        <div class="flex justify-between mb-1">
+                            <span class="font-medium">Order Code:</span>
+                            <span id="receiptOrderCode">-</span>
+                        </div>
+                        <div class="flex justify-between mb-1">
+                            <span class="font-medium">Date:</span>
+                            <span id="receiptDate">-</span>
+                        </div>
+                    </div>
+                    <!-- Customer Info -->
+                    <div class="mb-2">
+                        <h4 class="font-medium mb-1">Customer Details:</h4>
+                        <p id="receiptCustomerName" class="text-[11px]">-</p>
+                        <p id="receiptCustomerPhone" class="text-[11px]">-</p>
+                    </div>
+                    <!-- Order Summary -->
+                    <div class="mb-2">
+                        <h4 class="font-medium mb-1">Order Summary:</h4>
+                        <div id="receiptItems" class="text-[11px] leading-snug space-y-1">
+                            <!-- Items will be added here -->
+                        </div>
+                    </div>
+                    <!-- Totals -->
+                    <div class="border-t border-gray-300 pt-2 space-y-1">
+                        <div class="flex justify-between font-medium">
+                            <span>Total Amount:</span>
+                            <span id="receiptTotalAmount">KSh 0.00</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span>Amount Paid:</span>
+                            <span id="receiptAmountPaid">KSh 0.00</span>
+                        </div>
+                        <div class="flex justify-between font-bold border-t border-gray-300 pt-1">
+                            <span>Balance:</span>
+                            <span id="receiptBalance">KSh 0.00</span>
+                        </div>
+                        <div class="flex justify-between font-bold border-t border-gray-300 pt-1">
+                            <span>Served By:</span>
+                            <span id="orderCreator"></span>
+                        </div>
+                    </div>
+                </div>
+                <!-- Buttons -->
+                <div class="mt-4 flex justify-end gap-2">
+                    <button type="button" id="cancelPrint"
+                        class="px-3 py-1.5 border border-gray-300 rounded text-gray-700 hover:bg-gray-50 text-[11px]">
+                        Cancel
+                    </button>
+                    <button type="button" id="printReceiptBtn"
+                        class="px-3 py-1.5 bg-blue-600 text-white rounded hover:bg-blue-700 text-[11px]">
+                        <i class="fas fa-print mr-1 text-[10px]"></i> Print
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Payment Complete Modal -->
+    <div id="paymentCompleteModal"
+        class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        <div class="bg-white rounded-xl shadow-xl w-full max-w-md">
+            <div class="p-6 border-b border-gray-200">
+                <h2 class="text-xl font-bold text-gray-900">Complete Payment</h2>
+                <button type="button" id="closePaymentModal"
+                    class="absolute top-6 right-6 text-gray-400 hover:text-gray-600">
+                    <i class="fas fa-times text-xl"></i>
+                </button>
+            </div>
+            <div class="p-8">
+                <!-- Header -->
+                <div class="mb-6">
+                    <div class="flex items-center mb-3">
+                        <div
+                            class="w-10 h-10 bg-gradient-to-r from-green-500 to-emerald-600 rounded-full flex items-center justify-center mr-3">
+                            <i class="fas fa-credit-card text-white text-lg"></i>
+                        </div>
+                        <h3 class="text-xl font-bold text-gray-900">Complete Payment</h3>
+                    </div>
+                    <p class="text-gray-600 text-sm leading-relaxed">
+                        Confirm to mark this payment as complete. The remaining balance will be added to the total
+                        amount paid.
+                    </p>
+                </div>
+
+                <!-- Payment Summary Card -->
+                <div
+                    class="bg-gradient-to-br from-blue-50 to-indigo-50 border border-blue-100 rounded-xl p-6 mb-6 shadow-sm">
+                    <h4 class="text-sm font-semibold text-blue-900 mb-4 uppercase tracking-wide">Payment Summary</h4>
+
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+                        <!-- Current Amount -->
+                        <div class="bg-white rounded-lg p-4 border border-blue-100 shadow-xs">
+                            <div class="flex items-center mb-2">
+                                <div class="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center mr-2">
+                                    <i class="fas fa-wallet text-blue-600 text-xs"></i>
+                                </div>
+                                <span class="text-xs font-medium text-blue-700">Current Paid</span>
+                            </div>
+                            <p class="text-lg font-bold text-blue-900" id="currentAmountPaid">KSh 0.00</p>
+                        </div>
+
+                        <!-- Balance to Add -->
+                        <div class="bg-white rounded-lg p-4 border border-orange-100 shadow-xs">
+                            <div class="flex items-center mb-2">
+                                <div class="w-8 h-8 bg-orange-100 rounded-full flex items-center justify-center mr-2">
+                                    <i class="fas fa-plus-circle text-orange-600 text-xs"></i>
+                                </div>
+                                <span class="text-xs font-medium text-orange-700">Balance to Add</span>
+                            </div>
+                            <p class="text-lg font-bold text-orange-900" id="balanceToAdd">KSh 0.00</p>
+                        </div>
+
+                        <!-- New Total -->
+                        <div class="bg-white rounded-lg p-4 border border-green-100 shadow-xs">
+                            <div class="flex items-center mb-2">
+                                <div class="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center mr-2">
+                                    <i class="fas fa-check-circle text-green-600 text-xs"></i>
+                                </div>
+                                <span class="text-xs font-medium text-green-700">New Total</span>
+                            </div>
+                            <p class="text-lg font-bold text-green-900" id="newTotalPaid">KSh 0.00</p>
+                        </div>
+                    </div>
+
+                    <!-- Payment Method -->
+                    <div class="bg-white rounded-lg p-4 border border-purple-100 shadow-xs">
+                        <label for="paymentTypeSelect"
+                            class="block text-sm font-semibold text-gray-700 mb-3 flex items-center">
+                            <i class="fas fa-credit-card text-purple-500 mr-2"></i>
+                            Payment Method
+                        </label>
+                        <select id="paymentTypeSelect"
+                            class="w-full px-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 bg-gray-50 text-gray-700">
+                            <option value="" class="text-gray-400">-- Select Payment Type --</option>
+                            <option value="cash" class="text-gray-700">
+                                💵 Cash
+                            </option>
+                            <option value="mpesa" class="text-gray-700">
+                                📱 M-Pesa
+                            </option>
+                            <option value="card" class="text-gray-700">
+                                💳 Credit/Debit Card
+                            </option>
+                            <option value="bank_transfer" class="text-gray-700">
+                                🏦 Bank Transfer
+                            </option>
+                            <option value="other" class="text-gray-700">
+                                🔄 Other
+                            </option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Action Buttons -->
+                <div class="flex justify-end gap-3 pt-4 border-t border-gray-100">
+                    <button type="button" id="cancelPayment"
+                        class="px-6 py-3 border border-gray-300 rounded-xl text-gray-700 hover:bg-gray-50 transition-all duration-200 font-medium hover:shadow-sm hover:border-gray-400">
+                        <i class="fas fa-times mr-2"></i>Cancel
+                    </button>
+                    <button type="button" id="confirmPaymentComplete"
+                        class="px-6 py-3 bg-gradient-to-r from-green-600 to-emerald-600 text-white rounded-xl hover:from-green-700 hover:to-emerald-700 transition-all duration-200 font-medium shadow-sm hover:shadow-md flex items-center">
+                        <i class="fas fa-check-circle mr-2"></i> Complete Payment
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+   <script>
+    class OrderManager {
+        constructor() {
+            this.currentPage = 1;
+            this.currentFilters = {
+                payment_status: '',
+                search: '',
+                shop: ''
+            };
+            this.selectedOrders = new Set();
+            this.currentOrderForPayment = null;
+            this.init();
+        }
+
+        init() {
+            this.bindEvents();
+            this.loadOrders();
+        }
+
+        bindEvents() {
+            // Search input with debounce
+            const searchInput = document.getElementById('searchInput');
+            if (searchInput) {
+                let searchTimeout;
+                searchInput.addEventListener('input', (e) => {
+                    clearTimeout(searchTimeout);
+                    searchTimeout = setTimeout(() => {
+                        this.currentFilters.search = e.target.value;
+                        this.currentPage = 1;
+                        this.loadOrders();
+                    }, 500);
+                });
+            }
+
+            // Shop filter - only bind if it exists (for superusers)
+            const shopFilter = document.getElementById('shopFilter');
+            if (shopFilter) {
+                shopFilter.addEventListener('change', (e) => {
+                    this.currentFilters.shop = e.target.value;
+                    this.currentPage = 1;
+                    this.loadOrders();
+                });
+            }
+
+            // Payment filters
+            document.querySelectorAll('.payment-filter').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    const paymentStatus = e.target.getAttribute('data-payment');
+                    this.currentFilters.payment_status = paymentStatus;
+                    this.currentPage = 1;
+                    this.updateActiveFilters();
+                    this.loadOrders();
+                });
+            });
+
+            // Action filters
+            document.querySelectorAll('.action-filter').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    const action = e.target.getAttribute('data-action');
+                    this.handleBulkAction(action);
+                });
+            });
+
+            // Active orders filter
+            const activeOrdersBtn = document.querySelector('[data-payment=""]');
+            if (activeOrdersBtn) {
+                activeOrdersBtn.addEventListener('click', () => {
+                    this.currentFilters.payment_status = '';
+                    this.currentPage = 1;
+                    this.updateActiveFilters();
+                    this.loadOrders();
+                });
+            }
+
+            // Export dropdown
+            const exportDropdownBtn = document.getElementById('exportDropdownBtn');
+            if (exportDropdownBtn) {
+                exportDropdownBtn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    const exportDropdown = document.getElementById('exportDropdown');
+                    if (exportDropdown) {
+                        exportDropdown.classList.toggle('hidden');
+                    }
+                });
+            }
+
+            // Export buttons
+            document.querySelectorAll('.export-btn').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    const format = e.currentTarget.getAttribute('data-format');
+                    this.exportOrders(format);
+                    const exportDropdown = document.getElementById('exportDropdown');
+                    if (exportDropdown) {
+                        exportDropdown.classList.add('hidden');
+                    }
+                });
+            });
+
+            // Bulk action buttons
+            const bulkCompleteBtn = document.getElementById('bulkCompleteBtn');
+            if (bulkCompleteBtn) {
+                bulkCompleteBtn.addEventListener('click', () => {
+                    this.bulkUpdateStatus('Completed');
+                });
+            }
+
+            const bulkDeliverBtn = document.getElementById('bulkDeliverBtn');
+            if (bulkDeliverBtn) {
+                bulkDeliverBtn.addEventListener('click', () => {
+                    this.bulkUpdateStatus('Delivered_picked');
+                });
+            }
+
+            const clearSelectionBtn = document.getElementById('clearSelectionBtn');
+            if (clearSelectionBtn) {
+                clearSelectionBtn.addEventListener('click', () => {
+                    this.clearSelection();
+                });
+            }
+
+            // Select all checkbox
+            const selectAllCheckbox = document.getElementById('selectAllCheckbox');
+            if (selectAllCheckbox) {
+                selectAllCheckbox.addEventListener('change', (e) => {
+                    this.toggleSelectAll(e.target.checked);
+                });
+            }
+
+            // Modal events
+            const closeModal = document.getElementById('closeModal');
+            if (closeModal) {
+                closeModal.addEventListener('click', () => {
+                    this.closeModal();
+                });
+            }
+
+            const cancelUpdate = document.getElementById('cancelUpdate');
+            if (cancelUpdate) {
+                cancelUpdate.addEventListener('click', () => {
+                    this.closeModal();
+                });
+            }
+
+            const updateOrderForm = document.getElementById('updateOrderForm');
+            if (updateOrderForm) {
+                updateOrderForm.addEventListener('submit', (e) => {
+                    e.preventDefault();
+                    this.submitUpdateForm();
+                });
+            }
+
+            const addItemBtn = document.getElementById('addItemBtn');
+            if (addItemBtn) {
+                addItemBtn.addEventListener('click', () => {
+                    this.addItemRow();
+                });
+            }
+
+            // Receipt modal events
+            const closeReceiptModal = document.getElementById('closeReceiptModal');
+            if (closeReceiptModal) {
+                closeReceiptModal.addEventListener('click', () => {
+                    this.closeReceiptModal();
+                });
+            }
+
+            const cancelPrint = document.getElementById('cancelPrint');
+            if (cancelPrint) {
+                cancelPrint.addEventListener('click', () => {
+                    this.closeReceiptModal();
+                });
+            }
+
+            const printReceiptBtn = document.getElementById('printReceiptBtn');
+            if (printReceiptBtn) {
+                printReceiptBtn.addEventListener('click', () => {
+                    this.printReceipt();
+                });
+            }
+
+            // Payment modal events - Fixed to use proper event delegation
+            document.addEventListener('click', (e) => {
+                if (e.target.id === 'closePaymentModal' || e.target.closest('#closePaymentModal')) {
+                    this.closePaymentModal();
+                }
+                if (e.target.id === 'cancelPayment' || e.target.closest('#cancelPayment')) {
+                    this.closePaymentModal();
+                }
+                if (e.target.id === 'confirmPaymentComplete' || e.target.closest('#confirmPaymentComplete')) {
+                    this.confirmPaymentComplete();
+                }
+            });
+
+            // Close modals when clicking outside
+            const updateOrderModal = document.getElementById('updateOrderModal');
+            if (updateOrderModal) {
+                updateOrderModal.addEventListener('click', (e) => {
+                    if (e.target.id === 'updateOrderModal') {
+                        this.closeModal();
+                    }
+                });
+            }
+
+            const receiptModal = document.getElementById('receiptModal');
+            if (receiptModal) {
+                receiptModal.addEventListener('click', (e) => {
+                    if (e.target.id === 'receiptModal') {
+                        this.closeReceiptModal();
+                    }
+                });
+            }
+
+            const paymentCompleteModal = document.getElementById('paymentCompleteModal');
+            if (paymentCompleteModal) {
+                paymentCompleteModal.addEventListener('click', (e) => {
+                    if (e.target.id === 'paymentCompleteModal') {
+                        this.closePaymentModal();
+                    }
+                });
+            }
+
+            // Delegate events for dynamically loaded content
+            document.addEventListener('click', (e) => {
+                // Individual order checkboxes
+                if (e.target.matches('.order-checkbox')) {
+                    this.handleOrderSelection(e.target);
+                }
+
+                // Edit order buttons
+                if (e.target.closest('.edit-order-btn')) {
+                    const button = e.target.closest('.edit-order-btn');
+                    const orderId = button.getAttribute('data-order-id');
+                    this.openEditModal(orderId);
+                }
+
+                // Print receipt buttons
+                if (e.target.closest('.print-receipt-btn')) {
+                    const button = e.target.closest('.print-receipt-btn');
+                    const orderId = button.getAttribute('data-order-id');
+                    this.openReceiptModal(orderId);
+                }
+
+                // Mark payment complete buttons
+                if (e.target.closest('.mark-payment-complete-btn')) {
+                    const button = e.target.closest('.mark-payment-complete-btn');
+                    const orderId = button.getAttribute('data-order-id');
+                    this.openPaymentCompleteModal(orderId);
+                }
+
+                // Update status buttons
+                if (e.target.closest('.update-status-btn')) {
+                    const button = e.target.closest('.update-status-btn');
+                    const orderRow = button.closest('tr[data-order-id]');
+                    if (orderRow) {
+                        const orderId = orderRow.getAttribute('data-order-id');
+                        const status = button.getAttribute('data-status');
+                        this.updateSingleOrderStatus(orderId, status);
+                    }
+                }
+
+                // Delete order buttons
+                if (e.target.closest('.delete-order-btn')) {
+                    const button = e.target.closest('.delete-order-btn');
+                    const orderId = button.getAttribute('data-order-id');
+                    const orderCode = button.getAttribute('data-order-code');
+                    this.deleteOrder(orderId, orderCode);
+                }
+
+                // Remove item buttons
+                if (e.target.closest('.remove-item')) {
+                    const button = e.target.closest('.remove-item');
+                    const itemRow = button.closest('.item-row');
+                    if (itemRow) {
+                        itemRow.remove();
+                    }
+                }
+
+                // Pagination buttons
+                if (e.target.closest('.pagination-btn')) {
+                    const button = e.target.closest('.pagination-btn');
+                    this.currentPage = parseInt(button.getAttribute('data-page'));
+                    this.loadOrders();
+                }
+
+                // More Actions Dropdown Toggle
+                if (e.target.closest('.more-actions-btn') || e.target.closest('.more-actions-btn i')) {
+                    const button = e.target.closest('.more-actions-btn') || e.target.closest('.more-actions-btn i').parentElement;
+                    const dropdownContainer = button.closest('.relative');
+                    const dropdown = dropdownContainer.querySelector('.absolute');
+
+                    if (dropdown) {
+                        // Close all other dropdowns
+                        document.querySelectorAll('.absolute').forEach(otherDropdown => {
+                            if (otherDropdown !== dropdown && !otherDropdown.classList.contains('hidden')) {
+                                otherDropdown.classList.add('hidden');
+                            }
+                        });
+
+                        // Toggle current dropdown
+                        dropdown.classList.toggle('hidden');
+
+                        // Prevent event from bubbling to document click handler
+                        e.stopPropagation();
+                    }
+                }
+
+                // Close dropdowns when clicking on dropdown items
+                if (e.target.closest('.update-status-btn') || e.target.closest('.delete-order-btn')) {
+                    const dropdown = e.target.closest('.absolute');
+                    if (dropdown) {
+                        dropdown.classList.add('hidden');
+                    }
+                }
+            });
+
+            // Close all dropdowns when clicking anywhere on the document
+            document.addEventListener('click', (e) => {
+                // Only close if not clicking on a dropdown trigger or dropdown content
+                if (!e.target.closest('.relative') && !e.target.closest('.absolute')) {
+                    document.querySelectorAll('.absolute').forEach(dropdown => {
+                        if (!dropdown.classList.contains('hidden')) {
+                            dropdown.classList.add('hidden');
+                        }
+                    });
+                }
+
+                // Close export dropdown when clicking outside
+                if (!e.target.closest('.relative')) {
+                    const exportDropdown = document.getElementById('exportDropdown');
+                    if (exportDropdown) {
+                        exportDropdown.classList.add('hidden');
+                    }
+                }
+            });
+        }
+
+        // Safe element access methods
+        getElement(id) {
+            const element = document.getElementById(id);
+            if (!element) {
+                console.warn(`Element with id '${id}' not found`);
+            }
+            return element;
+        }
+
+        async openPaymentCompleteModal(orderId) {
+            try {
+                console.log('Opening payment modal for order:', orderId);
+                this.showLoading();
+
+                const response = await fetch(`/Laundry/get-order-details/${orderId}`, {
+                    headers: {
+                        'X-Requested-With': 'XMLHttpRequest'
+                    }
+                });
+
+                if (!response.ok) throw new Error('Failed to fetch order details');
+
+                const data = await response.json();
+                console.log('Order details response:', data);
+
+                if (data.success && data.order) {
+                    this.currentOrderForPayment = data.order;
+                    this.showPaymentModal(data.order);
+                } else {
+                    throw new Error(data.message || 'Failed to load order details');
+                }
+            } catch (error) {
+                console.error('Error loading order details:', error);
+                this.showMessage('Failed to load order details: ' + error.message, 'error');
+            } finally {
+                this.hideLoading();
+            }
+        }
+
+        showPaymentModal(order) {
+            console.log('showPaymentModal called with order:', order);
+
+            if (!order) {
+                console.error('Order object is undefined in showPaymentModal');
+                this.showMessage('Failed to load order details - order is undefined', 'error');
+                return;
+            }
+
+            this.currentOrderForPayment = order;
+            const modal = this.getElement('paymentCompleteModal');
+
+            if (!modal) {
+                console.error('Payment modal element not found');
+                return;
+            }
+
+            // Update payment summary information
+            this.updatePaymentSummary(order);
+
+            // Populate payment type dropdown with current value
+            const paymentTypeSelect = this.getElement('paymentTypeSelect');
+            if (paymentTypeSelect) {
+                // Check if order has payment_type and it's not null/undefined
+                const currentPaymentType = order.payment_type || '';
+                console.log('Current payment type:', currentPaymentType);
+
+                // Set the payment type select value
+                if (currentPaymentType && currentPaymentType !== 'None') {
+                    paymentTypeSelect.value = currentPaymentType;
+                } else {
+                    // Default to cash if no payment type is set
+                    paymentTypeSelect.value = 'cash';
+                }
+
+                console.log('Set payment type to:', paymentTypeSelect.value);
+            }
+
+            // Show the modal
+            modal.classList.remove('hidden');
+        }
+
+        // Update payment summary information
+        updatePaymentSummary(order) {
+            try {
+                const currentAmountPaid = parseFloat(order.amount_paid) || 0;
+                const totalPrice = parseFloat(order.total_price) || 0;
+                const balanceToAdd = totalPrice - currentAmountPaid;
+
+                // Update the payment summary cards
+                const currentAmountElement = this.getElement('currentAmountPaid');
+                const balanceToAddElement = this.getElement('balanceToAdd');
+                const newTotalElement = this.getElement('newTotalPaid');
+
+                if (currentAmountElement) {
+                    currentAmountElement.textContent = `KSh ${currentAmountPaid.toFixed(2)}`;
+                }
+                if (balanceToAddElement) {
+                    balanceToAddElement.textContent = `KSh ${balanceToAdd.toFixed(2)}`;
+                }
+                if (newTotalElement) {
+                    newTotalElement.textContent = `KSh ${totalPrice.toFixed(2)}`;
+                }
+
+                console.log('Payment summary updated:', {
+                    currentAmountPaid,
+                    balanceToAdd,
+                    totalPrice
+                });
+            } catch (error) {
+                console.error('Error updating payment summary:', error);
+            }
+        }
+
+        async confirmPaymentComplete() {
+            if (!this.currentOrderForPayment) {
+                this.showMessage('No order selected for payment completion', 'error');
+                return;
+            }
+
+            try {
+                console.log('Starting payment completion for order:', this.currentOrderForPayment);
+
+                // Get the selected payment type
+                const paymentTypeSelect = this.getElement('paymentTypeSelect');
+                const selectedPaymentType = paymentTypeSelect ? paymentTypeSelect.value : null;
+
+                if (!selectedPaymentType || selectedPaymentType === '') {
+                    this.showMessage('Please select a payment method before completing payment.', 'error');
+                    return;
+                }
+
+                // Create form data for the update
+                const formData = new FormData();
+                formData.append('csrfmiddlewaretoken', this.getCSRFToken());
+                formData.append('order_id', this.currentOrderForPayment.id);
+                formData.append('payment_status', 'completed');
+                formData.append('payment_type', selectedPaymentType);
+                formData.append('amount_paid', this.currentOrderForPayment.total_price);
+
+                // Preserve other order data
+                formData.append('name', this.currentOrderForPayment.customer?.name || '');
+                formData.append('phone', this.currentOrderForPayment.customer?.phone || '');
+                formData.append('order_status', this.currentOrderForPayment.order_status || 'pending');
+
+                console.log('Submitting payment completion with data:', {
+                    order_id: this.currentOrderForPayment.id,
+                    payment_type: selectedPaymentType,
+                    amount_paid: this.currentOrderForPayment.total_price
+                });
+
+                const response = await fetch('/Laundry/update-order/', {
+                    method: 'POST',
+                    body: formData,
+                    headers: {
+                        'X-Requested-With': 'XMLHttpRequest',
+                        'X-CSRFToken': this.getCSRFToken()
+                    }
+                });
+
+                // Check if response is JSON
+                const contentType = response.headers.get('content-type');
+                if (!contentType || !contentType.includes('application/json')) {
+                    const text = await response.text();
+                    throw new Error(`Server returned HTML instead of JSON. Status: ${response.status}`);
+                }
+
+                const data = await response.json();
+                console.log('Payment completion response:', data);
+
+                if (data.success) {
+                    this.showMessage('Payment marked as complete successfully!', 'success');
+                    this.closePaymentModal();
+                    this.loadOrders(); // Refresh the orders list
+                } else {
+                    throw new Error(data.message || 'Failed to complete payment');
+                }
+            } catch (error) {
+                console.error('Error completing payment:', error);
+                this.showMessage(error.message || 'Failed to complete payment', 'error');
+            }
+        }
+
+        closePaymentModal() {
+            const modal = this.getElement('paymentCompleteModal');
+            if (modal) {
+                modal.classList.add('hidden');
+            }
+            this.currentOrderForPayment = null;
+        }
+
+        async openEditModal(orderId) {
+            try {
+                this.showLoading();
+
+                const response = await fetch(`/Laundry/get-order-details/${orderId}`, {
+                    headers: {
+                        'X-Requested-With': 'XMLHttpRequest'
+                    }
+                });
+
+                if (!response.ok) throw new Error('Failed to fetch order details');
+
+                const data = await response.json();
+
+                if (data.success) {
+                    this.populateEditForm(data.order);
+                    this.showModal();
+                } else {
+                    throw new Error(data.message || 'Failed to load order details');
+                }
+            } catch (error) {
+                console.error('Error loading order details:', error);
+                this.showMessage('Failed to load order details', 'error');
+            } finally {
+                this.hideLoading();
+            }
+        }
+
+        async submitUpdateForm() {
+            try {
+                const formData = new FormData(document.getElementById('updateOrderForm'));
+
+                // Add CSRF token
+                const csrfToken = this.getCSRFToken();
+                formData.append('csrfmiddlewaretoken', csrfToken);
+
+                const response = await fetch('/Laundry/update-order/', {
+                    method: 'POST',
+                    body: formData,
+                    headers: {
+                        'X-Requested-With': 'XMLHttpRequest',
+                        'X-CSRFToken': csrfToken
+                    }
+                });
+
+                // Check if response is JSON
+                const contentType = response.headers.get('content-type');
+                if (!contentType || !contentType.includes('application/json')) {
+                    const text = await response.text();
+                    throw new Error(`Server returned HTML instead of JSON. Status: ${response.status}`);
+                }
+
+                const data = await response.json();
+
+                if (!response.ok) {
+                    throw new Error(data.message || `HTTP error! status: ${response.status}`);
+                }
+
+                if (data.success) {
+                    this.showMessage(data.message, 'success');
+                    this.closeModal();
+                    this.loadOrders();
+                } else {
+                    throw new Error(data.message || 'Failed to update order');
+                }
+            } catch (error) {
+                console.error('Error updating order:', error);
+                this.showMessage(error.message || 'Failed to update order', 'error');
+            }
+        }
+
+        addItemRow(item = {}, index = null) {
+            const itemsContainer = this.getElement('updateItemsContainer');
+            if (!itemsContainer) return;
+
+            const currentItemCount = itemsContainer.children.length;
+            const itemIndex = index !== null ? index : currentItemCount;
+
+            const itemRow = document.createElement('div');
+            itemRow.className = 'item-row grid grid-cols-1 md:grid-cols-4 gap-4 p-4 border-b border-gray-200 last:border-b-0';
+            itemRow.innerHTML = `
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Item Name</label>
+                    <input type="text" name="items-${itemIndex}-itemname" 
+                           value="${item.itemname || ''}" 
+                           class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" 
+                           placeholder="Enter item name" 
+                           required>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Service Type</label>
+                    <input type="text" name="items-${itemIndex}-servicetype" 
+                           value="${item.servicetype || ''}" 
+                           class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" 
+                           placeholder="e.g., Wash & Fold" 
+                           required>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Item Type</label>
+                    <input type="text" name="items-${itemIndex}-itemtype" 
+                           value="${item.itemtype || ''}" 
+                           class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" 
+                           placeholder="e.g., Shirt" 
+                           required>
+                </div>
+                
+                <div class="flex items-end">
+                    <div class="flex-1 mr-2">
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Price</label>
+                        <input type="number" name="items-${itemIndex}-unit_price" 
+                               value="${item.unit_price || ''}" 
+                               class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" 
+                               step="0.01" 
+                               min="0" 
+                               placeholder="0.00" 
+                               required>
+                    </div>
+                    
+                    <button type="button" class="px-3 py-2 bg-red-500 text-white rounded-md hover:bg-red-600 transition-colors remove-item">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                </div>
+            `;
+            itemsContainer.appendChild(itemRow);
+        }
+
+        populateEditForm(order) {
+            // Set base values
+            const updateOrderId = this.getElement('updateOrderId');
+            const updateCustomerName = this.getElement('updateCustomerName');
+            const updateCustomerPhone = this.getElement('updateCustomerPhone');
+            const updateOrderStatus = this.getElement('updateOrderStatus');
+            const updatePaymentStatus = this.getElement('updatePaymentStatus');
+            const updateAmountPaid = this.getElement('updateAmountPaid');
+            const updateTotalPrice = this.getElement('updateTotalPrice');
+            const modalTotalAmount = this.getElement('modalTotalAmount');
+            const modalAmountPaid = this.getElement('modalAmountPaid');
+            const modalBalance = this.getElement('modalBalance');
+
+            if (updateOrderId) updateOrderId.value = order.id;
+            if (updateCustomerName) updateCustomerName.value = order.customer.name || '';
+            if (updateCustomerPhone) updateCustomerPhone.value = order.customer.phone || '';
+            if (updateOrderStatus) updateOrderStatus.value = order.order_status || 'pending';
+            if (updatePaymentStatus) updatePaymentStatus.value = order.payment_status || 'pending';
+            if (updateAmountPaid) updateAmountPaid.value = order.amount_paid || 0;
+
+            // Handle totals
+            if (updateTotalPrice) updateTotalPrice.value = order.total_price || 0;
+            if (modalTotalAmount) modalTotalAmount.textContent = `KSh ${order.total_price ? order.total_price.toLocaleString() : '0.00'}`;
+            if (modalAmountPaid) modalAmountPaid.textContent = `KSh ${order.amount_paid ? order.amount_paid.toLocaleString() : '0.00'}`;
+            if (modalBalance) modalBalance.textContent = `KSh ${order.balance ? order.balance.toLocaleString() : '0.00'}`;
+
+            // Disable total price editing for all users
+            if (updateTotalPrice) updateTotalPrice.readOnly = true;
+
+            // Clear and repopulate items
+            const itemsContainer = this.getElement('updateItemsContainer');
+            if (itemsContainer) {
+                itemsContainer.innerHTML = '';
+
+                if (order.items && order.items.length > 0) {
+                    order.items.forEach((item, index) => {
+                        this.addItemRow(item, index);
+                    });
+                } else {
+                    this.addItemRow();
+                }
+            }
+        }
+
+        showModal() {
+            const modal = this.getElement('updateOrderModal');
+            if (modal) modal.classList.remove('hidden');
+        }
+
+        closeModal() {
+            const modal = this.getElement('updateOrderModal');
+            if (modal) modal.classList.add('hidden');
+        }
+
+        async openReceiptModal(orderId) {
+            try {
+                const response = await fetch(`/Laundry/get-order-details/${orderId}`, {
+                    headers: {
+                        'X-Requested-With': 'XMLHttpRequest'
+                    }
+                });
+
+                if (!response.ok) throw new Error('Failed to fetch order details');
+
+                const data = await response.json();
+
+                if (data.success) {
+                    this.populateReceipt(data.order);
+                    this.showReceiptModal();
+                } else {
+                    throw new Error(data.message || 'Failed to load order details');
+                }
+            } catch (error) {
+                console.error('Error loading order details:', error);
+                this.showMessage('Failed to load order details', 'error');
+            }
+        }
+
+        populateReceipt(order) {
+            const receiptOrderCode = this.getElement('receiptOrderCode');
+            const receiptDate = this.getElement('receiptDate');
+            const receiptCustomerName = this.getElement('receiptCustomerName');
+            const receiptCustomerPhone = this.getElement('receiptCustomerPhone');
+            const receiptTotalAmount = this.getElement('receiptTotalAmount');
+            const receiptAmountPaid = this.getElement('receiptAmountPaid');
+            const receiptBalance = this.getElement('receiptBalance');
+            const orderCreator = this.getElement('orderCreator');
+            const receiptItems = this.getElement('receiptItems');
+
+            if (receiptOrderCode) receiptOrderCode.textContent = order.uniquecode || '-';
+            if (receiptDate) receiptDate.textContent = new Date().toLocaleDateString();
+            if (receiptCustomerName) receiptCustomerName.textContent = order.customer.name || '-';
+            if (receiptCustomerPhone) receiptCustomerPhone.textContent = order.customer.phone || '-';
+            if (receiptTotalAmount) receiptTotalAmount.textContent = `KSh ${order.total_price ? order.total_price.toLocaleString() : '0.00'}`;
+            if (receiptAmountPaid) receiptAmountPaid.textContent = `KSh ${order.amount_paid ? order.amount_paid.toLocaleString() : '0.00'}`;
+            if (receiptBalance) receiptBalance.textContent = `KSh ${order.balance ? order.balance.toLocaleString() : '0.00'}`;
+            if (orderCreator) orderCreator.textContent = ` ${order.created_by || 'User'}`;
+
+            if (receiptItems) {
+                receiptItems.innerHTML = '';
+
+                if (order.items && order.items.length > 0) {
+                    order.items.forEach(item => {
+                        const itemElement = document.createElement('div');
+                        itemElement.className = 'flex justify-between mb-1';
+                        itemElement.innerHTML = `
+                            <span>${item.itemname || 'N/A'} (${item.servicetype || 'N/A'})</span>
+                            <span>KSh ${item.unit_price ? item.unit_price.toLocaleString() : '0.00'}</span>
+                        `;
+                        receiptItems.appendChild(itemElement);
+                    });
+                } else {
+                    receiptItems.innerHTML = '<p>No items found</p>';
+                }
+            }
+        }
+
+        showReceiptModal() {
+            const modal = this.getElement('receiptModal');
+            if (modal) modal.classList.remove('hidden');
+        }
+
+        closeReceiptModal() {
+            const modal = this.getElement('receiptModal');
+            if (modal) modal.classList.add('hidden');
+        }
+
+        printReceipt() {
+            const receiptContent = this.getElement('receiptContent');
+            if (!receiptContent) return;
+
+            const originalContent = document.body.innerHTML;
+
+            document.body.innerHTML = receiptContent.innerHTML;
+            window.print();
+            document.body.innerHTML = originalContent;
+            this.closeReceiptModal();
+            this.loadOrders();
+        }
+
+        handleOrderSelection(checkbox) {
+            const orderId = checkbox.getAttribute('data-order-id');
+
+            if (checkbox.checked) {
+                this.selectedOrders.add(orderId);
+            } else {
+                this.selectedOrders.delete(orderId);
+            }
+
+            this.updateBulkActionsUI();
+        }
+
+        toggleSelectAll(selectAll) {
+            const checkboxes = document.querySelectorAll('.order-checkbox');
+            checkboxes.forEach(checkbox => {
+                checkbox.checked = selectAll;
+                const orderId = checkbox.getAttribute('data-order-id');
+
+                if (selectAll) {
+                    this.selectedOrders.add(orderId);
+                } else {
+                    this.selectedOrders.delete(orderId);
+                }
+            });
+
+            this.updateBulkActionsUI();
+        }
+
+        clearSelection() {
+            this.selectedOrders.clear();
+            document.querySelectorAll('.order-checkbox').forEach(checkbox => {
+                checkbox.checked = false;
+            });
+            const selectAllCheckbox = this.getElement('selectAllCheckbox');
+            if (selectAllCheckbox) selectAllCheckbox.checked = false;
+            this.updateBulkActionsUI();
+        }
+
+        updateBulkActionsUI() {
+            const selectedCount = this.selectedOrders.size;
+            const bulkContainer = this.getElement('bulkActionsContainer');
+            const selectedCountElement = this.getElement('selectedCount');
+            const selectAllCheckbox = this.getElement('selectAllCheckbox');
+
+            if (selectedCountElement) {
+                selectedCountElement.textContent = `${selectedCount} order${selectedCount !== 1 ? 's' : ''} selected`;
+            }
+
+            if (bulkContainer) {
+                if (selectedCount > 0) {
+                    bulkContainer.classList.remove('hidden');
+                } else {
+                    bulkContainer.classList.add('hidden');
+                }
+            }
+
+            const totalCheckboxes = document.querySelectorAll('.order-checkbox').length;
+            if (selectAllCheckbox) {
+                selectAllCheckbox.checked = selectedCount > 0 && selectedCount === totalCheckboxes;
+                selectAllCheckbox.indeterminate = selectedCount > 0 && selectedCount < totalCheckboxes;
+            }
+        }
+
+        updateActiveFilters() {
+            document.querySelectorAll('.payment-filter, [data-payment=""]').forEach(btn => {
+                btn.classList.remove('bg-blue-100', 'text-blue-700', 'shadow-sm');
+                btn.classList.add('bg-gray-100', 'text-gray-700');
+            });
+
+            const activeBtn = document.querySelector(`[data-payment="${this.currentFilters.payment_status}"]`);
+            if (activeBtn) {
+                activeBtn.classList.remove('bg-gray-100', 'text-gray-700');
+                activeBtn.classList.add('bg-blue-100', 'text-blue-700', 'shadow-sm');
+            }
+        }
+
+        exportOrders(format) {
+            // Build export URL with current filters
+            const params = new URLSearchParams();
+
+            // Add all current filters
+            Object.entries(this.currentFilters).forEach(([key, value]) => {
+                if (value) {
+                    params.append(key, value);
+                }
+            });
+
+            // Add current page for context (though export should export all filtered data)
+            params.append('page', this.currentPage);
+
+            // Add export format parameter - this is crucial
+            params.append('export', format);
+
+            // Build the full URL
+            const exportUrl = `${window.location.pathname}?${params.toString()}`;
+
+            console.log('Export URL:', exportUrl); // For debugging
+
+            // Redirect to export URL - this will trigger the Django view's export handling
+            window.location.href = exportUrl;
+        }
+
+        async loadOrders() {
+            this.showLoading();
+
+            const params = new URLSearchParams({
+                ...this.currentFilters,
+                page: this.currentPage
+            });
+
+            try {
+                const response = await fetch(`?${params}`, {
+                    headers: {
+                        'X-Requested-With': 'XMLHttpRequest'
+                    }
+                });
+
+                if (!response.ok) throw new Error('Network response was not ok');
+
+                const data = await response.json();
+
+                if (data.success) {
+                    this.renderOrders(data.orders);
+                    this.renderStats(data.stats);
+                    this.renderPagination(data.pagination);
+                } else {
+                    throw new Error(data.message || 'Failed to load orders');
+                }
+            } catch (error) {
+                console.error('Error loading orders:', error);
+                this.showError('Failed to load orders. Please try again.');
+            } finally {
+                this.hideLoading();
+            }
+        }
+
+        truncateText(text, maxLength) {
+            if (!text) return 'N/A';
+            if (text.length <= maxLength) return text;
+            return text.substring(0, maxLength) + '...';
+        }
+
+        renderOrders(orders) {
+            const tbody = this.getElement('ordersTableBody');
+            if (!tbody) return;
+
+            if (!orders || orders.length === 0) {
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="14" class="px-6 py-12 text-left">
+                            <div class="inline-flex items-center justify-start rounded-full bg-gray-100 p-4 mb-3">
+                                <i class="fas fa-inbox text-2xl text-gray-400"></i>
+                            </div>
+                            <h3 class="text-lg font-medium text-gray-900 mb-1 text-left">No orders found</h3>
+                            <p class="text-gray-500 max-w-md text-left">
+                                ${this.currentFilters.search || this.currentFilters.payment_status || this.currentFilters.shop ?
+                        'No orders match your current filters. Try adjusting your search criteria.' :
+                        'There are no active orders in the system. When you have orders, they\'ll appear here.'}
+                            </p>
+                            <div class="text-left mt-4">
+                                <a href="{% url 'laundry:createorder' %}"
+                                    class="inline-flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-pink-500 to-rose-500 text-white rounded-lg font-medium shadow-md hover:shadow-lg transition-all duration-200">
+                                    <i class="fas fa-plus text-sm"></i>
+                                    <span>Create New Order</span>
+                                </a>
+                            </div>
+                        </td>
+                    </tr>
+                `;
+                return;
+            }
+
+            tbody.innerHTML = orders.map(order => this.renderOrderRow(order)).join('');
+            this.updateBulkActionsUI();
+        }
+
+        renderOrderRow(order) {
+            const firstItem = order.items[0] || {};
+            const hasMultipleItems = order.items.length > 1;
+            const isSelected = this.selectedOrders.has(order.id.toString());
+            const isSuperuser = document.getElementById('shopFilter') !== null;
+
+            // Handle created_by field - show "Unknown" if null or empty
+            const servedBy = order.created_by && order.created_by.trim() !== '' ? order.created_by : 'Unknown';
+
+            return `
+                <tr class="hover:bg-gray-50 transition-colors duration-150 border-b border-gray-100" data-order-id="${order.id}">
+                    <td class="px-6 w-auto w-12 text-center py-4 px-4">
+                        <input type="checkbox" class="order-checkbox h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500" 
+                               data-order-id="${order.id}" ${isSelected ? 'checked' : ''}>
+                    </td>
+                    <td class="text-left">
+                        <div class="font-medium text-gray-900 text-xs">${order.created_at}</div>
+                    </td>
+                    <td class="px-6 w-auto text-left">
+                        <div class="font-medium text-gray-900 text-xs">${order.uniquecode}</div>
+                    </td>
+                    <td class="px-6 w-auto text-left">
+                        <div class="text-xs text-gray-800">${order.customer.name}</div>
+                    </td>
+
+                    <!-- Service Type Column -->
+                    <td class="px-6 w-auto text-left">
+                        <div class="relative group inline-block">
+                            <span class="text-xs text-gray-800">${firstItem.servicetype || 'N/A'}</span>
+                            ${hasMultipleItems ? `
+                                <span class="text-xs text-gray-500 ml-1">+${order.items.length - 1}</span>
+                                <div class="absolute left-0 top-full mt-1 hidden group-hover:block z-50 w-48 rounded-md bg-gray-900 px-3 py-2 text-xs text-white shadow-lg transition-opacity duration-200">
+                                    <div class="font-medium mb-1">All Services:</div>
+                                    <ul class="space-y-1">
+                                        ${order.items.map(item => `<li class="text-left truncate">${item.servicetype || 'N/A'}</li>`).join('')}
+                                    </ul>
+                                </div>
+                            ` : ''}
+                        </div>
+                    </td>
+
+                    <!-- Item Type Column -->
+                    <td class="px-6 w-auto text-left">
+                        <div class="relative group inline-block">
+                            <span class="text-xs text-gray-800">${firstItem.itemtype || 'N/A'}</span>
+                            ${hasMultipleItems ? `
+                                <span class="text-xs text-gray-500 ml-1">+${order.items.length - 1}</span>
+                                <div class="absolute left-0 top-full mt-1 hidden group-hover:block z-50 w-48 rounded-md bg-gray-900 px-3 py-2 text-xs text-white shadow-lg transition-opacity duration-200">
+                                    <div class="font-medium mb-1">All Item Types:</div>
+                                    <ul class="space-y-1">
+                                        ${order.items.map(item => `<li class="text-left truncate">${item.itemtype || 'N/A'}</li>`).join('')}
+                                    </ul>
+                                </div>
+                            ` : ''}
+                        </div>
+                    </td>
+
+                    <!-- Items Column -->
+                    <td class="px-6 w-auto text-left">
+                        <div class="relative group inline-block">
+                            ${hasMultipleItems ? `
+                                <span class="text-xs text-gray-800">${this.truncateText(firstItem.itemname || 'N/A', 30)}</span>
+                                <span class="text-xs text-gray-500 ml-1">+${order.items.length - 1}</span>
+                                <div class="absolute left-0 top-full mt-1 hidden group-hover:block z-50 w-64 rounded-md bg-gray-900 px-3 py-2 text-xs text-white shadow-lg transition-opacity duration-200">
+                                    <div class="font-medium mb-1">Additional Items (${order.items.length - 1}):</div>
+                                    <ul class="space-y-1 max-h-32 overflow-y-auto">
+                                        ${order.items.slice(1).map(item => `
+                                            <li class="text-left truncate">${item.itemname || 'N/A'}</li>
+                                        `).join('')}
+                                    </ul>
+                                </div>
+                            ` : `
+                                <span class="text-xs text-gray-800">${this.truncateText(firstItem.itemname || 'N/A', 30)}</span>
+                            `}
+                        </div>
+                    </td>
+                    
+                    <!-- Served by Column -->
+                    <td class="px-6 w-auto text-left">
+                        <div class="font-semibold text-blue-900 text-xs">${servedBy}</div>
+                    </td>
+                    
+                    <!-- Payment Columns -->
+                    <td class="px-6 w-auto text-left">
+                        <div class="font-semibold text-blue-900 text-xs">KSh ${order.amount_paid.toLocaleString()}</div>
+                    </td>
+                    <td class="px-6 w-auto text-left">
+                        <div class="font-semibold text-blue-900 text-xs">KSh ${order.balance.toLocaleString()}</div>
+                    </td>
+                    <td class="px-6 w-auto text-left">
+                        <div class="font-semibold text-blue-900 text-xs">KSh ${order.total_price.toLocaleString()}</div>
+                    </td>
+
+                    <!-- Status Columns -->
+                    <td class="py-4 px-4 text-left">
+                        ${this.renderOrderStatus(order.order_status)}
+                    </td>
+                    <td class="px-6 w-auto text-left">
+                        ${this.renderPaymentStatus(order.payment_status)}
+                    </td>
+
+                    <!-- Actions Column -->
+                    <td class="px-6 w-auto text-left">
+                        <div class="flex items-center justify-start space-x-2">
+                            <!-- Payment Complete Button - Always visible if payment is not completed -->
+                            ${order.payment_status !== 'completed' ? `
+                                <button type="button" class="mark-payment-complete-btn p-2 text-green-600 hover:bg-green-100 rounded-lg transition-colors duration-200"
+                                    data-order-id="${order.id}" title="Mark Payment Complete">
+                                    <i class="fas fa-check-circle text-sm"></i>
+                                </button>
+                            ` : ''}
+
+                            <!-- Edit Button -->
+                            <button type="button" class="edit-order-btn p-2 text-amber-600 hover:bg-amber-100 rounded-lg transition-colors duration-200"
+                                data-order-id="${order.id}" title="Edit Order">
+                                <i class="fas fa-edit text-sm"></i>
+                            </button>
+
+                            <!-- Print Receipt Button -->
+                            <button type="button" class="print-receipt-btn p-2 text-blue-600 hover:bg-blue-100 rounded-lg transition-colors duration-200"
+                                data-order-id="${order.id}" title="Print Receipt">
+                                <i class="fas fa-print text-sm"></i>
+                            </button>
+
+                            <!-- More Actions Dropdown -->
+                            <div class="relative">
+                                <button type="button" class="more-actions-btn p-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors duration-200"
+                                    title="More Actions">
+                                    <i class="fas fa-ellipsis-v text-sm"></i>
+                                </button>
+                                <div class="absolute right-0 mt-1 hidden bg-white rounded-md shadow-lg py-1 z-50 border border-gray-200 w-48">
+                                    <!-- Mark Completed -->
+                                    ${order.order_status !== 'Completed' ? `
+                                        <button type="button" class="w-full text-left px-4 py-2 text-sm text-green-700 hover:bg-green-50 flex items-center update-status-btn"
+                                            data-status="Completed">
+                                            <i class="fas fa-check-circle mr-2"></i> Mark Completed
+                                        </button>
+                                    ` : ''}
+                                    
+                                    <!-- Mark Delivered -->
+                                    ${order.order_status !== 'Delivered_picked' ? `
+                                        <button type="button" class="w-full text-left px-4 py-2 text-sm text-purple-700 hover:bg-purple-50 flex items-center update-status-btn"
+                                            data-status="Delivered_picked">
+                                            <i class="fas fa-truck mr-2"></i> Mark Delivered
+                                        </button>
+                                    ` : ''}
+                                    
+                                    <div class="border-t border-gray-100 my-1"></div>
+                                    {% if user.is_superuser %}
+                                    <!-- Delete Order Button -->
+                                    <button type="button" class="w-full text-left px-4 py-2 text-sm text-red-700 hover:bg-red-50 flex items-center delete-order-btn"
+                                        data-order-id="${order.id}" data-order-code="${order.uniquecode}">
+                                        <i class="fas fa-trash mr-2"></i> Delete Order
+                                    </button>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                    </td>
+                </tr>
+            `;
+        }
+
+        async bulkUpdateStatus(status) {
+            if (this.selectedOrders.size === 0) {
+                this.showMessage('Please select at least one order', 'warning');
+                return;
+            }
+
+            const statusText = status.replace('_', ' ');
+            if (!confirm(`Are you sure you want to mark ${this.selectedOrders.size} order${this.selectedOrders.size !== 1 ? 's' : ''} as ${statusText}?`)) {
+                return;
+            }
+
+            try {
+                const promises = Array.from(this.selectedOrders).map(orderId =>
+                    this.updateOrderStatus(orderId, status)
+                );
+
+                const results = await Promise.allSettled(promises);
+
+                let successCount = 0;
+                let errorCount = 0;
+
+                results.forEach((result, index) => {
+                    if (result.status === 'fulfilled' && result.value.success) {
+                        successCount++;
+                    } else {
+                        errorCount++;
+                    }
+                });
+
+                if (successCount > 0) {
+                    this.showMessage(`Successfully updated ${successCount} order${successCount !== 1 ? 's' : ''}`, 'success');
+                }
+                if (errorCount > 0) {
+                    this.showMessage(`Failed to update ${errorCount} order${errorCount !== 1 ? 's' : ''}`, 'error');
+                }
+
+                this.clearSelection();
+                this.loadOrders();
+
+            } catch (error) {
+                console.error('Error in bulk update:', error);
+                this.showMessage('Failed to update orders', 'error');
+            }
+        }
+
+        renderOrderStatus(status) {
+            const statusConfig = {
+                'Completed': { color: 'green', icon: 'check-circle', label: 'Completed' },
+                'pending': { color: 'yellow', icon: 'clock', label: 'Pending' },
+                'processing': { color: 'blue', icon: 'cog', label: 'Processing' },
+                'Delivered_picked': { color: 'purple', icon: 'truck', label: 'Delivered' }
+            };
+
+            const config = statusConfig[status] || { color: 'gray', icon: 'question-circle', label: status };
+
+            return `
+                <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium text-${config.color}-800 bg-${config.color}-100">
+                    <i class="fas fa-${config.icon} mr-1"></i> ${config.label}
+                </span>
+            `;
+        }
+
+        renderPaymentStatus(status) {
+            const statusConfig = {
+                'completed': { color: 'green', icon: 'check', label: 'Paid' },
+                'partial': { color: 'yellow', icon: 'exclamation-triangle', label: 'Partial' },
+                'pending': { color: 'red', icon: 'clock', label: 'Pending' }
+            };
+
+            const config = statusConfig[status] || { color: 'gray', icon: 'question-circle', label: status };
+
+            return `
+                <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium text-${config.color}-800 bg-${config.color}-100">
+                    <i class="fas fa-${config.icon} mr-1"></i> ${config.label}
+                </span>
+            `;
+        }
+
+        renderStats(stats) {
+            if (stats) {
+                const totalOrders = this.getElement('totalOrders');
+                const pendingOrders = this.getElement('pendingOrders');
+                const completedOrders = this.getElement('completedOrders');
+
+                if (totalOrders) totalOrders.textContent = stats.total_orders || 0;
+                if (pendingOrders) pendingOrders.textContent = stats.pending_orders || 0;
+                if (completedOrders) completedOrders.textContent = stats.completed_orders || 0;
+            }
+        }
+
+        renderPagination(pagination) {
+            const container = this.getElement('paginationContainer');
+            if (!container) return;
+
+            if (!pagination || !pagination.has_other_pages) {
+                container.innerHTML = '';
+                return;
+            }
+
+            let paginationHTML = `
+                <div class="flex flex-col sm:flex-row items-center justify-between gap-4">
+                    <div class="text-sm text-gray-700">
+                        Showing ${pagination.start_index} to ${pagination.end_index} of ${pagination.count} entries
+                    </div>
+                    <div class="flex space-x-2">
+            `;
+
+            if (pagination.has_previous) {
+                paginationHTML += `
+                    <button type="button" class="pagination-btn px-3 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors duration-200"
+                        data-page="${pagination.number - 1}">
+                        Previous
+                    </button>
+                `;
+            }
+
+            const startPage = Math.max(1, pagination.number - 2);
+            const endPage = Math.min(pagination.num_pages, pagination.number + 2);
+
+            for (let i = startPage; i <= endPage; i++) {
+                if (i === pagination.number) {
+                    paginationHTML += `
+                        <span class="px-3 py-2 border border-blue-500 bg-blue-100 text-blue-700 rounded-lg text-sm font-medium">
+                            ${i}
+                        </span>
+                    `;
+                } else {
+                    paginationHTML += `
+                        <button type="button" class="pagination-btn px-3 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors duration-200"
+                            data-page="${i}">
+                            ${i}
+                        </button>
+                    `;
+                }
+            }
+
+            if (pagination.has_next) {
+                paginationHTML += `
+                    <button type="button" class="pagination-btn px-3 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors duration-200"
+                        data-page="${pagination.number + 1}">
+                        Next
+                    </button>
+                `;
+            }
+
+            paginationHTML += `
+                    </div>
+                </div>
+            `;
+
+            container.innerHTML = paginationHTML;
+        }
+
+        async updateSingleOrderStatus(orderId, status) {
+            if (!confirm(`Are you sure you want to mark this order as ${status.replace('_', ' ')}?`)) {
+                return;
+            }
+
+            try {
+                const response = await this.updateOrderStatus(orderId, status);
+                if (response.success) {
+                    this.showMessage(response.message, 'success');
+                    this.loadOrders();
+                } else {
+                    throw new Error(response.message);
+                }
+            } catch (error) {
+                console.error('Error updating order status:', error);
+                this.showMessage('Failed to update order status', 'error');
+            }
+        }
+
+        async handleBulkAction(action) {
+            this.showMessage('Please select orders using checkboxes for bulk actions', 'info');
+        }
+
+        async updateOrderStatus(orderId, status) {
+            const formData = new FormData();
+            formData.append('csrfmiddlewaretoken', this.getCSRFToken());
+
+            const response = await fetch(`/Laundry/update-order-status/${orderId}/${status}/`, {
+                method: 'POST',
+                body: formData,
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest'
+                }
+            });
+
+            const data = await response.json();
+
+            if (!response.ok) {
+                // Pass the server's error message through
+                const error = new Error(data.message || `HTTP error! status: ${response.status}`);
+                error.response = response;
+                throw error;
+            }
+
+            return data;
+        }
+
+        async deleteOrder(orderId, orderCode) {
+            if (!confirm(`Are you sure you want to delete order ${orderCode}? This action cannot be undone.`)) {
+                return;
+            }
+
+            try {
+                const formData = new FormData();
+                formData.append('csrfmiddlewaretoken', this.getCSRFToken());
+
+                const response = await fetch(`/Laundry/order-delete/${orderCode}/`, {
+                    method: 'POST',
+                    body: formData,
+                    headers: {
+                        'X-Requested-With': 'XMLHttpRequest',
+                        'X-CSRFToken': this.getCSRFToken()
+                    }
+                });
+
+                // Check if response is JSON
+                const contentType = response.headers.get('content-type');
+                if (!contentType || !contentType.includes('application/json')) {
+                    const text = await response.text();
+                    throw new Error(`Server returned HTML instead of JSON. Status: ${response.status}`);
+                }
+
+                const data = await response.json();
+
+                if (data.success) {
+                    this.showMessage(`Order ${orderCode} deleted successfully`, 'success');
+                    this.loadOrders(); // Reload the orders list
+                } else {
+                    throw new Error(data.message || 'Failed to delete order');
+                }
+            } catch (error) {
+                console.error('Error deleting order:', error);
+                this.showMessage(error.message || 'Failed to delete order', 'error');
+            }
+        }
+
+        showLoading() {
+            const loadingSpinner = this.getElement('loadingSpinner');
+            const ordersTableBody = this.getElement('ordersTableBody');
+
+            if (loadingSpinner) loadingSpinner.classList.remove('hidden');
+            if (ordersTableBody) ordersTableBody.innerHTML = '';
+        }
+
+        hideLoading() {
+            const loadingSpinner = this.getElement('loadingSpinner');
+            if (loadingSpinner) loadingSpinner.classList.add('hidden');
+        }
+
+        showError(message) {
+            this.showMessage(message, 'error');
+        }
+
+        showMessage(message, type) {
+            const toast = document.createElement('div');
+            toast.className = `fixed top-4 right-4 p-4 rounded-lg shadow-lg z-50 ${type === 'success' ? 'bg-green-500' :
+                type === 'error' ? 'bg-red-500' :
+                    type === 'warning' ? 'bg-yellow-500' : 'bg-blue-500'
+                } text-white`;
+            toast.innerHTML = `
+                <div class="flex items-center">
+                    <i class="fas fa-${type === 'success' ? 'check' : type === 'error' ? 'exclamation-triangle' : 'info-circle'} mr-2"></i>
+                    <span>${message}</span>
+                </div>
+            `;
+            document.body.appendChild(toast);
+
+            setTimeout(() => {
+                toast.remove();
+            }, 5000);
+        }
+
+        getCSRFToken() {
+            const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]');
+            return csrfToken ? csrfToken.value : '';
+        }
+    }
+
+    // Initialize when DOM is loaded
+    document.addEventListener('DOMContentLoaded', function () {
+        window.orderManager = new OrderManager();
+    });
+</script>
+</body>
+
+</html>
+{% endblock %}

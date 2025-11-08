@@ -544,6 +544,9 @@
                             <option value="other" class="text-gray-700">
                                 🔄 Other
                             </option>
+                            <option value="None" class="text-gray-700">
+                                    None
+                            </option>
                         </select>
                     </div>
                 </div>
@@ -933,7 +936,7 @@
                     if (data.success) {
                         this.currentOrderForPayment = data.order;
                         this.populatePaymentCompleteModal(data.order);
-                        this.showPaymentModal();
+                        this.showPaymentModal(data.order);
                     } else {
                         throw new Error(data.message || 'Failed to load order details');
                     }
@@ -947,6 +950,11 @@
                 const currentAmountPaid = order.amount_paid || 0;
                 const balance = order.balance || 0;
                 const newTotalPaid = currentAmountPaid + balance;
+                const payment_type = order.payment_type||''
+                console.log(payment_type)
+                if(payment_type){
+                    document.getElementById("paymentTypeSelect").value = payment_type;
+                }
 
                 const currentAmountElement = this.getElement('currentAmountPaid');
                 const balanceToAddElement = this.getElement('balanceToAdd');

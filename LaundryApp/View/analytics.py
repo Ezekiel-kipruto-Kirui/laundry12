@@ -33,7 +33,7 @@ PAYMENT_STATUS_COMPLETE = 'complete'
 PAYMENT_STATUS_OVERDUE = 'overdue'
 
 # Payment type constants
-PAYMENT_TYPES = ['cash', 'mpesa', 'card', 'bank_transfer', 'other']
+PAYMENT_TYPES = ['cash', 'mpesa', 'card', 'bank_transfer', 'other','None']
 
 
 class DashboardAnalytics:
@@ -211,7 +211,7 @@ class DashboardAnalytics:
         revenue_stats = OrderItem.objects.filter(order_id__in=order_ids).aggregate(
             total_revenue=Coalesce(Sum('total_item_price'), 0, output_field=DecimalField())
         )
-        
+        #print(revenue_stats)
         return revenue_stats['total_revenue']
     
     def _calculate_order_stats(self, base_queryset):
@@ -231,7 +231,7 @@ class DashboardAnalytics:
         
         # Calculate total revenue from order items (correct method)
         order_stats['total_revenue'] = self._calculate_laundry_revenue(base_queryset)
-        
+        #print(order_stats)
         return order_stats
     
     def _calculate_expense_stats(self, request, selected_year=None, selected_month=None, from_date=None, to_date=None):
@@ -555,7 +555,7 @@ class DashboardAnalytics:
         )
         
         payment_stats.update(overdue_stats)
-        
+        #print(payment_stats)
         return payment_stats
    
     def _get_orders_by_payment_status(self, base_queryset, shop=None):
@@ -1037,6 +1037,9 @@ class DashboardAnalytics:
             'other_payments_count': payment_type_stats.get('other', {}).get('count', 0),
             'other_payments_amount': payment_type_stats.get('other', {}).get('total_amount', 0),
             'other_payments_collected': payment_type_stats.get('other', {}).get('amount_collected', 0),
+            'none_payments_count': payment_type_stats.get('None', {}).get('count', 0),
+            'none_payments_amount': payment_type_stats.get('None', {}).get('total_amount', 0),
+            'none_payments_collected': payment_type_stats.get('None', {}).get('amount_collected', 0),
 
             # Expense statistics
             'total_expenses': data['expense_stats']['total_expenses'],
