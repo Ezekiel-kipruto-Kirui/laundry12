@@ -1224,42 +1224,23 @@ def get_laundry_profit_and_hotel(request):
             shop=None
         )
         
-        # DEBUG: Log the raw dashboard data to identify discrepancies
-        # print("Dashboard Data:", dashboard_data)
-        
         # Extract data from dashboard_data with better validation
         order_stats = dashboard_data.get('order_stats', {})
         expense_stats = dashboard_data.get('expense_stats', {})
         hotel_stats = dashboard_data.get('hotel_stats', {})
         business_growth = dashboard_data.get('business_growth', {})
         
-        # DEBUG: Log individual stats
-        # print(f"Order stats: {order_stats}")
-        # print(f"Expense stats: {expense_stats}")
-        # print(f"Hotel stats: {hotel_stats}")
-        # print(f"Business growth: {business_growth}")
-        
-        # CORRECTED: Get laundry revenue directly from order_stats
-        # The DashboardAnalytics._calculate_laundry_revenue method calculates revenue from order items
-        # and stores it in order_stats['total_revenue']
+        # Get laundry revenue from dashboard
         laundry_revenue = float(order_stats.get('total_revenue', 0) or 0)
         laundry_expenses = float(expense_stats.get('total_expenses', 0) or 0)
         laundry_profit = laundry_revenue - laundry_expenses
         
-        # print(f"Laundry Revenue: {laundry_revenue}")
-        # print(f"Laundry Expenses: {laundry_expenses}")
-        # print(f"Laundry Profit: {laundry_profit}")
-        
-        # Calculate hotel metrics with proper type conversion
+        # Calculate hotel metrics
         hotel_revenue = float(hotel_stats.get('total_revenue', 0) or 0)
         hotel_expenses = float(hotel_stats.get('total_expenses', 0) or 0)
         hotel_profit = float(hotel_stats.get('net_profit', 0) or 0)
         
-        # print(f"Hotel Revenue: {hotel_revenue}")
-        # print(f"Hotel Expenses: {hotel_expenses}")
-        # print(f"Hotel Profit: {hotel_profit}")
-        
-        # Calculate totals - prefer direct values from business_growth if available
+        # Calculate totals
         total_revenue_from_growth = float(business_growth.get('total_revenue', 0) or 0)
         total_profit_from_growth = float(business_growth.get('net_profit', 0) or 0)
         
@@ -1271,34 +1252,55 @@ def get_laundry_profit_and_hotel(request):
             total_revenue = laundry_revenue + hotel_revenue
             total_profit = laundry_profit + hotel_profit
         
-        # print(f"Total Revenue: {total_revenue}")
-        # print(f"Total Profit: {total_profit}")
-        
-        # Alternative approach: Query the database directly if discrepancies persist
+        # **CRITICAL FIX**: Verify revenue with multiple date field queries
         try:
             from django.db.models import Sum
-             # Import your actual models
             
-            # Get direct database values for current month - using OrderItem.total_item_price
-            direct_laundry_revenue = OrderItem.objects.filter(
+            # Query 1: Using delivery_date (same as dashboard)
+            delivery_date_revenue = OrderItem.objects.filter(
                 order__delivery_date__year=current_year,
                 order__delivery_date__month=current_month,
                 order__order_status__in=['pending', 'Completed', 'Delivered_picked']
             ).aggregate(total=Sum('total_item_price'))['total'] or 0
             
-            # print(f"Direct DB Laundry Revenue: {direct_laundry_revenue}")
+            # Query 2: Using created_at (might be what reports use)
+            created_date_revenue = OrderItem.objects.filter(
+                order__created_at__year=current_year,
+                order__created_at__month=current_month,
+                order__order_status__in=['pending', 'Completed', 'Delivered_picked']
+            ).aggregate(total=Sum('total_item_price'))['total'] or 0
             
-            # If direct query shows different results, use those values
-            if abs(float(direct_laundry_revenue) - laundry_revenue) > 1:  # Significant difference
-                # print(f"Revenue discrepancy detected: Dashboard={laundry_revenue}, Direct DB={direct_laundry_revenue}")
-                laundry_revenue = float(direct_laundry_revenue)
-                # Recalculate profits with direct values
+            print(f"Dashboard Laundry Revenue: {laundry_revenue}")
+            print(f"Delivery Date Revenue: {delivery_date_revenue}")
+            print(f"Created Date Revenue: {created_date_revenue}")
+            
+            # If there's a significant discrepancy, use the most reliable source
+            delivery_diff = abs(float(delivery_date_revenue) - laundry_revenue)
+            created_diff = abs(float(created_date_revenue) - laundry_revenue)
+            
+            # Use the most consistent value
+            if delivery_diff <= created_diff and delivery_diff <= 1:
+                # Dashboard and delivery date are consistent
+                final_laundry_revenue = laundry_revenue
+            elif created_diff <= delivery_diff and created_diff <= 1:
+                # Created date is consistent with something
+                final_laundry_revenue = float(created_date_revenue)
+            else:
+                # Significant discrepancies - use delivery date (dashboard standard)
+                final_laundry_revenue = float(delivery_date_revenue)
+                print(f"Revenue discrepancies detected. Using delivery date standard: {final_laundry_revenue}")
+            
+            # Update the revenue if different from dashboard
+            if final_laundry_revenue != laundry_revenue:
+                print(f"Correcting laundry revenue from {laundry_revenue} to {final_laundry_revenue}")
+                laundry_revenue = final_laundry_revenue
+                # Recalculate all dependent values
                 laundry_profit = laundry_revenue - laundry_expenses
                 total_revenue = laundry_revenue + hotel_revenue
                 total_profit = laundry_profit + hotel_profit
                 
         except Exception as db_error:
-             print(f"Direct database query failed: {db_error}")
+            print(f"Database verification query failed: {db_error}")
         
         # Prepare context with formatted values
         context = {
@@ -1316,8 +1318,7 @@ def get_laundry_profit_and_hotel(request):
             'dashboard_title': f"{current_month_name} {current_year} Dashboard"
         }
         
-        # Final debug log
-        print(f"Final context data: {context}")
+        print(f"Final Dashboard Data - Laundry: KSh {laundry_revenue:,.2f}, Hotel: KSh {hotel_revenue:,.2f}, Total: KSh {total_revenue:,.2f}")
         
         return render(request, 'Generaldashboard.html', context)
         
@@ -1342,6 +1343,7 @@ def get_laundry_profit_and_hotel(request):
             'dashboard_title': f"{current_month_name} {current_date.year} Dashboard",
             'error_message': f"Error loading dashboard data: {str(e)}"
         })
+
 @login_required
 @csrf_protect
 def logout_view(request):

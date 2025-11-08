@@ -359,7 +359,8 @@ class DashboardAnalytics:
         if not selected_year:
             selected_year = now().year
         
-        # Get monthly laundry revenue - FIXED to use order items
+        # **FIXED**: Use consistent date fields
+        # Get monthly laundry revenue - using delivery_date consistently
         laundry_monthly_data = Order.objects.filter(
             delivery_date__year=selected_year,
             order_status__in=ACTIVE_ORDER_STATUSES
@@ -369,7 +370,7 @@ class DashboardAnalytics:
             laundry_revenue=Coalesce(Sum(
                 Case(
                     When(items__isnull=False, 
-                         then=models.F('items__total_item_price')),
+                        then=models.F('items__total_item_price')),
                     default=0,
                     output_field=DecimalField()
                 )
@@ -377,7 +378,7 @@ class DashboardAnalytics:
             laundry_orders=Count('id')
         ).order_by('month')
         
-        # Get monthly hotel revenue - FIXED to use HotelOrderItem price
+        # Get monthly hotel revenue - using created_at consistently
         hotel_monthly_data = HotelOrder.objects.filter(
             created_at__year=selected_year
         ).annotate(
@@ -386,7 +387,7 @@ class DashboardAnalytics:
             hotel_revenue=Coalesce(Sum(
                 Case(
                     When(order_items__isnull=False, 
-                         then=models.F('order_items__quantity') * models.F('order_items__price')),
+                        then=models.F('order_items__quantity') * models.F('order_items__price')),
                     default=0,
                     output_field=DecimalField()
                 )
@@ -731,7 +732,7 @@ class DashboardAnalytics:
 
             # Calculate total business revenue (laundry + hotel)
             total_laundry_revenue = order_stats['total_revenue']
-            print(total_laundry_revenue)
+            
             total_hotel_revenue = hotel_stats['total_revenue']
             total_business_revenue = total_laundry_revenue + total_hotel_revenue
             
