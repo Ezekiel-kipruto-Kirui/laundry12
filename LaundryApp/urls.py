@@ -47,7 +47,7 @@ urlpatterns = [
     path('order-delete/<str:order_code>/', views.order_delete, name='order_delete'),
     # Order Actions
     path('order/<str:order_code>/status/<str:status>/', views.update_order_status_ajax, name='update_order_status'),
-    #path('order/<str:order_code>/delete/', views.order_delete, name='order_delete'),
+    path('jsondata/', views.get_current_month_financials, name='jsondata'),
     path('order/<str:order_code>/update-payment/', views.update_payment_status, name='update_payment_status'),
     path('update-order-status/<int:order_id>/<str:status>/', views.update_order_status_ajax, name='update_order_status_ajax'),
     

@@ -13,6 +13,7 @@ from django.templatetags.static import static
 from django.urls import reverse_lazy
 from django.utils.translation import gettext_lazy as _
 import os
+import dj_database_url
 from LaundryConfig.env import BASE_DIR, env
 
 from decouple import config

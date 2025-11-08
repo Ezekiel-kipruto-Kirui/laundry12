@@ -1,5 +1,5 @@
 from .base import *
-import dj_database_url
+
 import os
 
 DEBUG = env.bool('DJANGO_DEBUG', default=False)

@@ -1358,4 +1358,31 @@ def logout_view(request):
     return redirect('login')
 
 # ==================== DEBUG VIEW ====================
+# In your views.py
 
+
+def get_current_month_financials(request):
+    """View function to return current month financial data as JSON"""
+    today = timezone.now().date()
+    
+    current_month_orders = Order.objects.filter(
+        created_at__year=today.year,
+        created_at__month=today.month
+    )
+    
+    revenue = current_month_orders.aggregate(
+        total=Sum('amount_paid')
+    )['total'] or Decimal('0.00')
+    
+    balance = current_month_orders.aggregate(
+        total=Sum('balance')
+    )['total'] or Decimal('0.00')
+    
+    data = {
+        'revenue': float(revenue),
+        'balance': float(balance),
+        'order_count': current_month_orders.count(),
+        'month': today.strftime('%B %Y')
+    }
+    
+    return JsonResponse(data)
