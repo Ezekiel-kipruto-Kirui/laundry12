@@ -5,7 +5,7 @@ import os
 DEBUG = env.bool('DJANGO_DEBUG', default=False)
 
 if not DEBUG:
-    ALLOWED_HOSTS = ['www.cleanpage.shop', 'cleanpage.shop', 'elite-laundry0010.onrender.com']
+    ALLOWED_HOSTS = ['www.cleanpage.shop', 'cleanpage.shop', 'clean-page-laundry.onrender.com']
     CSRF_TRUSTED_ORIGINS = [
         'https://www.cleanpage.shop',
         'https://cleanpage.shop',
