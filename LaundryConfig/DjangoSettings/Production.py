@@ -9,7 +9,7 @@ if not DEBUG:
     CSRF_TRUSTED_ORIGINS = [
         'https://www.cleanpage.shop',
         'https://cleanpage.shop',
-        'clean-page-laundry.onrender.com'
+        'https://clean-page-laundry.onrender.com'
     ]
 
     DATABASES = {
