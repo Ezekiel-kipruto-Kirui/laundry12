@@ -346,38 +346,38 @@ from django.dispatch import receiver
 logger = logging.getLogger(__name__)
 
 
-@receiver(post_save, sender=Order)
-def handle_order_sms(sender, instance, created, **kwargs):
-    customer_phone = str(instance.customer.phone)
-    order_code = instance.uniquecode
+import logging
+from django.conf import settings
+from twilio.rest import Client
+from LaundryConfig.env import env
 
-    if not customer_phone or not customer_phone.startswith('+'):
-        logger.warning(f"⚠️ Invalid phone number for order {order_code}: {customer_phone}")
-        return
+logger = logging.getLogger(__name__)
 
-    message_body = None
+def send_sms(to_number, message):
+    """
+    Send SMS via Twilio API
+    """
+    try:
+        account_sid = env("TWILIO_ACCOUNT_SID")
+        auth_token = env("TWILIO_AUTH_TOKEN")
+        messaging_service_sid = env("TWILIO_MESSAGING_SERVICE_SID")
 
-    if created:
-        message_body = (
-            f"Hello {instance.customer.name}! "
-            f"Your order {order_code} has been received and is now pending."
+        if not account_sid or not auth_token or not messaging_service_sid:
+            raise ValueError("⚠️ Missing Twilio credentials in environment variables")
+
+        client = Client(account_sid, auth_token)
+
+        logger.info(f"📤 Sending SMS to {to_number}: {message}")
+
+        message_obj = client.messages.create(
+            messaging_service_sid=messaging_service_sid,
+            body=message,
+            to=to_number   # Must be in +E164 format (+2547...)
         )
 
-    elif instance.order_status == 'Completed' and getattr(instance, "previous_order_status", None) not in (None, 'Completed'):
-        message_body = (
-            f"Hi {instance.customer.name}, your order {order_code} is now complete! "
-            "Thank you for choosing our laundry service."
-        )
+        logger.info(f"✅ SMS sent successfully to {to_number}, SID: {message_obj.sid}")
+        return True, f"SMS sent successfully ({message_obj.sid})"
 
-    elif instance.order_status == 'Delivered_picked' and getattr(instance, "previous_order_status", None) not in (None, 'Delivered_picked'):
-        message_body = (
-            f"Hello {instance.customer.name}, your order {order_code} has been delivered successfully. "
-            "We appreciate your trust in our services!"
-        )
-
-    if message_body:
-        success, response_message = send_sms(customer_phone, message_body)
-        if success:
-            logger.info(f"✅ SMS sent for order {order_code}: {response_message}")
-        else:
-            logger.error(f"❌ Failed to send SMS for order {order_code}: {response_message}")
+    except Exception as e:
+        logger.error(f"❌ Twilio SMS send failed: {e}")
+        return False, str(e)
