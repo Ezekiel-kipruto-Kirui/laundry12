@@ -58,7 +58,7 @@ INSTALLED_APPS = [
     'django.contrib.humanize',
     'LaundryApp',
     'HotelApp',
-    
+    'twilio',
     'tailwind',
     'crispy_forms',
     'import_export',
