@@ -47,7 +47,6 @@ INSTALLED_APPS = [
     'whitenoise.runserver_nostatic',
     'multiselectfield', 
     'rest_framework',
-    "unfold",
     'django_registration',
     'django.contrib.admin',
     'django.contrib.auth',
@@ -72,7 +71,7 @@ INSTALLED_APPS = [
 MIDDLEWARE = [
     
     'django.middleware.security.SecurityMiddleware',
-    # Place Whitenoise middleware at the top for efficiency
+    
     'whitenoise.middleware.WhiteNoiseMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
